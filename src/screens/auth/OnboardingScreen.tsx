@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, Dimensions,
     TouchableOpacity, Animated,
@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../types';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../theme/theme';
+import { useThemeStore } from '../../store/useThemeStore';
 import { useAuthStore } from '../../store/useAuthStore';
 
 const { width } = Dimensions.get('window');
@@ -36,6 +36,11 @@ const slides = [
 export default function OnboardingScreen() {
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
     const { setOnboardingComplete } = useAuthStore();
+
+    const { currentTheme } = useThemeStore();
+    const { Colors, FontSize, FontWeight, Spacing, BorderRadius } = currentTheme;
+    const styles = useMemo(() => getStyles(Colors, FontSize, FontWeight, Spacing, BorderRadius), [currentTheme]);
+
     const scrollRef = useRef<ScrollView>(null);
     const [activeIndex, setActiveIndex] = useState(0);
 
@@ -114,7 +119,7 @@ export default function OnboardingScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (Colors: any, FontSize: any, FontWeight: any, Spacing: any, BorderRadius: any) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,

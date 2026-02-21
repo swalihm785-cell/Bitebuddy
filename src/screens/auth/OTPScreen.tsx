@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import {
     View, Text, StyleSheet, TextInput, TouchableOpacity,
     KeyboardAvoidingView, Platform, Alert,
@@ -9,7 +9,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../../types';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../theme/theme';
+import { useThemeStore } from '../../store/useThemeStore';
 
 const OTP_LENGTH = 6;
 
@@ -17,6 +17,11 @@ export default function OTPScreen() {
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
     const route = useRoute<any>();
     const { phoneNumber } = route.params || { phoneNumber: '' };
+
+    const { currentTheme } = useThemeStore();
+    const { Colors, FontSize, FontWeight, Spacing, BorderRadius } = currentTheme;
+    const styles = useMemo(() => getStyles(Colors, FontSize, FontWeight, Spacing, BorderRadius), [currentTheme]);
+
     const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
     const inputRefs = useRef<(TextInput | null)[]>(Array(OTP_LENGTH).fill(null));
     const [resendTimer, setResendTimer] = useState(30);
@@ -103,7 +108,7 @@ export default function OTPScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (Colors: any, FontSize: any, FontWeight: any, Spacing: any, BorderRadius: any) => StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: Colors.background },
     flex: { flex: 1 },
     container: { flex: 1, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.xl },

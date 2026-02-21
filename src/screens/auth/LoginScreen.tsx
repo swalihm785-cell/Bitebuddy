@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     View, Text, StyleSheet, TextInput, TouchableOpacity,
     KeyboardAvoidingView, Platform, ScrollView, Alert,
@@ -9,50 +9,44 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../../types';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../theme/theme';
+import { useThemeStore } from '../../store/useThemeStore';
 import { useAuthStore } from '../../store/useAuthStore';
+
+import { TEST_USERS } from '../../data/testUsers';
 
 export default function LoginScreen() {
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
     const { setUser, setProfileComplete } = useAuthStore();
+    const { currentTheme } = useThemeStore();
+    const { Colors, FontSize, FontWeight, Spacing, BorderRadius } = currentTheme;
+    const styles = useMemo(() => getStyles(Colors, FontSize, FontWeight, Spacing, BorderRadius), [currentTheme]);
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     const handleLogin = async () => {
-        if (!email || !password) {
+        if (!email.trim() || !password.trim()) {
             Alert.alert('Error', 'Please enter email and password');
             return;
         }
         setIsLoading(true);
-        try {
-            // TODO: Connect to Firebase Auth
-            // const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            // Simulate login for now
-            setTimeout(() => {
-                setUser({
-                    id: 'demo_user',
-                    name: 'Demo User',
-                    email,
-                    cuisineInterests: ['Italian', 'Japanese'],
-                    dietaryRestrictions: [],
-                    personalityTags: ['Food Explorer'],
-                    reputationScore: 4.5,
-                    badges: [],
-                    points: 120,
-                    isVerified: false,
-                    isPremium: false,
-                    role: 'user',
-                    createdAt: new Date(),
-                });
-                setProfileComplete();
+
+        setTimeout(() => {
+            const key = email.trim().toLowerCase();
+            const record = TEST_USERS[key];
+
+            if (!record || record.password !== password) {
+                Alert.alert('Login Failed', 'Invalid email or password.');
                 setIsLoading(false);
-            }, 800);
-        } catch (error: any) {
-            Alert.alert('Login Failed', error.message);
+                return;
+            }
+
+            setUser(record.user);
+            setProfileComplete();
             setIsLoading(false);
-        }
+        }, 600);
     };
 
     return (
@@ -163,7 +157,7 @@ export default function LoginScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (Colors: any, FontSize: any, FontWeight: any, Spacing: any, BorderRadius: any) => StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: Colors.background },
     flex: { flex: 1 },
     container: {

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import {
     View, Text, StyleSheet, Animated, Dimensions,
 } from 'react-native';
@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../types';
-import { Colors, FontSize, FontWeight } from '../../theme/theme';
+import { useThemeStore } from '../../store/useThemeStore';
 import { useAuthStore } from '../../store/useAuthStore';
 
 const { width, height } = Dimensions.get('window');
@@ -14,6 +14,10 @@ const { width, height } = Dimensions.get('window');
 export default function SplashScreen() {
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
     const { isAuthenticated, hasCompletedProfile, hasCompletedOnboarding } = useAuthStore();
+
+    const { currentTheme } = useThemeStore();
+    const { Colors, FontSize, FontWeight } = currentTheme;
+    const styles = useMemo(() => getStyles(Colors, FontSize, FontWeight), [currentTheme]);
 
     const logoScale = useRef(new Animated.Value(0)).current;
     const logoOpacity = useRef(new Animated.Value(0)).current;
@@ -48,9 +52,14 @@ export default function SplashScreen() {
         return () => clearTimeout(timer);
     }, []);
 
+    // Change gradient based on theme
+    const bgColors = currentTheme === useThemeStore.getState().currentTheme && Colors.background === '#0F0F14'
+        ? ['#0F0F14', '#1A0A22', '#0F0F14']
+        : ['#FFFFFF', '#FFEBEB', '#FFFFFF'];
+
     return (
         <LinearGradient
-            colors={['#0F0F14', '#1A0A22', '#0F0F14']}
+            colors={bgColors as any}
             style={styles.container}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -85,7 +94,7 @@ export default function SplashScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (Colors: any, FontSize: any, FontWeight: any) => StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: 'center',

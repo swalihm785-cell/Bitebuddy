@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     View, Text, StyleSheet, TextInput, TouchableOpacity,
     KeyboardAvoidingView, Platform, ScrollView, Alert,
@@ -9,12 +9,17 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../../types';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius } from '../../theme/theme';
+import { useThemeStore } from '../../store/useThemeStore';
+import { useNotificationStore } from '../../store/useNotificationStore';
 
 export default function SignUpScreen() {
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+    const { addNotification } = useNotificationStore();
+    const { currentTheme } = useThemeStore();
+    const { Colors, FontSize, FontWeight, Spacing, BorderRadius } = currentTheme;
+    const styles = useMemo(() => getStyles(Colors, FontSize, FontWeight, Spacing, BorderRadius), [currentTheme]);
+
     const [tab, setTab] = useState<'email' | 'phone'>('email');
-    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
@@ -22,10 +27,17 @@ export default function SignUpScreen() {
 
     const handleSignUp = () => {
         if (tab === 'email') {
-            if (!name || !email || !password) {
+            if (!email || !password) {
                 Alert.alert('Error', 'Please fill all fields');
                 return;
             }
+            addNotification({
+                userId: 'new-user',
+                type: 'welcome',
+                title: 'Welcome to Bite Buddy! 👋',
+                body: 'Start exploring amazing dining plans around you.',
+                data: {},
+            });
             navigation.navigate('ProfileSetup');
         } else {
             if (!phone) {
@@ -66,19 +78,6 @@ export default function SignUpScreen() {
                     <View style={styles.form}>
                         {tab === 'email' ? (
                             <>
-                                <View style={styles.inputGroup}>
-                                    <Text style={styles.label}>Full Name</Text>
-                                    <View style={styles.inputWrapper}>
-                                        <Ionicons name="person-outline" size={18} color={Colors.textMuted} style={styles.inputIcon} />
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="John Doe"
-                                            placeholderTextColor={Colors.textMuted}
-                                            value={name}
-                                            onChangeText={setName}
-                                        />
-                                    </View>
-                                </View>
                                 <View style={styles.inputGroup}>
                                     <Text style={styles.label}>Email</Text>
                                     <View style={styles.inputWrapper}>
@@ -171,7 +170,7 @@ export default function SignUpScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (Colors: any, FontSize: any, FontWeight: any, Spacing: any, BorderRadius: any) => StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: Colors.background },
     flex: { flex: 1 },
     container: { flexGrow: 1, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.xl },

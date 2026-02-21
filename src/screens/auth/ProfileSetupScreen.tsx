@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     View, Text, StyleSheet, TextInput, TouchableOpacity,
     ScrollView, Image, Alert,
@@ -10,14 +10,20 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { RootStackParamList } from '../../types';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius, CUISINE_TYPES, DIETARY_RESTRICTIONS, PERSONALITY_TAGS } from '../../theme/theme';
+import { useThemeStore } from '../../store/useThemeStore';
 import { useAuthStore } from '../../store/useAuthStore';
+import { CUISINE_TYPES, DIETARY_RESTRICTIONS, PERSONALITY_TAGS } from '../../theme/theme';
 
 const STEPS = ['Basic Info', 'Preferences', 'Done'];
 
 export default function ProfileSetupScreen() {
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
     const { setUser, setProfileComplete } = useAuthStore();
+
+    const { currentTheme } = useThemeStore();
+    const { Colors, FontSize, FontWeight, Spacing, BorderRadius } = currentTheme;
+    const styles = useMemo(() => getStyles(Colors, FontSize, FontWeight, Spacing, BorderRadius), [currentTheme]);
+
     const [step, setStep] = useState(0);
 
     // Step 1
@@ -183,6 +189,8 @@ export default function ProfileSetupScreen() {
                                 items={CUISINE_TYPES}
                                 selected={selectedCuisines}
                                 onToggle={(item: string) => toggleItem(item, selectedCuisines, setSelectedCuisines)}
+                                Colors={Colors}
+                                styles={styles}
                             />
                         </View>
 
@@ -193,6 +201,8 @@ export default function ProfileSetupScreen() {
                                 selected={selectedDietary}
                                 onToggle={(item: string) => toggleItem(item, selectedDietary, setSelectedDietary)}
                                 color={Colors.success}
+                                Colors={Colors}
+                                styles={styles}
                             />
                         </View>
 
@@ -203,6 +213,8 @@ export default function ProfileSetupScreen() {
                                 selected={selectedTags}
                                 onToggle={(item: string) => toggleItem(item, selectedTags, setSelectedTags)}
                                 color={Colors.secondary}
+                                Colors={Colors}
+                                styles={styles}
                             />
                         </View>
                     </>
@@ -239,7 +251,7 @@ export default function ProfileSetupScreen() {
     );
 }
 
-const ChipSelector = ({ items, selected, onToggle, color }: any) => (
+const ChipSelector = ({ items, selected, onToggle, color, Colors, styles }: any) => (
     <View style={styles.chipWrap}>
         {items.map((item: string) => (
             <TouchableOpacity
@@ -253,7 +265,7 @@ const ChipSelector = ({ items, selected, onToggle, color }: any) => (
     </View>
 );
 
-const styles = StyleSheet.create({
+const getStyles = (Colors: any, FontSize: any, FontWeight: any, Spacing: any, BorderRadius: any) => StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: Colors.background },
     progressBar: { flexDirection: 'row', justifyContent: 'center', gap: 12, paddingVertical: Spacing.md },
     progressStep: {

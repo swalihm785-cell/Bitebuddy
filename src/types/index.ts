@@ -1,8 +1,14 @@
 export interface User {
     id: string;
     name: string;
+    // ── Private fields (only visible to owner) ──
     email?: string;
     phone?: string;
+    instagramId?: string;
+    facebookId?: string;
+    twitterId?: string;
+    whatsappNumber?: string;
+    // ── Public fields ──
     age?: number;
     gender?: string;
     bio?: string;
@@ -18,6 +24,21 @@ export interface User {
     isVerified: boolean;
     isPremium: boolean;
     role: 'user' | 'admin' | 'super_admin';
+    plan: 'free' | 'pro';
+    subscriptionStatus?: 'active' | 'expiring' | 'cancelled';
+    subscriptionExpiryDate?: Date;
+    profession?: string;
+    interests?: string[];
+    favoriteCuisines?: string[];
+    dietaryPreference?: string;
+    socialPreference?: string;
+    languagesSpoken?: string[];
+    followersCount: number;
+    followingCount: number;
+    followers: string[];
+    following: string[];
+    followRequests: string[];
+    blockedUsers: string[];
     createdAt: Date;
 }
 
@@ -39,6 +60,8 @@ export interface DiningPost {
     host?: User;
     title: string;
     cuisineTypes: string[];
+    foodItems?: string[];
+    cuisineDescription?: string;
     restaurantName?: string;
     restaurantAddress?: string;
     location?: GeoPoint;
@@ -49,7 +72,7 @@ export interface DiningPost {
     currentParticipants: number;
     dateTime: Date;
     isImmediate: boolean;
-    budgetRange: 'range1' | 'range2' | 'range3' | 'range4' | 'custom';
+    budgetRange: 'range1' | 'range2' | 'range3' | 'range4' | 'free' | 'custom';
     budgetMin?: number;
     budgetMax?: number;
     participants: Participant[];
@@ -115,7 +138,7 @@ export interface Badge {
 export interface Notification {
     id: string;
     userId: string;
-    type: 'join_request' | 'request_accepted' | 'new_message' | 'review' | 'event';
+    type: 'join_request' | 'request_accepted' | 'request_rejected' | 'participant_left' | 'new_message' | 'review' | 'event' | 'follow_request' | 'follow_accepted' | 'new_meal' | 'report' | 'welcome' | 'system';
     title: string;
     body: string;
     data?: Record<string, string>;
@@ -123,7 +146,20 @@ export interface Notification {
     createdAt: Date;
 }
 
+export type ReportReason = 'spam' | 'harassment' | 'fake_profile' | 'inappropriate' | 'other';
+
+export interface Report {
+    id: string;
+    reporterId: string;
+    reportedId: string;
+    reason: ReportReason;
+    description?: string;
+    status: 'pending' | 'reviewed' | 'resolved';
+    createdAt: Date;
+}
+
 export type RootStackParamList = {
+    Auth: undefined;
     Splash: undefined;
     Onboarding: undefined;
     Login: undefined;
@@ -132,15 +168,24 @@ export type RootStackParamList = {
     ProfileSetup: undefined;
     Main: undefined;
     PostDetail: { postId: string };
-    ChatDetail: { chatId: string; chatName: string };
+    ChatDetail: { chatId: string; chatName: string; isGroup?: boolean };
     EditProfile: undefined;
     CreatePost: undefined;
+    EditPost: { postId: string };
+    UserProfile: { userId: string };
+    Settings: undefined;
+    Notifications: undefined;
+    Plan: undefined;
+    ManageSubscription: undefined;
+    SnapDetails: { snapId: string };
+    FollowList: undefined;
+    BlockedUsers: undefined;
 };
 
 export type MainTabParamList = {
     Dashboard: undefined;
     Create: undefined;
     Messages: undefined;
+    Snap: undefined;
     Profile: undefined;
-    Notifications: undefined;
 };

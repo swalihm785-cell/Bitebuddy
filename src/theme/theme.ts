@@ -1,112 +1,117 @@
-export const Colors = {
-    // Primary brand
-    primary: '#FF6B35',
-    primaryLight: '#FF8A5C',
-    primaryDark: '#E55A24',
-
-    // Secondary
-    secondary: '#6C63FF',
-    secondaryLight: '#8A84FF',
-
-    // Accent
-    accent: '#FFD166',
-
-    // Backgrounds (dark mode)
-    background: '#0F0F14',
-    backgroundCard: '#1A1A24',
-    backgroundElevated: '#22222F',
-    backgroundInput: '#1E1E2A',
-
-    // Text
-    textPrimary: '#FFFFFF',
-    textSecondary: '#A0A0B0',
-    textMuted: '#6B6B80',
-    textInverse: '#0F0F14',
-
-    // Status
-    success: '#4CAF50',
-    warning: '#FFC107',
-    error: '#F44336',
-    info: '#2196F3',
-
-    // Borders
-    border: '#2A2A3A',
-    borderLight: '#35354A',
-
-    // Gradients (as tuples)
-    gradientPrimary: ['#FF6B35', '#FF3CAC'] as [string, string],
-    gradientCard: ['#1A1A24', '#22222F'] as [string, string],
-    gradientSplash: ['#0F0F14', '#1A1A24'] as [string, string],
-
-    // Cuisine tag colors
-    Italian: '#E8534A',
-    Mexican: '#F5A623',
-    Indian: '#E67E22',
-    Vegan: '#27AE60',
-    Japanese: '#8E44AD',
-    American: '#2980B9',
-    Thai: '#D35400',
-    Chinese: '#C0392B',
-};
-
-export const Spacing = {
-    xs: 4,
-    sm: 8,
-    md: 16,
-    lg: 24,
-    xl: 32,
-    xxl: 48,
-};
-
-export const BorderRadius = {
-    sm: 8,
-    md: 12,
-    lg: 16,
-    xl: 24,
-    full: 9999,
-};
-
-export const FontSize = {
-    xs: 11,
-    sm: 13,
-    md: 15,
-    lg: 17,
-    xl: 20,
-    xxl: 26,
-    xxxl: 34,
-};
-
-export const FontWeight = {
-    regular: '400' as const,
-    medium: '500' as const,
-    semibold: '600' as const,
-    bold: '700' as const,
-    extrabold: '800' as const,
-};
-
-export const Shadow = {
-    sm: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 3,
+export const CommonTheme = {
+    Spacing: {
+        xs: 4,
+        sm: 8,
+        md: 16,
+        lg: 24,
+        xl: 32,
+        xxl: 48,
     },
-    md: {
-        shadowColor: '#FF6B35',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 6,
+    BorderRadius: {
+        sm: 8,
+        md: 12,
+        lg: 16,
+        xl: 24,
+        full: 9999,
     },
-    lg: {
-        shadowColor: '#FF6B35',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.25,
-        shadowRadius: 16,
-        elevation: 10,
+    FontSize: {
+        xs: 11,
+        sm: 13,
+        md: 15,
+        lg: 17,
+        xl: 20,
+        xxl: 26,
+        xxxl: 34,
+    },
+    FontWeight: {
+        regular: '400' as const,
+        medium: '500' as const,
+        semibold: '600' as const,
+        bold: '700' as const,
+        extrabold: '800' as const,
     },
 };
+
+export const LightTheme = {
+    ...CommonTheme,
+    Colors: {
+        primary: '#FF6B35',
+        primaryLight: '#FF8A5C',
+        primaryDark: '#E55A24',
+        secondary: '#6C63FF',
+        secondaryLight: '#8A84FF',
+        accent: '#FFD166',
+        background: '#F8F9FA',
+        backgroundCard: '#FFFFFF',
+        backgroundElevated: '#F0F0F5',
+        backgroundInput: '#EEF0F2',
+        textPrimary: '#1A1A1A',
+        textSecondary: '#666666',
+        textMuted: '#999999',
+        textInverse: '#FFFFFF',
+        success: '#2E7D32',
+        warning: '#F9A825',
+        error: '#D32F2F',
+        info: '#0288D1',
+        border: '#E0E0E0',
+        borderLight: '#F0F0F0',
+        gradientPrimary: ['#FF6B35', '#FF3CAC'] as [string, string],
+        cuisineTag: {
+            Italian: '#E8534A',
+            Mexican: '#F5A623',
+            Indian: '#E67E22',
+            Vegan: '#27AE60',
+            Japanese: '#8E44AD',
+            American: '#2980B9',
+            Thai: '#D35400',
+            Chinese: '#C0392B',
+        }
+    }
+};
+
+export const DarkTheme = {
+    ...CommonTheme,
+    Colors: {
+        primary: '#FF6B35',
+        primaryLight: '#FF8A5C',
+        primaryDark: '#E55A24',
+        secondary: '#6C63FF',
+        secondaryLight: '#8A84FF',
+        accent: '#FFD166',
+        background: '#0F0F14',
+        backgroundCard: '#1A1A24',
+        backgroundElevated: '#22222F',
+        backgroundInput: '#1E1E2A',
+        textPrimary: '#FFFFFF',
+        textSecondary: '#A0A0B0',
+        textMuted: '#6B6B80',
+        textInverse: '#0F0F14',
+        success: '#4CAF50',
+        warning: '#FFC107',
+        error: '#F44336',
+        info: '#2196F3',
+        border: '#2A2A3A',
+        borderLight: '#35354A',
+        gradientPrimary: ['#FF6B35', '#FF3CAC'] as [string, string],
+        cuisineTag: {
+            Italian: '#E8534A',
+            Mexican: '#F5A623',
+            Indian: '#E67E22',
+            Vegan: '#27AE60',
+            Japanese: '#8E44AD',
+            American: '#2980B9',
+            Thai: '#D35400',
+            Chinese: '#C0392B',
+        }
+    }
+};
+
+// Legacy exports for compatibility during transition
+export const Colors = DarkTheme.Colors;
+export const Spacing = CommonTheme.Spacing;
+export const BorderRadius = CommonTheme.BorderRadius;
+export const FontSize = CommonTheme.FontSize;
+export const FontWeight = CommonTheme.FontWeight;
 
 export const CUISINE_TYPES = [
     'Italian', 'Mexican', 'Indian', 'Japanese', 'Chinese',
@@ -129,6 +134,7 @@ export const BUDGET_LABELS: Record<string, string> = {
     range2: '250 - 300',
     range3: '300 - 500',
     range4: '500+',
+    free: 'Free',
     custom: 'Custom',
 };
 
@@ -137,5 +143,6 @@ export const BUDGET_RANGE_OPTIONS = [
     { label: '250 - 300', value: 'range2' },
     { label: '300 - 500', value: 'range3' },
     { label: '500+', value: 'range4' },
+    { label: 'Free', value: 'free' },
     { label: 'Custom', value: 'custom' },
 ];

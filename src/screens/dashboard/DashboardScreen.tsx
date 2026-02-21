@@ -1,37 +1,85 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    FlatList, TextInput, Dimensions, RefreshControl,
+    FlatList, TextInput, Dimensions, RefreshControl, Modal
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList, DiningPost } from '../../types';
-import { Colors, FontSize, FontWeight, Spacing, BorderRadius, CUISINE_TYPES, BUDGET_LABELS } from '../../theme/theme';
+import { RootStackParamList } from '../../types';
+import { CUISINE_TYPES, BUDGET_RANGE_OPTIONS } from '../../theme/theme';
 import { useAuthStore } from '../../store/useAuthStore';
 import { usePostStore } from '../../store/usePostStore';
-import { PostCard } from '../../components/PostCard';
-
-
-const { width } = Dimensions.get('window');
+import { useThemeStore } from '../../store/useThemeStore';
+import { useNotificationStore } from '../../store/useNotificationStore';
+import { PostCard } from '../../components/common/PostCard';
+import { GlassCard, GlassButton, GlassSection } from '../../theme/LiquidGlassTheme';
 
 export default function DashboardScreen() {
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
     const { user } = useAuthStore();
     const { posts } = usePostStore();
+    const { notifications } = useNotificationStore();
+    const { currentTheme } = useThemeStore();
+    const { Colors, Spacing, FontSize, FontWeight, BorderRadius } = currentTheme;
+
+    const unreadCount = notifications.filter(n => !n.isRead && n.userId === user?.id).length;
+
     const [view, setView] = useState<'list' | 'map'>('list');
     const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null);
     const [search, setSearch] = useState('');
     const [refreshing, setRefreshing] = useState(false);
+    const [filterModalVisible, setFilterModalVisible] = useState(false);
+    const [filterBudget, setFilterBudget] = useState<string>('any');
+    const [filterMinPrice, setFilterMinPrice] = useState('');
+    const [filterMaxPrice, setFilterMaxPrice] = useState('');
+    const [filterGroupMin, setFilterGroupMin] = useState('');
+    const [filterGroupMax, setFilterGroupMax] = useState('');
+    const [filterTiming, setFilterTiming] = useState<'any' | 'morning' | 'afternoon' | 'evening' | 'night'>('any');
 
     const filtered = posts.filter((p) => {
-        const matchesCuisine = !selectedCuisine || p.cuisineTypes.includes(selectedCuisine);
-        const matchesSearch = !search || p.title.toLowerCase().includes(search.toLowerCase()) ||
-            (p.restaurantName || '').toLowerCase().includes(search.toLowerCase()) ||
-            p.area.toLowerCase().includes(search.toLowerCase());
-        return matchesCuisine && matchesSearch;
+        const matchesCuisine = !selectedCuisine || selectedCuisine === 'All' || p.cuisineTypes.includes(selectedCuisine);
+        const searchLower = search.toLowerCase().trim();
+        const matchesSearch = !searchLower || p.title.toLowerCase().includes(searchLower) || (p.restaurantName || '').toLowerCase().includes(searchLower) || p.area.toLowerCase().includes(searchLower);
+
+        if (!matchesCuisine || !matchesSearch) return false;
+
+        // BUDGET
+        if (filterBudget !== 'any') {
+            if (filterBudget === 'free' && p.budgetRange !== 'free') return false;
+            else if (filterBudget === 'custom') {
+                const fmin = parseInt(filterMinPrice) || 0;
+                const fmax = parseInt(filterMaxPrice) || Infinity;
+                const pmin = p.budgetMin || 0;
+                const pmax = p.budgetMax || Infinity;
+                if (!(fmin <= pmax && fmax >= pmin)) return false;
+            } else if (filterBudget !== 'free') {
+                if (p.budgetRange !== filterBudget) return false;
+            }
+        }
+
+        // GROUP SIZE
+        if (filterGroupMin || filterGroupMax) {
+            const fmin = parseInt(filterGroupMin) || 1;
+            const fmax = parseInt(filterGroupMax) || 100;
+            const pmin = p.minGroupSize || 1;
+            const pmax = p.maxGroupSize || 100;
+            if (!(fmin <= pmax && fmax >= pmin)) return false;
+        }
+
+        // TIMING
+        if (filterTiming !== 'any') {
+            const d = new Date(p.dateTime);
+            const hrs = d.getHours();
+            let pTime = 'night';
+            if (hrs >= 6 && hrs < 12) pTime = 'morning';
+            else if (hrs >= 12 && hrs < 17) pTime = 'afternoon';
+            else if (hrs >= 17 && hrs < 21) pTime = 'evening';
+            if (filterTiming !== pTime) return false;
+        }
+
+        return true;
     });
 
     const onRefresh = () => {
@@ -39,78 +87,93 @@ export default function DashboardScreen() {
         setTimeout(() => setRefreshing(false), 1000);
     };
 
-
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: Colors.background }]}>
             {/* Header */}
             <View style={styles.header}>
                 <View>
-                    <Text style={styles.greeting}>Good evening, {user?.name?.split(' ')[0] || 'Foodie'} 👋</Text>
-                    <Text style={styles.headerSub}>Find your next meal companion</Text>
+                    <Text style={[styles.greeting, { color: Colors.textPrimary }]}>Hi, {user?.name?.split(' ')[0] || 'Foodie'} 👋</Text>
+                    <Text style={[styles.headerSub, { color: Colors.textSecondary }]}>Find your next meal companion</Text>
                 </View>
-                <TouchableOpacity style={styles.notifBtn}>
-                    <Ionicons name="notifications-outline" size={22} color={Colors.textPrimary} />
-                    <View style={styles.notifDot} />
-                </TouchableOpacity>
+                <GlassButton
+                    colorScheme={useThemeStore.getState().isDarkMode ? 'dark' : 'light'}
+                    effect="clear"
+                    style={[styles.notifBtn, { backgroundColor: 'transparent', borderColor: Colors.border }]}
+                    onPress={() => navigation.navigate('Notifications')}
+                >
+                    <Ionicons name="notifications" size={20} color={unreadCount > 0 ? Colors.primary : Colors.textMuted} />
+                    {unreadCount > 0 && <View style={[styles.notifDot, { backgroundColor: Colors.error }]} />}
+                </GlassButton>
             </View>
 
-            {/* Search */}
-            <View style={styles.searchBar}>
-                <Ionicons name="search-outline" size={18} color={Colors.textMuted} />
-                <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search restaurants, cuisines..."
-                    placeholderTextColor={Colors.textMuted}
-                    value={search}
-                    onChangeText={setSearch}
-                />
-                {search ? (
-                    <TouchableOpacity onPress={() => setSearch('')}>
-                        <Ionicons name="close-circle" size={18} color={Colors.textMuted} />
-                    </TouchableOpacity>
-                ) : null}
+            {/* Search and Filters */}
+            <View style={{ flexDirection: 'row', gap: 10, marginHorizontal: 20, marginBottom: 15 }}>
+                <View style={[styles.searchBar, { flex: 1, backgroundColor: Colors.backgroundCard, borderColor: Colors.border, marginHorizontal: 0, marginBottom: 0 }]}>
+                    <Ionicons name="search-outline" size={18} color={Colors.textMuted} />
+                    <TextInput
+                        style={[styles.searchInput, { color: Colors.textPrimary }]}
+                        placeholder="Search restaurants, cuisines..."
+                        placeholderTextColor={Colors.textMuted}
+                        value={search}
+                        onChangeText={setSearch}
+                    />
+                </View>
+                <GlassButton
+                    colorScheme={useThemeStore.getState().isDarkMode ? 'dark' : 'light'}
+                    effect="clear"
+                    style={[styles.filterBtn, { backgroundColor: 'transparent', borderColor: Colors.border }]}
+                    onPress={() => setFilterModalVisible(true)}
+                >
+                    <Ionicons name="options-outline" size={20} color={Colors.primary} />
+                </GlassButton>
             </View>
 
             {/* View toggle */}
-            <View style={styles.viewToggle}>
+            <View style={[styles.viewToggle, { backgroundColor: Colors.backgroundCard }]}>
                 <TouchableOpacity
-                    style={[styles.toggleBtn, view === 'list' && styles.toggleBtnActive]}
+                    style={[styles.toggleBtn, view === 'list' && { backgroundColor: Colors.primary }]}
                     onPress={() => setView('list')}
                 >
                     <Ionicons name="list-outline" size={16} color={view === 'list' ? '#FFF' : Colors.textMuted} />
-                    <Text style={[styles.toggleText, view === 'list' && styles.toggleTextActive]}>List</Text>
+                    <Text style={[styles.toggleText, view === 'list' ? { color: '#FFF' } : { color: Colors.textMuted }]}>List</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={[styles.toggleBtn, view === 'map' && styles.toggleBtnActive]}
+                    style={[styles.toggleBtn, view === 'map' && { backgroundColor: Colors.primary }]}
                     onPress={() => setView('map')}
                 >
                     <Ionicons name="map-outline" size={16} color={view === 'map' ? '#FFF' : Colors.textMuted} />
-                    <Text style={[styles.toggleText, view === 'map' && styles.toggleTextActive]}>Map</Text>
+                    <Text style={[styles.toggleText, view === 'map' ? { color: '#FFF' } : { color: Colors.textMuted }]}>Map</Text>
                 </TouchableOpacity>
             </View>
 
             {/* Cuisine filter chips */}
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.filterRow}
-            >
-                <TouchableOpacity
-                    style={[styles.filterChip, !selectedCuisine && styles.filterChipActive]}
-                    onPress={() => setSelectedCuisine(null)}
-                >
-                    <Text style={[styles.filterChipText, !selectedCuisine && styles.filterChipTextActive]}>All</Text>
-                </TouchableOpacity>
-                {CUISINE_TYPES.slice(0, 10).map((c) => (
+            <View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
                     <TouchableOpacity
-                        key={c}
-                        style={[styles.filterChip, selectedCuisine === c && styles.filterChipActive]}
-                        onPress={() => setSelectedCuisine(selectedCuisine === c ? null : c)}
+                        style={[
+                            styles.filterChip,
+                            { borderColor: Colors.border, backgroundColor: Colors.backgroundCard },
+                            !selectedCuisine && { backgroundColor: Colors.primary, borderColor: Colors.primary }
+                        ]}
+                        onPress={() => setSelectedCuisine(null)}
                     >
-                        <Text style={[styles.filterChipText, selectedCuisine === c && styles.filterChipTextActive]}>{c}</Text>
+                        <Text style={[styles.filterChipText, { color: !selectedCuisine ? '#FFF' : Colors.textSecondary }]}>All</Text>
                     </TouchableOpacity>
-                ))}
-            </ScrollView>
+                    {CUISINE_TYPES.map((c) => (
+                        <TouchableOpacity
+                            key={c}
+                            style={[
+                                styles.filterChip,
+                                { borderColor: Colors.border, backgroundColor: Colors.backgroundCard },
+                                selectedCuisine === c && { backgroundColor: Colors.primary, borderColor: Colors.primary }
+                            ]}
+                            onPress={() => setSelectedCuisine(selectedCuisine === c ? null : c)}
+                        >
+                            <Text style={[styles.filterChipText, { color: selectedCuisine === c ? '#FFF' : Colors.textSecondary }]}>{c}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
 
             {/* Post list */}
             {view === 'list' ? (
@@ -129,91 +192,114 @@ export default function DashboardScreen() {
                     ListEmptyComponent={
                         <View style={styles.empty}>
                             <Text style={{ fontSize: 40 }}>🍽️</Text>
-                            <Text style={styles.emptyText}>No dining plans found</Text>
-                            <Text style={styles.emptySubText}>Be the first to create one!</Text>
+                            <Text style={[styles.emptyText, { color: Colors.textPrimary }]}>No dining plans found</Text>
+                            <Text style={{ color: Colors.textMuted }}>Be the first to create one!</Text>
                         </View>
                     }
                 />
             ) : (
-                <View style={styles.mapPlaceholder}>
-                    <Ionicons name="map" size={60} color={Colors.textMuted} />
-                    <Text style={styles.mapText}>Map View</Text>
-                    <Text style={styles.mapSubText}>Connect Google Maps API to enable</Text>
+                <View style={styles.mapContainer}>
+                    <View style={styles.mapPlaceholder}>
+                        <Ionicons name="map" size={60} color={Colors.textMuted} />
+                        <Text style={[styles.mapText, { color: Colors.textPrimary }]}>Map View</Text>
+                        <Text style={{ color: Colors.textMuted }}>Google Maps integration coming soon</Text>
+                    </View>
                 </View>
             )}
+
+            {/* Filter Modal */}
+            <Modal visible={filterModalVisible} transparent animationType="slide">
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setFilterModalVisible(false)}>
+                    <View style={[styles.modalContent, { backgroundColor: Colors.background }]} onStartShouldSetResponder={() => true}>
+                        <View style={[styles.modalHeader, { borderBottomColor: Colors.border }]}>
+                            <Text style={[styles.modalTitle, { color: Colors.textPrimary }]}>Filters</Text>
+                            <TouchableOpacity onPress={() => {
+                                setFilterBudget('any'); setFilterMinPrice(''); setFilterMaxPrice('');
+                                setFilterGroupMin(''); setFilterGroupMax(''); setFilterTiming('any');
+                            }}>
+                                <Text style={{ color: Colors.primary, fontWeight: '700' }}>Reset</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={{ padding: 20 }}>
+                            <Text style={[styles.filterLabel, { color: Colors.textPrimary }]}>Budget</Text>
+                            <View style={styles.chipRowFilter}>
+                                <TouchableOpacity style={[styles.chipModal, filterBudget === 'any' ? { backgroundColor: Colors.primary, borderColor: Colors.primary } : { borderColor: Colors.border, backgroundColor: Colors.backgroundCard }]} onPress={() => setFilterBudget('any')}>
+                                    <Text style={{ color: filterBudget === 'any' ? '#FFF' : Colors.textPrimary, fontWeight: '700' }}>Any</Text>
+                                </TouchableOpacity>
+                                {BUDGET_RANGE_OPTIONS.map((opt) => (
+                                    <TouchableOpacity key={opt.value} style={[styles.chipModal, filterBudget === opt.value ? { backgroundColor: Colors.primary, borderColor: Colors.primary } : { borderColor: Colors.border, backgroundColor: Colors.backgroundCard }]} onPress={() => setFilterBudget(opt.value)}>
+                                        <Text style={{ color: filterBudget === opt.value ? '#FFF' : Colors.textPrimary, fontWeight: '700' }}>{opt.label}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                            {filterBudget === 'custom' && (
+                                <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                                    <TextInput style={[styles.filterInput, { flex: 1, backgroundColor: Colors.backgroundCard, color: Colors.textPrimary, borderColor: Colors.border }]} placeholder="Min Price" placeholderTextColor={Colors.textMuted} keyboardType="numeric" value={filterMinPrice} onChangeText={setFilterMinPrice} />
+                                    <Text style={{ alignSelf: 'center', color: Colors.textMuted }}>to</Text>
+                                    <TextInput style={[styles.filterInput, { flex: 1, backgroundColor: Colors.backgroundCard, color: Colors.textPrimary, borderColor: Colors.border }]} placeholder="Max Price" placeholderTextColor={Colors.textMuted} keyboardType="numeric" value={filterMaxPrice} onChangeText={setFilterMaxPrice} />
+                                </View>
+                            )}
+
+                            <Text style={[styles.filterLabel, { color: Colors.textPrimary, marginTop: 24 }]}>Group Size (People)</Text>
+                            <View style={{ flexDirection: 'row', gap: 10 }}>
+                                <TextInput style={[styles.filterInput, { flex: 1, backgroundColor: Colors.backgroundCard, color: Colors.textPrimary, borderColor: Colors.border }]} placeholder="Min" placeholderTextColor={Colors.textMuted} keyboardType="numeric" value={filterGroupMin} onChangeText={setFilterGroupMin} />
+                                <Text style={{ alignSelf: 'center', color: Colors.textMuted }}>to</Text>
+                                <TextInput style={[styles.filterInput, { flex: 1, backgroundColor: Colors.backgroundCard, color: Colors.textPrimary, borderColor: Colors.border }]} placeholder="Max" placeholderTextColor={Colors.textMuted} keyboardType="numeric" value={filterGroupMax} onChangeText={setFilterGroupMax} />
+                            </View>
+
+                            <Text style={[styles.filterLabel, { color: Colors.textPrimary, marginTop: 24 }]}>Timing</Text>
+                            <View style={styles.chipRowFilter}>
+                                {['any', 'morning', 'afternoon', 'evening', 'night'].map((t) => (
+                                    <TouchableOpacity key={t} style={[styles.chipModal, filterTiming === t ? { backgroundColor: Colors.primary, borderColor: Colors.primary } : { borderColor: Colors.border, backgroundColor: Colors.backgroundCard }]} onPress={() => setFilterTiming(t as any)}>
+                                        <Text style={{ color: filterTiming === t ? '#FFF' : Colors.textPrimary, fontWeight: '700', textTransform: 'capitalize' }}>{t}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                            <View style={{ height: 40 }} />
+                        </ScrollView>
+
+                        <View style={{ padding: 20, borderTopWidth: 1, borderColor: Colors.border }}>
+                            <TouchableOpacity style={[styles.applyBtn, { backgroundColor: Colors.primary }]} onPress={() => setFilterModalVisible(false)}>
+                                <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 16 }}>Apply Filters</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: Colors.background },
-    header: {
-        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
-        paddingHorizontal: Spacing.xl, paddingTop: Spacing.md, paddingBottom: Spacing.md,
-    },
-    greeting: { fontSize: FontSize.xl, fontWeight: FontWeight.extrabold, color: Colors.textPrimary },
-    headerSub: { fontSize: FontSize.sm, color: Colors.textSecondary, marginTop: 2 },
-    notifBtn: { position: 'relative', padding: 8, backgroundColor: Colors.backgroundCard, borderRadius: BorderRadius.md },
-    notifDot: { position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.error },
-    searchBar: {
-        flexDirection: 'row', alignItems: 'center', gap: 8,
-        marginHorizontal: Spacing.xl, marginBottom: Spacing.md,
-        backgroundColor: Colors.backgroundInput, borderRadius: BorderRadius.lg,
-        paddingHorizontal: Spacing.md, height: 48, borderWidth: 1, borderColor: Colors.border,
-    },
-    searchInput: { flex: 1, fontSize: FontSize.md, color: Colors.textPrimary },
-    viewToggle: {
-        flexDirection: 'row', marginHorizontal: Spacing.xl, marginBottom: Spacing.md,
-        backgroundColor: Colors.backgroundCard, borderRadius: BorderRadius.md, padding: 4,
-    },
-    toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8, borderRadius: BorderRadius.sm },
-    toggleBtnActive: { backgroundColor: Colors.primary },
-    toggleText: { fontSize: FontSize.sm, color: Colors.textMuted, fontWeight: FontWeight.medium },
-    toggleTextActive: { color: '#FFF' },
-    filterRow: { paddingHorizontal: Spacing.xl, gap: 8, paddingBottom: Spacing.md, alignItems: 'center' },
-    filterChip: {
-        paddingVertical: 7, paddingHorizontal: 16, borderRadius: BorderRadius.full,
-        borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.backgroundCard,
-    },
-    filterChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-    filterChipText: { fontSize: FontSize.sm, color: Colors.textSecondary },
-    filterChipTextActive: { color: '#FFF', fontWeight: FontWeight.semibold },
-    list: { paddingHorizontal: Spacing.xl, paddingBottom: 100, gap: Spacing.md },
-    card: { backgroundColor: Colors.backgroundCard, borderRadius: BorderRadius.xl, overflow: 'hidden', borderWidth: 1, borderColor: Colors.border },
-    cardBanner: { height: 110, justifyContent: 'center', alignItems: 'center', position: 'relative' },
-    cardBannerEmoji: { fontSize: 50 },
-    urgentBadge: {
-        position: 'absolute', top: 10, right: 10,
-        backgroundColor: Colors.error, borderRadius: BorderRadius.full,
-        paddingVertical: 4, paddingHorizontal: 10,
-    },
-    urgentText: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: '#FFF' },
-    cardBody: { padding: Spacing.md, gap: 8 },
-    cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-    cardTitle: { flex: 1, fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.textPrimary },
-    budgetBadge: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: BorderRadius.sm },
-    budgetText: { fontSize: FontSize.xs, color: Colors.textSecondary, fontWeight: FontWeight.medium },
-    cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    cardMetaText: { fontSize: FontSize.sm, color: Colors.textMuted, flex: 1 },
-    cardDesc: { fontSize: FontSize.sm, color: Colors.textSecondary, lineHeight: 20 },
-    tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-    cuisineTag: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: BorderRadius.full, backgroundColor: Colors.backgroundElevated },
-    cuisineTagText: { fontSize: FontSize.xs, color: Colors.primary, fontWeight: FontWeight.medium },
-    cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 },
-    footerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    avatarStack: { flexDirection: 'row', height: 24, width: 60, position: 'relative' },
-    avatarMini: {
-        width: 24, height: 24, borderRadius: 12,
-        backgroundColor: Colors.backgroundElevated, position: 'absolute',
-        justifyContent: 'center', alignItems: 'center',
-        borderWidth: 1.5, borderColor: Colors.backgroundCard,
-    },
-    spotsText: { fontSize: FontSize.xs, color: Colors.textMuted },
-    timeLabel: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.textSecondary },
-    empty: { alignItems: 'center', paddingTop: 80, gap: 8 },
-    emptyText: { fontSize: FontSize.lg, fontWeight: FontWeight.semibold, color: Colors.textPrimary },
-    emptySubText: { fontSize: FontSize.md, color: Colors.textMuted },
+    safeArea: { flex: 1 },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 15 },
+    greeting: { fontSize: 20, fontWeight: '800' },
+    headerSub: { fontSize: 13, marginTop: 2 },
+    notifBtn: { position: 'relative', padding: 10, borderRadius: 12, borderWidth: 1 },
+    notifDot: { position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: 4, borderWidth: 1.5, borderColor: '#FFF' },
+    filterBtn: { width: 48, height: 48, borderRadius: 12, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
+    searchBar: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 20, marginBottom: 15, borderRadius: 12, paddingHorizontal: 15, height: 48, borderWidth: 1 },
+    searchInput: { flex: 1, fontSize: 15 },
+    viewToggle: { flexDirection: 'row', marginHorizontal: 20, marginBottom: 15, borderRadius: 12, padding: 4 },
+    toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8, borderRadius: 10 },
+    toggleText: { fontSize: 13, fontWeight: '600' },
+    filterRow: { paddingHorizontal: 20, gap: 10, paddingBottom: 15 },
+    filterChip: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 99, borderWidth: 1 },
+    filterChipText: { fontSize: 13, fontWeight: '600' },
+    list: { paddingHorizontal: 20, paddingBottom: 100, gap: 16 },
+    empty: { alignItems: 'center', paddingTop: 80, gap: 12 },
+    emptyText: { fontSize: 18, fontWeight: '700' },
+    mapContainer: { flex: 1 },
     mapPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-    mapText: { fontSize: FontSize.xl, fontWeight: FontWeight.bold, color: Colors.textPrimary },
-    mapSubText: { fontSize: FontSize.md, color: Colors.textMuted },
+    mapText: { fontSize: 20, fontWeight: '800' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    modalContent: { borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: '85%' },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1 },
+    modalTitle: { fontSize: 18, fontWeight: '800' },
+    filterLabel: { fontSize: 16, fontWeight: '800', marginBottom: 12 },
+    chipRowFilter: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    chipModal: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1 },
+    filterInput: { height: 50, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, fontSize: 15 },
+    applyBtn: { height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center' }
 });
