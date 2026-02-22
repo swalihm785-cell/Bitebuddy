@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    TextInput, Switch, Platform, Image, FlatList, ActivityIndicator
+    TextInput, Switch, Platform, Image, FlatList, ActivityIndicator,
+    Modal, Share, Clipboard, Linking
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -101,6 +102,21 @@ export default function CreatePostScreen() {
     const [invitedBuddies, setInvitedBuddies] = useState<string[]>([]);
     const [buddySearch, setBuddySearch] = useState('');
     const fetchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const foodCuisineMap = useRef<Map<string, string>>(new Map()); // food name -> cuisine
+
+    // Expanded cuisine for nested dishes
+    const [expandedCuisine, setExpandedCuisine] = useState<string | null>(null);
+
+    // Google Places autocomplete state
+    const [placeSuggestions, setPlaceSuggestions] = useState<{ description: string, place_id: string }[]>([]);
+    const [showPlaceSuggestions, setShowPlaceSuggestions] = useState(false);
+    const placesTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const GOOGLE_PLACES_API_KEY = 'YOUR_GOOGLE_PLACES_API_KEY'; // TODO: Replace with actual key
+
+    // Success modal state
+    const [successModal, setSuccessModal] = useState<{ visible: boolean, postId: string, title: string }>({
+        visible: false, postId: '', title: ''
+    });
 
     // Compute Food Buddies (merged followers + following)
     const foodBuddies = React.useMemo(() => {
@@ -114,10 +130,10 @@ export default function CreatePostScreen() {
         });
     }, [user]);
 
-    // Fetch food options when cuisines change (debounced)
+    // Fetch food options when expanded cuisine changes (debounced)
     useEffect(() => {
         if (fetchTimeout.current) clearTimeout(fetchTimeout.current);
-        if (selectedCuisines.length === 0) {
+        if (!expandedCuisine) {
             setFoodOptions([]);
             return;
         }
@@ -127,7 +143,7 @@ export default function CreatePostScreen() {
                 const resp = await fetch(`${API_URL}/api/food-options`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cuisine: selectedCuisines[0], location: area || 'Kochi' }),
+                    body: JSON.stringify({ cuisine: expandedCuisine, location: area || 'Kochi' }),
                 });
                 const data = await resp.json();
                 if (Array.isArray(data)) setFoodOptions(data.slice(0, 30));
@@ -138,12 +154,48 @@ export default function CreatePostScreen() {
             }
         }, 500);
         return () => { if (fetchTimeout.current) clearTimeout(fetchTimeout.current); };
-    }, [selectedCuisines]);
+    }, [expandedCuisine]);
+
+    // Google Places autocomplete
+    const fetchPlaceSuggestions = (text: string) => {
+        setArea(text);
+        if (placesTimeout.current) clearTimeout(placesTimeout.current);
+        if (text.length < 3) {
+            setPlaceSuggestions([]);
+            setShowPlaceSuggestions(false);
+            return;
+        }
+        placesTimeout.current = setTimeout(async () => {
+            try {
+                const response = await fetch(
+                    `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&types=geocode|establishment&key=${GOOGLE_PLACES_API_KEY}`
+                );
+                const data = await response.json();
+                if (data.predictions) {
+                    setPlaceSuggestions(data.predictions.map((p: any) => ({
+                        description: p.description,
+                        place_id: p.place_id
+                    })));
+                    setShowPlaceSuggestions(true);
+                }
+            } catch (err) {
+                console.log('Places API error:', err);
+            }
+        }, 400);
+    };
+
+    const selectPlace = (description: string) => {
+        setArea(description);
+        setShowPlaceSuggestions(false);
+        setPlaceSuggestions([]);
+    };
 
     const toggleFoodSelection = (food: FoodOption) => {
         if (selectedFoods.find(f => f.name === food.name)) {
             setSelectedFoods(selectedFoods.filter(f => f.name !== food.name));
+            foodCuisineMap.current.delete(food.name);
         } else {
+            foodCuisineMap.current.set(food.name, expandedCuisine || '');
             setSelectedFoods([...selectedFoods, food]);
         }
     };
@@ -182,12 +234,29 @@ export default function CreatePostScreen() {
         }
     };
 
-    // Unlimited cuisine selection (no cap)
+    // Unlimited cuisine selection (no cap) — also manages expanded cuisine
     const toggleCuisine = (c: string) => {
         if (selectedCuisines.includes(c)) {
             setSelectedCuisines(selectedCuisines.filter((x) => x !== c));
+            if (expandedCuisine === c) setExpandedCuisine(null);
+            // Remove selected foods from this cuisine
+            setSelectedFoods(prev => prev.filter(f => foodCuisineMap.current.get(f.name) !== c));
+            // Clean up the map entries
+            for (const [name, cuisine] of foodCuisineMap.current) {
+                if (cuisine === c) foodCuisineMap.current.delete(name);
+            }
         } else {
             setSelectedCuisines([...selectedCuisines, c]);
+            setExpandedCuisine(c);
+        }
+    };
+
+    // Tap already-selected cuisine chip to toggle expand/collapse its dishes
+    const handleCuisineChipPress = (c: string) => {
+        if (selectedCuisines.includes(c)) {
+            setExpandedCuisine(expandedCuisine === c ? null : c);
+        } else {
+            toggleCuisine(c);
         }
     };
 
@@ -266,15 +335,8 @@ export default function CreatePostScreen() {
         setInvitedBuddies([]);
         setBuddySearch('');
 
-        showMessage({
-            message: "Success! 🎉",
-            description: "You have created your dining plan successfully.",
-            type: "success",
-            icon: "success",
-            duration: 3000,
-        });
-
-        navigation.navigate('PostDetail', { postId: newPost.id });
+        // Show success modal instead of flash message
+        setSuccessModal({ visible: true, postId: newPost.id, title });
 
         // Create invites for selected buddies
         if (invitedBuddies.length > 0) {
@@ -326,7 +388,7 @@ export default function CreatePostScreen() {
             </SafeAreaView>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-                <Section title="The Basics" subtitle="Give your dining plan a catchy name" icon="bookmark-outline" colors={Colors} isDarkMode={isDarkMode}>
+                <Section title="Name Your Feast" subtitle="Give your dining plan a catchy name" icon="bookmark-outline" colors={Colors} isDarkMode={isDarkMode}>
                     <TextInput
                         style={[styles.input, { backgroundColor: inputBg, color: Colors.textPrimary, borderColor: glassBorder }]}
                         placeholder="Catchy title (e.g. Best Ramen in Town)"
@@ -334,45 +396,188 @@ export default function CreatePostScreen() {
                         value={title}
                         onChangeText={setTitle}
                     />
-                    {/* Urgent request toggle */}
-                    <View style={[styles.switchRow, { backgroundColor: inputBg, borderColor: glassBorder, marginTop: 16 }]}>
-                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            <Ionicons name="flash" size={18} color={isUrgent ? Colors.error : Colors.textMuted} />
-                            <View>
-                                <Text style={[styles.switchTitle, { color: Colors.textPrimary }]}>Urgent Request 🔴</Text>
-                                <Text style={[styles.switchSub, { color: Colors.textMuted }]}>Mark as high priority — looking right now</Text>
-                            </View>
-                        </View>
-                        <Switch
-                            value={isUrgent}
-                            onValueChange={(val) => {
-                                setIsUrgent(val);
-                                if (val) setIsImmediate(true);
-                            }}
-                            trackColor={{ false: '#767577', true: Colors.error }}
-                            thumbColor={Platform.OS === 'ios' ? '#FFF' : isUrgent ? Colors.error : '#f4f3f4'}
-                        />
-                    </View>
                 </Section>
 
-                <Section title="Cuisines & Cravings" subtitle="Select the cuisines you're craving right now" icon="restaurant-outline" colors={Colors} isDarkMode={isDarkMode}>
+                <Section title="Cuisines & Dishes" subtitle="Pick cuisines, then tap to explore dishes" icon="restaurant-outline" colors={Colors} isDarkMode={isDarkMode}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
                         <View style={styles.chipRow}>
-                            {CUISINE_TYPES.map((c) => (
-                                <TouchableOpacity
-                                    key={c}
-                                    style={[
-                                        styles.chip,
-                                        { borderColor: glassBorder, backgroundColor: inputBg },
-                                        selectedCuisines.includes(c) && { backgroundColor: Colors.primary, borderColor: Colors.primary }
-                                    ]}
-                                    onPress={() => toggleCuisine(c)}
-                                >
-                                    <Text style={[styles.chipText, { color: selectedCuisines.includes(c) ? '#FFF' : Colors.textSecondary }]}>{c}</Text>
-                                </TouchableOpacity>
-                            ))}
+                            {CUISINE_TYPES.map((c) => {
+                                const isSelected = selectedCuisines.includes(c);
+                                const isExpanded = expandedCuisine === c;
+                                return (
+                                    <TouchableOpacity
+                                        key={c}
+                                        style={[
+                                            styles.chip,
+                                            { borderColor: glassBorder, backgroundColor: inputBg },
+                                            isSelected && { backgroundColor: Colors.primary, borderColor: Colors.primary },
+                                            isExpanded && { borderWidth: 2 }
+                                        ]}
+                                        onPress={() => handleCuisineChipPress(c)}
+                                        onLongPress={() => {
+                                            if (isSelected) {
+                                                toggleCuisine(c);
+                                            }
+                                        }}
+                                    >
+                                        <Text style={[styles.chipText, { color: isSelected ? '#FFF' : Colors.textSecondary }]}>
+                                            {c}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
                         </View>
                     </ScrollView>
+
+                    {/* Cuisine tabs for dish browsing */}
+                    {selectedCuisines.length > 0 && (
+                        <View>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                                <View style={{ flexDirection: 'row', gap: 8 }}>
+                                    {selectedCuisines.map((c) => {
+                                        const isActive = expandedCuisine === c;
+                                        return (
+                                            <TouchableOpacity
+                                                key={c}
+                                                onPress={() => setExpandedCuisine(isActive ? null : c)}
+                                                style={[styles.cuisineTab, {
+                                                    backgroundColor: isActive ? Colors.primary : inputBg,
+                                                    borderColor: isActive ? Colors.primary : glassBorder,
+                                                }]}
+                                            >
+                                                <Text style={[styles.cuisineTabText, { color: isActive ? '#FFF' : Colors.textPrimary }]}>
+                                                    🍽️ {c}
+                                                </Text>
+                                                <TouchableOpacity
+                                                    onPress={() => toggleCuisine(c)}
+                                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                                >
+                                                    <Ionicons name="close-circle" size={16} color={isActive ? 'rgba(255,255,255,0.7)' : Colors.textMuted} />
+                                                </TouchableOpacity>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </View>
+                            </ScrollView>
+                            {/* Dish content for active tab */}
+                            {expandedCuisine && (
+                                <>
+                                    {/* Search bar */}
+                                    {!foodLoading && foodOptions.length > 0 && (
+                                        <View style={[styles.searchRow, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', borderColor: glassBorder }]}>
+                                            <Ionicons name="search" size={18} color={Colors.textMuted} />
+                                            <TextInput
+                                                style={[styles.searchInput, { color: Colors.textPrimary }]}
+                                                placeholder="Search dishes..."
+                                                placeholderTextColor={Colors.textMuted}
+                                                value={foodSearch}
+                                                onChangeText={setFoodSearch}
+                                            />
+                                            {foodSearch.length > 0 && (
+                                                <TouchableOpacity onPress={() => setFoodSearch('')}>
+                                                    <Ionicons name="close-circle" size={18} color={Colors.textMuted} />
+                                                </TouchableOpacity>
+                                            )}
+                                        </View>
+                                    )}
+
+                                    {foodLoading ? (
+                                        <View style={{ alignItems: 'center', paddingVertical: 30 }}>
+                                            <ActivityIndicator size="large" color={Colors.primary} />
+                                            <Text style={{ color: Colors.textMuted, marginTop: 10, fontSize: 13 }}>Finding {expandedCuisine} dishes...</Text>
+                                        </View>
+                                    ) : foodOptions.length > 0 ? (
+                                        <FlatList
+                                            data={foodSearch.trim() ? foodOptions.filter(f => f.name.toLowerCase().includes(foodSearch.toLowerCase())) : foodOptions}
+                                            extraData={foodSearch + selectedFoods.map(f => f.name).join(',')}
+                                            horizontal
+                                            showsHorizontalScrollIndicator={false}
+                                            keyExtractor={(item, idx) => `${item.name}-${idx}`}
+                                            contentContainerStyle={{ gap: 12, paddingRight: 8 }}
+                                            ListEmptyComponent={
+                                                foodSearch.trim() ? (
+                                                    <View style={{ paddingVertical: 20, paddingHorizontal: 16 }}>
+                                                        <Text style={{ color: Colors.textMuted, fontSize: 13 }}>No dishes found for "{foodSearch}"</Text>
+                                                    </View>
+                                                ) : null
+                                            }
+                                            renderItem={({ item }) => {
+                                                const isSelected = selectedFoods.some(f => f.name === item.name);
+                                                return (
+                                                    <TouchableOpacity
+                                                        onPress={() => toggleFoodSelection(item)}
+                                                        activeOpacity={0.8}
+                                                        style={[
+                                                            styles.foodCard,
+                                                            { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : '#fff', borderColor: isSelected ? Colors.primary : Colors.border },
+                                                            isSelected && { borderWidth: 2 }
+                                                        ]}
+                                                    >
+                                                        {isSelected && (
+                                                            <View style={[styles.foodCheckmark, { backgroundColor: Colors.primary }]}>
+                                                                <Ionicons name="checkmark" size={12} color="#FFF" />
+                                                            </View>
+                                                        )}
+                                                        <Image
+                                                            source={{ uri: item.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300' }}
+                                                            style={styles.foodImage}
+                                                        />
+                                                        <View style={styles.foodInfo}>
+                                                            <Text numberOfLines={2} style={[styles.foodName, { color: Colors.textPrimary }]}>{item.name}</Text>
+                                                            {item.priceRange ? (
+                                                                <View style={[styles.priceBadge, { backgroundColor: Colors.primary + '15' }]}>
+                                                                    <Text style={[styles.priceText, { color: Colors.primary }]}>{item.priceRange}</Text>
+                                                                </View>
+                                                            ) : null}
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                );
+                                            }}
+                                        />
+                                    ) : null}
+
+                                    {/* Custom food input */}
+                                    <View style={[styles.customFoodRow, { marginTop: foodOptions.length > 0 ? 16 : 0 }]}>
+                                        <TextInput
+                                            style={[styles.input, { flex: 1, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : '#fff', color: Colors.textPrimary, borderColor: glassBorder }]}
+                                            placeholder="Add new dish"
+                                            placeholderTextColor={Colors.textMuted}
+                                            value={customFoodName}
+                                            onChangeText={setCustomFoodName}
+                                            onSubmitEditing={addCustomFood}
+                                            returnKeyType="done"
+                                        />
+                                        <TouchableOpacity
+                                            onPress={addCustomFood}
+                                            style={[styles.addFoodBtn, { backgroundColor: Colors.primary }]}
+                                        >
+                                            <Ionicons name="add" size={22} color="#FFF" />
+                                        </TouchableOpacity>
+                                    </View>
+                                </>
+                            )}
+                        </View>
+                    )}
+
+                    {/* Selected foods chips (global across all cuisines) */}
+                    {selectedFoods.length > 0 && (
+                        <View style={{}}>
+                            <Text style={[styles.budgetGroupLabel, { color: Colors.textMuted }]}>Selected Dishes ({selectedFoods.length})</Text>
+                            <View style={styles.selectedFoodsWrap}>
+                                {selectedFoods.map((f) => (
+                                    <View key={f.name} style={[styles.selectedFoodChip, { backgroundColor: Colors.primary + '15', borderColor: Colors.primary }]}>
+                                        <Text style={[styles.selectedFoodText, { color: Colors.primary }]} numberOfLines={1}>
+                                            🍽️ {f.name}
+                                        </Text>
+                                        <TouchableOpacity onPress={() => removeFood(f.name)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                            <Ionicons name="close-circle" size={18} color={Colors.primary} />
+                                        </TouchableOpacity>
+                                    </View>
+                                ))}
+                            </View>
+                        </View>
+                    )}
+
                     <TextInput
                         style={[styles.textArea, { backgroundColor: inputBg, color: Colors.textPrimary, borderColor: glassBorder }]}
                         placeholder="Add a craving description... (e.g. I prefer Biryani, but open to other suggestions.)"
@@ -384,124 +589,7 @@ export default function CreatePostScreen() {
                     />
                 </Section>
 
-                {/* Food Options Carousel */}
-                {selectedCuisines.length > 0 && (
-                    <Section title="Popular Dishes 🍽️" subtitle="Tap to select what you're craving — or add your own" icon="flame-outline" colors={Colors} isDarkMode={isDarkMode}>
-                        {/* Search bar */}
-                        {!foodLoading && foodOptions.length > 0 && (
-                            <View style={[styles.searchRow, { backgroundColor: inputBg, borderColor: glassBorder }]}>
-                                <Ionicons name="search" size={18} color={Colors.textMuted} />
-                                <TextInput
-                                    style={[styles.searchInput, { color: Colors.textPrimary }]}
-                                    placeholder="Search dishes..."
-                                    placeholderTextColor={Colors.textMuted}
-                                    value={foodSearch}
-                                    onChangeText={setFoodSearch}
-                                />
-                                {foodSearch.length > 0 && (
-                                    <TouchableOpacity onPress={() => setFoodSearch('')}>
-                                        <Ionicons name="close-circle" size={18} color={Colors.textMuted} />
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-                        )}
-
-                        {foodLoading ? (
-                            <View style={{ alignItems: 'center', paddingVertical: 30 }}>
-                                <ActivityIndicator size="large" color={Colors.primary} />
-                                <Text style={{ color: Colors.textMuted, marginTop: 10, fontSize: 13 }}>Finding popular dishes...</Text>
-                            </View>
-                        ) : foodOptions.length > 0 ? (
-                            <FlatList
-                                data={foodSearch.trim() ? foodOptions.filter(f => f.name.toLowerCase().includes(foodSearch.toLowerCase())) : foodOptions}
-                                extraData={foodSearch + selectedFoods.map(f => f.name).join(',')}
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                keyExtractor={(item, idx) => `${item.name}-${idx}`}
-                                contentContainerStyle={{ gap: 12, paddingRight: 8 }}
-                                ListEmptyComponent={
-                                    foodSearch.trim() ? (
-                                        <View style={{ paddingVertical: 20, paddingHorizontal: 16 }}>
-                                            <Text style={{ color: Colors.textMuted, fontSize: 13 }}>No dishes found for "{foodSearch}"</Text>
-                                        </View>
-                                    ) : null
-                                }
-                                renderItem={({ item }) => {
-                                    const isSelected = selectedFoods.some(f => f.name === item.name);
-                                    return (
-                                        <TouchableOpacity
-                                            onPress={() => toggleFoodSelection(item)}
-                                            activeOpacity={0.8}
-                                            style={[
-                                                styles.foodCard,
-                                                { backgroundColor: inputBg, borderColor: isSelected ? Colors.primary : Colors.border },
-                                                isSelected && { borderWidth: 2 }
-                                            ]}
-                                        >
-                                            {isSelected && (
-                                                <View style={[styles.foodCheckmark, { backgroundColor: Colors.primary }]}>
-                                                    <Ionicons name="checkmark" size={12} color="#FFF" />
-                                                </View>
-                                            )}
-                                            <Image
-                                                source={{ uri: item.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300' }}
-                                                style={styles.foodImage}
-                                            />
-                                            <View style={styles.foodInfo}>
-                                                <Text numberOfLines={2} style={[styles.foodName, { color: Colors.textPrimary }]}>{item.name}</Text>
-                                                {item.priceRange ? (
-                                                    <View style={[styles.priceBadge, { backgroundColor: Colors.primary + '15' }]}>
-                                                        <Text style={[styles.priceText, { color: Colors.primary }]}>{item.priceRange}</Text>
-                                                    </View>
-                                                ) : null}
-                                            </View>
-                                        </TouchableOpacity>
-                                    );
-                                }}
-                            />
-                        ) : null}
-
-                        {/* Custom food input */}
-                        <View style={[styles.customFoodRow, { marginTop: foodOptions.length > 0 ? 16 : 0 }]}>
-                            <TextInput
-                                style={[styles.input, { flex: 1, backgroundColor: inputBg, color: Colors.textPrimary, borderColor: glassBorder }]}
-                                placeholder="Add new dish"
-                                placeholderTextColor={Colors.textMuted}
-                                value={customFoodName}
-                                onChangeText={setCustomFoodName}
-                                onSubmitEditing={addCustomFood}
-                                returnKeyType="done"
-                            />
-                            <TouchableOpacity
-                                onPress={addCustomFood}
-                                style={[styles.addFoodBtn, { backgroundColor: Colors.primary }]}
-                            >
-                                <Ionicons name="add" size={22} color="#FFF" />
-                            </TouchableOpacity>
-                        </View>
-
-                        {/* Selected foods chips */}
-                        {selectedFoods.length > 0 && (
-                            <View style={{}}>
-                                <Text style={[styles.budgetGroupLabel, { color: Colors.textMuted }]}>Selected ({selectedFoods.length})</Text>
-                                <View style={styles.selectedFoodsWrap}>
-                                    {selectedFoods.map((f) => (
-                                        <View key={f.name} style={[styles.selectedFoodChip, { backgroundColor: Colors.primary + '15', borderColor: Colors.primary }]}>
-                                            <Text style={[styles.selectedFoodText, { color: Colors.primary }]} numberOfLines={1}>
-                                                🍽️ {f.name}
-                                            </Text>
-                                            <TouchableOpacity onPress={() => removeFood(f.name)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                                                <Ionicons name="close-circle" size={18} color={Colors.primary} />
-                                            </TouchableOpacity>
-                                        </View>
-                                    ))}
-                                </View>
-                            </View>
-                        )}
-                    </Section>
-                )}
-
-                <Section title="Location" subtitle="Where do you want to dine?" icon="location-outline" colors={Colors} isDarkMode={isDarkMode}>
+                <Section title="Venue" subtitle="Where do you want to dine?" icon="location-outline" colors={Colors} isDarkMode={isDarkMode}>
                     <TextInput
                         style={[styles.input, { backgroundColor: inputBg, color: Colors.textPrimary, borderColor: glassBorder }]}
                         placeholder="Restaurant Name (optional)"
@@ -509,13 +597,33 @@ export default function CreatePostScreen() {
                         value={restaurant}
                         onChangeText={setRestaurant}
                     />
-                    <TextInput
-                        style={[styles.input, { marginTop: 12, backgroundColor: inputBg, color: Colors.textPrimary, borderColor: glassBorder }]}
-                        placeholder="Neighborhood / Area *"
-                        placeholderTextColor={Colors.textMuted}
-                        value={area}
-                        onChangeText={setArea}
-                    />
+                    <View style={{ position: 'relative', zIndex: 10 }}>
+                        <TextInput
+                            style={[styles.input, { marginTop: 12, backgroundColor: inputBg, color: Colors.textPrimary, borderColor: glassBorder }]}
+                            placeholder="Neighborhood / Area *"
+                            placeholderTextColor={Colors.textMuted}
+                            value={area}
+                            onChangeText={fetchPlaceSuggestions}
+                            onFocus={() => { if (placeSuggestions.length > 0) setShowPlaceSuggestions(true); }}
+                            onBlur={() => setTimeout(() => setShowPlaceSuggestions(false), 200)}
+                        />
+                        {showPlaceSuggestions && placeSuggestions.length > 0 && (
+                            <View style={[styles.suggestionsDropdown, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
+                                {placeSuggestions.map((place) => (
+                                    <TouchableOpacity
+                                        key={place.place_id}
+                                        style={[styles.suggestionItem, { borderBottomColor: Colors.border }]}
+                                        onPress={() => selectPlace(place.description)}
+                                    >
+                                        <Ionicons name="location-outline" size={16} color={Colors.textMuted} />
+                                        <Text style={[styles.suggestionText, { color: Colors.textPrimary }]} numberOfLines={2}>
+                                            {place.description}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        )}
+                    </View>
                 </Section>
 
                 <Section title="Group & Timing" subtitle="Set your group size (2–6) and schedule" icon="people-outline" colors={Colors} isDarkMode={isDarkMode}>
@@ -544,6 +652,25 @@ export default function CreatePostScreen() {
                             <Text style={[styles.sizeLabel, { color: Colors.textMuted }]}>Scheduled Date & Time</Text>
                             <Ionicons name="calendar-outline" size={20} color={Colors.primary} style={{ marginTop: 8 }} />
                         </GlassCard>
+                    </View>
+                    {/* Urgent request toggle */}
+                    <View style={[styles.switchRow, { backgroundColor: inputBg, borderColor: glassBorder, marginTop: 16 }]}>
+                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Ionicons name="flash" size={18} color={isUrgent ? Colors.error : Colors.textMuted} />
+                            <View>
+                                <Text style={[styles.switchTitle, { color: Colors.textPrimary }]}>Urgent Request 🔴</Text>
+                                <Text style={[styles.switchSub, { color: Colors.textMuted }]}>Mark as high priority — looking right now</Text>
+                            </View>
+                        </View>
+                        <Switch
+                            value={isUrgent}
+                            onValueChange={(val) => {
+                                setIsUrgent(val);
+                                if (val) setIsImmediate(true);
+                            }}
+                            trackColor={{ false: '#767577', true: Colors.error }}
+                            thumbColor={Platform.OS === 'ios' ? '#FFF' : isUrgent ? Colors.error : '#f4f3f4'}
+                        />
                     </View>
                 </Section>
 
@@ -779,6 +906,77 @@ export default function CreatePostScreen() {
                 onClose={() => setAlertConfig({ ...alertConfig, visible: false })}
                 onConfirm={alertConfig.onConfirm}
             />
+
+            {/* Success Modal */}
+            <Modal transparent visible={successModal.visible} animationType="fade">
+                <View style={styles.successOverlay}>
+                    <View style={[styles.successCard, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
+                        <View style={styles.successIcon}>
+                            <Text style={{ fontSize: 48 }}>🎉</Text>
+                        </View>
+                        <Text style={[styles.successTitle, { color: Colors.textPrimary }]}>Published!</Text>
+                        <Text style={[styles.successSubtitle, { color: Colors.textMuted }]}>
+                            Your dining plan "{successModal.title}" is now live.
+                        </Text>
+
+                        <View style={styles.successActions}>
+                            <TouchableOpacity
+                                style={[styles.successBtn, { backgroundColor: Colors.primary }]}
+                                onPress={async () => {
+                                    const shareUrl = `https://bitebuddy.app/post/${successModal.postId}`;
+                                    try {
+                                        await Share.share({
+                                            message: `🍽️ Join my dining plan "${successModal.title}" on Bite Buddy!\n${shareUrl}`,
+                                            url: shareUrl,
+                                        });
+                                    } catch (err) {
+                                        console.log('Share error:', err);
+                                    }
+                                }}
+                            >
+                                <Ionicons name="share-social" size={18} color="#FFF" />
+                                <Text style={styles.successBtnText}>Share</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.successBtn, { backgroundColor: Colors.secondary }]}
+                                onPress={() => {
+                                    const shareUrl = `https://bitebuddy.app/post/${successModal.postId}`;
+                                    Clipboard.setString(shareUrl);
+                                    showMessage({
+                                        message: 'Link Copied!',
+                                        description: 'Share it with your friends.',
+                                        type: 'success',
+                                        duration: 2000,
+                                    });
+                                }}
+                            >
+                                <Ionicons name="copy" size={18} color="#FFF" />
+                                <Text style={styles.successBtnText}>Copy Link</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.successViewBtn]}
+                            onPress={() => {
+                                setSuccessModal({ visible: false, postId: '', title: '' });
+                                navigation.navigate('PostDetail', { postId: successModal.postId });
+                            }}
+                        >
+                            <LinearGradient colors={Colors.gradientPrimary} style={styles.successViewGradient}>
+                                <Text style={styles.successViewText}>View Post</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() => setSuccessModal({ visible: false, postId: '', title: '' })}
+                            style={{ marginTop: 12 }}
+                        >
+                            <Text style={{ color: Colors.textMuted, fontSize: 14, fontWeight: '600' }}>Dismiss</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -846,4 +1044,25 @@ const styles = StyleSheet.create({
     buddyAvatar: { width: 44, height: 44, borderRadius: 22 },
     buddyCheck: { position: 'absolute', top: 8, right: 12, width: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center' },
     buddyName: { fontSize: 11, fontWeight: '700', marginTop: 6, textAlign: 'center', paddingHorizontal: 4 },
+    // Cuisine tabs
+    cuisineTab: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1.5 },
+    cuisineTabText: { fontSize: 13, fontWeight: '700' },
+    // Expanded dish area (nested inside cuisine section)
+    expandedDishArea: { padding: 16, borderRadius: 16, borderWidth: 1, marginTop: 4 },
+    // Places autocomplete
+    suggestionsDropdown: { position: 'absolute', top: 68, left: 0, right: 0, borderRadius: 12, borderWidth: 1, zIndex: 100, elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+    suggestionItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: 0.5 },
+    suggestionText: { flex: 1, fontSize: 14, fontWeight: '500' },
+    // Success modal
+    successOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+    successCard: { width: '100%', borderRadius: 28, padding: 32, alignItems: 'center', borderWidth: 1 },
+    successIcon: { marginBottom: 16 },
+    successTitle: { fontSize: 26, fontWeight: '900', marginBottom: 8 },
+    successSubtitle: { fontSize: 14, fontWeight: '500', textAlign: 'center', marginBottom: 24, lineHeight: 20 },
+    successActions: { flexDirection: 'row', gap: 12, width: '100%', marginBottom: 16 },
+    successBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 14 },
+    successBtnText: { color: '#FFF', fontSize: 14, fontWeight: '800' },
+    successViewBtn: { width: '100%', height: 52, borderRadius: 26, overflow: 'hidden' },
+    successViewGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    successViewText: { color: '#FFF', fontSize: 15, fontWeight: '900' },
 });

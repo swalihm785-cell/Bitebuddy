@@ -122,43 +122,48 @@ export const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
 
         return (
             <View style={styles.timePickerContainer}>
-                <View style={styles.wheelRow}>
-                    {/* Hour Wheel */}
-                    <View style={styles.wheelWrapper}>
-                        <Text style={[styles.wheelLabel, { color: Colors.textMuted }]}>HOUR</Text>
-                        <ScrollView showsVerticalScrollIndicator={false} snapToInterval={50} contentContainerStyle={{ paddingVertical: 50 }}>
-                            {hours.map(h => (
-                                <TouchableOpacity key={h} style={styles.wheelItem} onPress={() => setHour(h)}>
-                                    <Text style={[styles.wheelText, { color: hour === h ? Colors.primary : Colors.textPrimary }]}>{h}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </View>
-                    <Text style={[styles.separator, { color: Colors.textMuted }]}>:</Text>
-                    {/* Minute Wheel */}
-                    <View style={styles.wheelWrapper}>
-                        <Text style={[styles.wheelLabel, { color: Colors.textMuted }]}>MIN</Text>
-                        <ScrollView showsVerticalScrollIndicator={false} snapToInterval={50} contentContainerStyle={{ paddingVertical: 50 }}>
-                            {mins.map(m => (
-                                <TouchableOpacity key={m} style={styles.wheelItem} onPress={() => setMinute(m)}>
-                                    <Text style={[styles.wheelText, { color: minute === m ? Colors.primary : Colors.textPrimary }]}>{m.toString().padStart(2, '0')}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </View>
-                    {/* AM/PM */}
-                    <View style={styles.ampmColumn}>
+                {/* Hour Grid */}
+                <Text style={[styles.wheelLabel, { color: Colors.textMuted, alignSelf: 'center', marginBottom: 8 }]}>HOUR</Text>
+                <View style={styles.chipGrid}>
+                    {hours.map(h => (
                         <TouchableOpacity
-                            onPress={() => setAmpm('AM')}
-                            style={[styles.ampmBtn, ampm === 'AM' && { backgroundColor: Colors.primary }]}>
-                            <Text style={[styles.ampmText, { color: ampm === 'AM' ? '#FFF' : Colors.textPrimary }]}>AM</Text>
+                            key={h}
+                            activeOpacity={0.7}
+                            onPress={() => setHour(h)}
+                            style={[styles.timeChip, hour === h && { backgroundColor: Colors.primary, borderColor: Colors.primary }]}
+                        >
+                            <Text style={[styles.timeChipText, { color: hour === h ? '#FFF' : Colors.textPrimary }]}>{h}</Text>
                         </TouchableOpacity>
+                    ))}
+                </View>
+
+                {/* Minute Grid */}
+                <Text style={[styles.wheelLabel, { color: Colors.textMuted, alignSelf: 'center', marginTop: 16, marginBottom: 8 }]}>MINUTE</Text>
+                <View style={styles.chipGrid}>
+                    {mins.map(m => (
                         <TouchableOpacity
-                            onPress={() => setAmpm('PM')}
-                            style={[styles.ampmBtn, ampm === 'PM' && { backgroundColor: Colors.primary }]}>
-                            <Text style={[styles.ampmText, { color: ampm === 'PM' ? '#FFF' : Colors.textPrimary }]}>PM</Text>
+                            key={m}
+                            activeOpacity={0.7}
+                            onPress={() => setMinute(m)}
+                            style={[styles.timeChip, minute === m && { backgroundColor: Colors.primary, borderColor: Colors.primary }]}
+                        >
+                            <Text style={[styles.timeChipText, { color: minute === m ? '#FFF' : Colors.textPrimary }]}>{m.toString().padStart(2, '0')}</Text>
                         </TouchableOpacity>
-                    </View>
+                    ))}
+                </View>
+
+                {/* AM/PM */}
+                <View style={[styles.ampmColumn, { flexDirection: 'row', justifyContent: 'center', marginTop: 16 }]}>
+                    <TouchableOpacity
+                        onPress={() => setAmpm('AM')}
+                        style={[styles.ampmBtn, ampm === 'AM' && { backgroundColor: Colors.primary }]}>
+                        <Text style={[styles.ampmText, { color: ampm === 'AM' ? '#FFF' : Colors.textPrimary }]}>AM</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => setAmpm('PM')}
+                        style={[styles.ampmBtn, ampm === 'PM' && { backgroundColor: Colors.primary }]}>
+                        <Text style={[styles.ampmText, { color: ampm === 'PM' ? '#FFF' : Colors.textPrimary }]}>PM</Text>
+                    </TouchableOpacity>
                 </View>
             </View>
         );
@@ -215,7 +220,7 @@ const styles = StyleSheet.create({
     tabContainer: { flexDirection: 'row', borderRadius: 16, padding: 4 },
     tab: { flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: 'center' },
     tabText: { fontWeight: '800', fontSize: 14 },
-    content: { height: 320, paddingHorizontal: 24 },
+    content: { paddingHorizontal: 24 },
     // Calendar
     calendarContainer: {},
     calendarHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
@@ -228,15 +233,13 @@ const styles = StyleSheet.create({
     dayBox: { width: (width - 48) / 7, height: 44, justifyContent: 'center', alignItems: 'center' },
     dayText: { fontSize: 15, fontWeight: '700' },
     // Time
-    timePickerContainer: { flex: 1, justifyContent: 'center' },
-    wheelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-    wheelWrapper: { height: 150, width: 70, alignItems: 'center' },
+    timePickerContainer: { paddingVertical: 8 },
+    chipGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
+    timeChip: { width: 48, height: 44, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.1)', justifyContent: 'center', alignItems: 'center' },
+    timeChipText: { fontSize: 16, fontWeight: '800' },
     wheelLabel: { fontSize: 10, fontWeight: '800', marginBottom: 10 },
-    wheelItem: { height: 50, justifyContent: 'center', alignItems: 'center' },
-    wheelText: { fontSize: 28, fontWeight: '900' },
-    separator: { fontSize: 28, fontWeight: '900', marginTop: 15 },
     ampmColumn: { gap: 10, marginLeft: 20, marginTop: 15 },
-    ampmBtn: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
+    ampmBtn: { paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
     ampmText: { fontSize: 14, fontWeight: '900' },
     // Footer
     footer: { paddingHorizontal: 24, marginTop: 20 },
