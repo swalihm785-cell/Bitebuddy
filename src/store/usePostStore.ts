@@ -1,16 +1,20 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DiningPost, JoinRequest, Participant } from '../types';
+import { DiningPost, JoinRequest, Participant, Invite } from '../types';
 
 interface PostState {
     posts: DiningPost[];
     joinRequests: JoinRequest[];
+    invites: Invite[];
     addPost: (post: DiningPost) => void;
     updatePost: (id: string, updates: Partial<DiningPost>) => void;
     deletePost: (id: string) => void;
     addJoinRequest: (request: JoinRequest) => void;
     updateJoinRequest: (id: string, status: JoinRequest['status']) => void;
+    addInvite: (invite: Invite) => void;
+    updateInvite: (id: string, status: Invite['status'], note?: string) => void;
+    removeInvite: (id: string) => void;
     leavePost: (postId: string, userId: string) => void;
 }
 
@@ -126,6 +130,7 @@ export const usePostStore = create<PostState>()(
         (set) => ({
             posts: MOCK_POSTS,
             joinRequests: [],
+            invites: [],
             addPost: (post) => set((state) => ({ posts: [post, ...state.posts] })),
             updatePost: (id, updates) => set((state) => ({
                 posts: state.posts.map((p) => p.id === id ? { ...p, ...updates } : p)
@@ -180,6 +185,42 @@ export const usePostStore = create<PostState>()(
                     return p;
                 }),
                 joinRequests: state.joinRequests.filter(r => !(r.postId === postId && r.requesterId === userId))
+            })),
+            addInvite: (invite) => set((state) => ({
+                invites: [invite, ...state.invites]
+            })),
+            updateInvite: (id, status, note) => set((state) => {
+                const invite = state.invites.find(i => i.id === id);
+                if (!invite) return state;
+
+                let updatedPosts = state.posts;
+                if (status === 'accepted') {
+                    updatedPosts = state.posts.map(p => {
+                        if (p.id === invite.postId) {
+                            const isAlready = p.participants.some(part => part.id === invite.inviteeId);
+                            if (isAlready) return p;
+                            const newParticipant: Participant = {
+                                id: invite.inviteeId,
+                                name: invite.inviteeName,
+                                age: 25,
+                            };
+                            return {
+                                ...p,
+                                participants: [...p.participants, newParticipant],
+                                currentParticipants: p.participants.length + 1
+                            };
+                        }
+                        return p;
+                    });
+                }
+
+                return {
+                    invites: state.invites.map(i => i.id === id ? { ...i, status, note: note || i.note } : i),
+                    posts: updatedPosts
+                };
+            }),
+            removeInvite: (id) => set((state) => ({
+                invites: state.invites.filter(i => i.id !== id)
             })),
         }),
         {

@@ -256,7 +256,7 @@ export default function UserProfileScreen() {
                                 onPress={handleFollow}
                             >
                                 <Text style={[styles.followBtnText, isFollowing ? { color: Colors.textPrimary } : { color: '#FFF' }]}>
-                                    {isFollowing ? 'Following' : 'Follow'}
+                                    {isFollowing ? 'Buddy ✓' : 'Add Buddy'}
                                 </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
@@ -279,9 +279,7 @@ export default function UserProfileScreen() {
                     <View style={[styles.statsRow, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border, marginTop: 20 }]}>
                         <StatCard value={userPosts.length} label="Plans" />
                         <View style={[styles.vDivider, { backgroundColor: Colors.border }]} />
-                        <StatCard value={user?.followersCount || 0} label="Followers" />
-                        <View style={[styles.vDivider, { backgroundColor: Colors.border }]} />
-                        <StatCard value={user?.followingCount || 0} label="Following" />
+                        <StatCard value={(user?.followersCount || 0) + (user?.followingCount || 0)} label="Food Buddies" />
                     </View>
                 </View>
 

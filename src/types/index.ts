@@ -54,6 +54,13 @@ export interface GeoPoint {
     longitude: number;
 }
 
+export interface FoodOption {
+    name: string;
+    imageUrl: string;
+    priceRange: string;
+    source: string;
+}
+
 export interface DiningPost {
     id: string;
     hostId: string;
@@ -61,6 +68,7 @@ export interface DiningPost {
     title: string;
     cuisineTypes: string[];
     foodItems?: string[];
+    selectedFoodOptions?: FoodOption[];
     cuisineDescription?: string;
     restaurantName?: string;
     restaurantAddress?: string;
@@ -72,6 +80,8 @@ export interface DiningPost {
     currentParticipants: number;
     dateTime: Date;
     isImmediate: boolean;
+    isUrgent?: boolean;
+    extras?: string[];
     budgetRange: 'range1' | 'range2' | 'range3' | 'range4' | 'free' | 'custom';
     budgetMin?: number;
     budgetMax?: number;
@@ -92,6 +102,18 @@ export interface JoinRequest {
     requester?: User;
     message?: string;
     status: 'pending' | 'accepted' | 'rejected' | 'waitlisted';
+    createdAt: Date;
+}
+
+export interface Invite {
+    id: string;
+    postId: string;
+    inviterId: string;
+    inviteeId: string;
+    inviteeName: string;
+    inviteePhotoURL?: string;
+    status: 'pending' | 'accepted' | 'rejected';
+    note?: string;
     createdAt: Date;
 }
 
@@ -138,7 +160,7 @@ export interface Badge {
 export interface Notification {
     id: string;
     userId: string;
-    type: 'join_request' | 'request_accepted' | 'request_rejected' | 'participant_left' | 'new_message' | 'review' | 'event' | 'follow_request' | 'follow_accepted' | 'new_meal' | 'report' | 'welcome' | 'system';
+    type: 'join_request' | 'request_accepted' | 'request_rejected' | 'participant_left' | 'new_message' | 'review' | 'event' | 'follow_request' | 'follow_accepted' | 'new_meal' | 'report' | 'welcome' | 'system' | 'invite_received' | 'invite_accepted' | 'invite_rejected';
     title: string;
     body: string;
     data?: Record<string, string>;

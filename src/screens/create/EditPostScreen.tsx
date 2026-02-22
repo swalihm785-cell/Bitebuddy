@@ -1,126 +1,283 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    TextInput, Switch, Platform, Alert, Image
+    TextInput, Switch, Platform, Image, FlatList, ActivityIndicator
 } from 'react-native';
-import { CustomDateTimePicker } from '../../components/common/CustomDateTimePicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { useEffect } from 'react';
-import {
-    FontSize, FontWeight, Spacing, BorderRadius,
-    CUISINE_TYPES, BUDGET_LABELS, BUDGET_RANGE_OPTIONS
-} from '../../theme/theme';
+import { useNavigation } from '@react-navigation/native';
+import { CUISINE_TYPES, BUDGET_LABELS, BUDGET_RANGE_OPTIONS } from '../../theme/theme';
 import { usePostStore } from '../../store/usePostStore';
 import { useAuthStore } from '../../store/useAuthStore';
-import { useNotificationStore } from '../../store/useNotificationStore';
 import { useThemeStore } from '../../store/useThemeStore';
+import { useNotificationStore } from '../../store/useNotificationStore';
+import { CustomAlert } from '../../components/common/CustomAlert';
+import { CustomDateTimePicker } from '../../components/common/CustomDateTimePicker';
+import { showMessage } from 'react-native-flash-message';
+import { GlassCard, GlassButton } from '../../theme/LiquidGlassTheme';
+import { API_URL } from '../../store/useChatStore';
+import { FoodOption } from '../../types';
+import { TEST_USERS } from '../../data/testUsers';
 
 const VISIBILITIES = ['public', 'friends', 'verified'] as const;
 
+let OTHER_OPTIONS = [
+    { label: '🍻 Drinks on me', value: 'drinks_on_me' },
+    { label: '🚗 I\'ll pick you up', value: 'pick_up' },
+    { label: '🚕 I\'ll drop you', value: 'drop_off' },
+    { label: '💰 Split evenly', value: 'split_evenly' },
+    { label: '🧾 Go dutch', value: 'go_dutch' },
+];
+
+const PAID_BUDGET_OPTIONS = BUDGET_RANGE_OPTIONS.filter(o => o.value !== 'free');
+
+const Section = ({ title, subtitle, children, icon, colors, isDarkMode }: { title: string, subtitle?: string, children: React.ReactNode, icon?: string, colors: any, isDarkMode?: boolean }) => (
+    <GlassCard
+        effect="regular"
+        colorScheme={isDarkMode ? 'dark' : 'light'}
+        style={[styles.section, { borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', shadowOpacity: isDarkMode ? 0.2 : 0.05, backgroundColor: (Platform.OS === 'android' && !isDarkMode) ? '#FFFFFF' : undefined }]}
+    >
+        <View style={styles.sectionHeader}>
+            {icon && (
+                <View style={[styles.iconContainer, { backgroundColor: colors.primary + '15' }]}>
+                    <Ionicons name={icon as any} size={20} color={colors.primary} />
+                </View>
+            )}
+            <View style={{ flex: 1, justifyContent: 'center' }}>
+                <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{title}</Text>
+                {subtitle && <Text style={[styles.sectionSubtitle, { color: colors.textMuted }]}>{subtitle}</Text>}
+            </View>
+        </View>
+        <View style={styles.sectionContent}>
+            {children}
+        </View>
+    </GlassCard>
+);
+
+import { useRoute } from '@react-navigation/native';
 export default function EditPostScreen() {
-    const navigation = useNavigation();
-    const route = useRoute<any>();
-    const { postId } = route.params;
+    const navigation = useNavigation<any>();
     const { user } = useAuthStore();
     const { posts, updatePost } = usePostStore();
-    const { addNotification } = useNotificationStore();
-    const { currentTheme } = useThemeStore();
-    const { Colors } = currentTheme;
-    const styles = getStyles(Colors);
-
+    const route = useRoute<any>();
+    const { postId } = route.params;
     const postToEdit = posts.find(p => p.id === postId);
+    const { currentTheme, isDarkMode } = useThemeStore();
+    const { addNotification } = useNotificationStore();
+    const { Colors, Spacing, FontSize, FontWeight, BorderRadius } = currentTheme;
+    const inputBg = isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.02)';
+    const glassBorder = isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.04)';
+    const iconBg = isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)';
+
     const [title, setTitle] = useState('');
     const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
+    const [cuisineDescription, setCuisineDescription] = useState('');
     const [restaurant, setRestaurant] = useState('');
     const [area, setArea] = useState('');
     const [minSize, setMinSize] = useState(2);
     const [maxSize, setMaxSize] = useState(4);
     const [isImmediate, setIsImmediate] = useState(false);
+    const [isUrgent, setIsUrgent] = useState(false);
     const [selectedBudget, setSelectedBudget] = useState<'range1' | 'range2' | 'range3' | 'range4' | 'free' | 'custom'>('range2');
-    const [minBudget, setMinBudget] = useState('');
-    const [maxBudget, setMaxBudget] = useState('');
-    const [visibility, setVisibility] = useState<typeof VISIBILITIES[number]>('public');
+    const [budgetMin, setBudgetMin] = useState('');
+    const [budgetMax, setBudgetMax] = useState('');
+    const [budgetDescription, setBudgetDescription] = useState('');
     const [description, setDescription] = useState('');
-    const [cuisineDescription, setCuisineDescription] = useState('');
-    const [selectedFoodItems, setSelectedFoodItems] = useState<string[]>([]);
-    const [customFoodItem, setCustomFoodItem] = useState('');
-    const [autoApprove, setAutoApprove] = useState(false);
+    const [visibility, setVisibility] = useState<typeof VISIBILITIES[number]>('public');
     const [dateTime, setDateTime] = useState(new Date());
-    const [showDatePicker, setShowDatePicker] = useState(false);
-    const [showTimePicker, setShowTimePicker] = useState(false);
+    const [autoApprove, setAutoApprove] = useState(false);
+    const [selectedOthers, setSelectedOthers] = useState<string[]>([]);
+
+    const [customPickerVisible, setCustomPickerVisible] = useState(false);
+    const [alertConfig, setAlertConfig] = useState<{ visible: boolean, title: string, message: string, type: 'error' | 'success', onConfirm?: () => void }>({
+        visible: false, title: '', message: '', type: 'error'
+    });
+
+    // Food options state
+    const [foodOptions, setFoodOptions] = useState<FoodOption[]>([]);
+    const [foodLoading, setFoodLoading] = useState(false);
+    const [selectedFoods, setSelectedFoods] = useState<FoodOption[]>([]);
+    const [customFoodName, setCustomFoodName] = useState('');
+    const [foodSearch, setFoodSearch] = useState('');
+    const [customOtherName, setCustomOtherName] = useState('');
+    const [invitedBuddies, setInvitedBuddies] = useState<string[]>([]);
+    const [buddySearch, setBuddySearch] = useState('');
 
     useEffect(() => {
         if (postToEdit) {
-            setTitle(postToEdit.title);
-            setSelectedCuisines(postToEdit.cuisineTypes);
-            setRestaurant(postToEdit.restaurantName || '');
-            setArea(postToEdit.area);
-            setMinSize(postToEdit.minGroupSize);
-            setMaxSize(postToEdit.maxGroupSize);
-            setIsImmediate(postToEdit.isImmediate);
-            setSelectedBudget(postToEdit.budgetRange);
-            setMinBudget(postToEdit.budgetMin?.toString() || '');
-            setMaxBudget(postToEdit.budgetMax?.toString() || '');
-            setVisibility(postToEdit.visibility);
-            setDescription(postToEdit.description || '');
+            setTitle(postToEdit.title || '');
+            setSelectedCuisines(postToEdit.cuisineTypes || []);
             setCuisineDescription(postToEdit.cuisineDescription || '');
-            setSelectedFoodItems(postToEdit.foodItems || []);
-            setAutoApprove(postToEdit.autoApprove);
+            setRestaurant(postToEdit.restaurantName || '');
+            setArea(postToEdit.area || '');
+            setMinSize(postToEdit.minGroupSize || 2);
+            setMaxSize(postToEdit.maxGroupSize || 4);
+            setIsImmediate(postToEdit.isImmediate || false);
+            setIsUrgent(postToEdit.isUrgent || false);
+            setSelectedBudget(postToEdit.budgetRange || 'range2');
+            setBudgetMin(postToEdit.budgetMin?.toString() || '');
+            setBudgetMax(postToEdit.budgetMax?.toString() || '');
+
+            // Try to split description into generic and budget parts if split by 
+
+
+            const descParts = (postToEdit.description || '').split('\n\n');
+            if (descParts.length > 1) {
+                setBudgetDescription(descParts.pop() || '');
+                setDescription(descParts.join('\n\n') || '');
+            } else {
+                setDescription(postToEdit.description || '');
+                setBudgetDescription('');
+            }
+
+            setVisibility(postToEdit.visibility || 'public');
             setDateTime(new Date(postToEdit.dateTime));
+            setAutoApprove(postToEdit.autoApprove || false);
+            setSelectedOthers(postToEdit.extras || []);
+            setSelectedFoods(postToEdit.selectedFoodOptions || []);
+
+            // Ensure any selected extras are in the OTHER_OPTIONS array
+            const currentOtherValues = OTHER_OPTIONS.map(o => o.value);
+            (postToEdit.extras || []).forEach(extra => {
+                if (!currentOtherValues.includes(extra)) {
+                    let labelName = extra.replace('custom_', '').replace(/_/g, ' ');
+                    if (labelName.length > 0) labelName = labelName[0].toUpperCase() + labelName.substring(1);
+                    OTHER_OPTIONS.push({ label: '✨ ' + labelName, value: extra });
+                }
+            });
         }
     }, [postToEdit]);
 
-    const toggleCuisine = (c: string) => {
-        if (selectedCuisines.includes(c)) setSelectedCuisines(selectedCuisines.filter((x) => x !== c));
-        else if (selectedCuisines.length < 3) setSelectedCuisines([...selectedCuisines, c]);
-    };
+    const fetchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const addFoodItem = () => {
-        if (customFoodItem.trim()) {
-            setSelectedFoodItems([...selectedFoodItems, customFoodItem.trim()]);
-            setCustomFoodItem('');
+    // Compute Food Buddies (merged followers + following)
+    const foodBuddies = React.useMemo(() => {
+        if (!user) return [];
+        const buddyIds = [...new Set([...(user.followers || []), ...(user.following || [])])];
+        return buddyIds.map(id => {
+            const testUser = Object.values(TEST_USERS).find(u => u.user.id === id);
+            return testUser
+                ? { id: testUser.user.id, name: testUser.user.name, photoURL: testUser.user.photoURL }
+                : { id, name: id, photoURL: `https://i.pravatar.cc/150?u=${id}` };
+        });
+    }, [user]);
+
+    // Fetch food options when cuisines change (debounced)
+    useEffect(() => {
+        if (fetchTimeout.current) clearTimeout(fetchTimeout.current);
+        if (selectedCuisines.length === 0) {
+            setFoodOptions([]);
+            return;
+        }
+        fetchTimeout.current = setTimeout(async () => {
+            setFoodLoading(true);
+            try {
+                const resp = await fetch(`${API_URL}/api/food-options`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cuisine: selectedCuisines[0], location: area || 'Kochi' }),
+                });
+                const data = await resp.json();
+                if (Array.isArray(data)) setFoodOptions(data.slice(0, 30));
+            } catch (err) {
+                console.log('Food options fetch error:', err);
+            } finally {
+                setFoodLoading(false);
+            }
+        }, 500);
+        return () => { if (fetchTimeout.current) clearTimeout(fetchTimeout.current); };
+    }, [selectedCuisines]);
+
+    const toggleFoodSelection = (food: FoodOption) => {
+        if (selectedFoods.find(f => f.name === food.name)) {
+            setSelectedFoods(selectedFoods.filter(f => f.name !== food.name));
+        } else {
+            setSelectedFoods([...selectedFoods, food]);
         }
     };
 
-    const removeFoodItem = (item: string) => {
-        setSelectedFoodItems(selectedFoodItems.filter(i => i !== item));
+    const addCustomFood = () => {
+        const name = customFoodName.trim();
+        if (!name) return;
+        if (selectedFoods.find(f => f.name === name)) return;
+        setSelectedFoods([...selectedFoods, { name, imageUrl: '', priceRange: '', source: 'custom' }]);
+        setCustomFoodName('');
     };
 
-    const onDateChange = (date: Date) => {
-        setShowDatePicker(false);
-        setDateTime(date);
+    const removeFood = (name: string) => {
+        setSelectedFoods(selectedFoods.filter(f => f.name !== name));
+    };
+
+    const addCustomOther = () => {
+        const name = customOtherName.trim();
+        if (!name) return;
+        const value = `custom_${name.toLowerCase().replace(/\s+/g, '_')}`;
+        if (selectedOthers.includes(value)) return;
+        OTHER_OPTIONS.push({ label: `✨ ${name}`, value });
+        setSelectedOthers([...selectedOthers, value]);
+        setCustomOtherName('');
+    };
+
+    const removeOther = (val: string) => {
+        setSelectedOthers(selectedOthers.filter(o => o !== val));
+    };
+
+    const safeGoBack = () => {
+        if (navigation.canGoBack()) {
+            navigation.goBack();
+        } else {
+            navigation.navigate('Dashboard');
+        }
+    };
+
+    // Unlimited cuisine selection (no cap)
+    const toggleCuisine = (c: string) => {
+        if (selectedCuisines.includes(c)) {
+            setSelectedCuisines(selectedCuisines.filter((x) => x !== c));
+        } else {
+            setSelectedCuisines([...selectedCuisines, c]);
+        }
+    };
+
+    const toggleOther = (val: string) => {
+        if (selectedOthers.includes(val)) {
+            setSelectedOthers(selectedOthers.filter(o => o !== val));
+        } else {
+            setSelectedOthers([...selectedOthers, val]);
+        }
     };
 
     const handleUpdate = () => {
-        if (!title.trim()) { Alert.alert('Error', 'Please add a title'); return; }
-        if (selectedCuisines.length === 0) { Alert.alert('Error', 'Pick at least one cuisine'); return; }
-        if (!area.trim()) { Alert.alert('Error', 'Specify an area'); return; }
+        if (!title.trim()) { setAlertConfig({ visible: true, title: 'Missing Info', message: 'Please add a catchy title for your meal.', type: 'error' }); return; }
+        if (selectedCuisines.length === 0) { setAlertConfig({ visible: true, title: 'Cuisine Required', message: 'Pick at least one cuisine you\'d like to eat.', type: 'error' }); return; }
+        if (!area.trim()) { setAlertConfig({ visible: true, title: 'Location Needed', message: 'Specify an area or neighborhood.', type: 'error' }); return; }
 
-        if (!postToEdit) { Alert.alert('Error', 'Post not found'); return; }
-
+        if (!postToEdit) return;
         updatePost(postId, {
             title,
             cuisineTypes: selectedCuisines,
+            cuisineDescription,
             restaurantName: restaurant || undefined,
             area,
             minGroupSize: minSize,
             maxGroupSize: maxSize,
             dateTime: isImmediate ? new Date() : dateTime,
             isImmediate,
+            isUrgent,
             budgetRange: selectedBudget,
-            budgetMin: selectedBudget === 'custom' ? parseInt(minBudget) || 0 : undefined,
-            budgetMax: selectedBudget === 'custom' ? parseInt(maxBudget) || 0 : undefined,
-            foodItems: selectedFoodItems,
-            cuisineDescription,
+            budgetMin: selectedBudget === 'custom' ? parseInt(budgetMin) || 0 : undefined,
+            budgetMax: selectedBudget === 'custom' ? parseInt(budgetMax) || 0 : undefined,
+            description: `${description}\n\n${budgetDescription}`.trim(),
+            extras: selectedOthers,
             visibility,
-            description,
             autoApprove,
+            foodItems: selectedFoods.map(f => f.name),
+            selectedFoodOptions: selectedFoods,
         });
 
-        // Notify participants
+        // Notify participants of update
         postToEdit.participants?.forEach(p => {
             if (p.id !== user?.id) {
                 addNotification({
@@ -130,117 +287,220 @@ export default function EditPostScreen() {
                     body: `"${title}" has been updated by the host.`,
                     data: {
                         postId,
-                        prevTime: postToEdit.dateTime.toLocaleString(),
+                        prevTime: new Date(postToEdit.dateTime).toLocaleString(),
                         newTime: dateTime.toLocaleString()
                     }
                 });
             }
         });
 
-        Alert.alert('🎉 Post Updated!', 'Your participants have been notified of the changes.', [
-            { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+        showMessage({
+            message: "Success! 💾",
+            description: "You have updated your dining plan successfully.",
+            type: "success",
+            icon: "success",
+            duration: 3000,
+        });
+
+        navigation.goBack();
     };
 
-    const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-        <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{title}</Text>
-            {children}
-        </View>
-    );
-
     return (
-        <SafeAreaView style={styles.safeArea}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Ionicons name="close" size={24} color={Colors.textPrimary} />
+        <View style={[styles.container, { backgroundColor: Colors.background }]}>
+            <SafeAreaView style={[styles.customHeader, { borderBottomColor: Colors.border }]}>
+                <TouchableOpacity onPress={() => safeGoBack()} style={styles.backBtn}>
+                    <Ionicons name="close-outline" size={28} color={Colors.textPrimary} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Edit Dining Plan</Text>
-                <TouchableOpacity onPress={handleUpdate}>
-                    <LinearGradient colors={['#FF6B35', '#FF3CAC']} style={styles.postBtn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-                        <Text style={styles.postBtnText}>Save</Text>
-                    </LinearGradient>
-                </TouchableOpacity>
-            </View>
+                <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>Edit Dining Plan</Text>
+                <View style={{ width: 44 }} />
+            </SafeAreaView>
 
-            <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-
-                <Section title="📝 Title">
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                <Section title="The Basics" subtitle="Give your dining plan a catchy name" icon="bookmark-outline" colors={Colors} isDarkMode={isDarkMode}>
                     <TextInput
-                        style={styles.input}
-                        placeholder="e.g. Sushi Night at Nobu"
+                        style={[styles.input, { backgroundColor: inputBg, color: Colors.textPrimary, borderColor: glassBorder }]}
+                        placeholder="Catchy title (e.g. Best Ramen in Town)"
                         placeholderTextColor={Colors.textMuted}
                         value={title}
                         onChangeText={setTitle}
                     />
+                    {/* Urgent request toggle */}
+                    <View style={[styles.switchRow, { backgroundColor: inputBg, borderColor: glassBorder, marginTop: 16 }]}>
+                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Ionicons name="flash" size={18} color={isUrgent ? Colors.error : Colors.textMuted} />
+                            <View>
+                                <Text style={[styles.switchTitle, { color: Colors.textPrimary }]}>Urgent Request 🔴</Text>
+                                <Text style={[styles.switchSub, { color: Colors.textMuted }]}>Mark as high priority — looking right now</Text>
+                            </View>
+                        </View>
+                        <Switch
+                            value={isUrgent}
+                            onValueChange={(val) => {
+                                setIsUrgent(val);
+                                if (val) setIsImmediate(true);
+                            }}
+                            trackColor={{ false: '#767577', true: Colors.error }}
+                            thumbColor={Platform.OS === 'ios' ? '#FFF' : isUrgent ? Colors.error : '#f4f3f4'}
+                        />
+                    </View>
                 </Section>
 
-                <Section title="🍽️ Cuisine Types (pick up to 3)">
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <Section title="Cuisines & Cravings" subtitle="Select the cuisines you're craving right now" icon="restaurant-outline" colors={Colors} isDarkMode={isDarkMode}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
                         <View style={styles.chipRow}>
                             {CUISINE_TYPES.map((c) => (
                                 <TouchableOpacity
                                     key={c}
-                                    style={[styles.chip, selectedCuisines.includes(c) && styles.chipActive]}
+                                    style={[
+                                        styles.chip,
+                                        { borderColor: glassBorder, backgroundColor: inputBg },
+                                        selectedCuisines.includes(c) && { backgroundColor: Colors.primary, borderColor: Colors.primary }
+                                    ]}
                                     onPress={() => toggleCuisine(c)}
                                 >
-                                    <Text style={[styles.chipText, selectedCuisines.includes(c) && styles.chipTextActive]}>{c}</Text>
+                                    <Text style={[styles.chipText, { color: selectedCuisines.includes(c) ? '#FFF' : Colors.textSecondary }]}>{c}</Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
                     </ScrollView>
-
-                    {selectedCuisines.length > 0 && (
-                        <View style={{ marginTop: Spacing.md }}>
-                            <Text style={styles.subLabel}>🍕 Specific Foods (optional)</Text>
-                            <View style={styles.foodInputRow}>
-                                <TextInput
-                                    style={[styles.input, { flex: 1, height: 44 }]}
-                                    placeholder="e.g. Biryani, Sushi, Pizza"
-                                    placeholderTextColor={Colors.textMuted}
-                                    value={customFoodItem}
-                                    onChangeText={setCustomFoodItem}
-                                    onSubmitEditing={addFoodItem}
-                                />
-                                <TouchableOpacity style={styles.addFoodBtn} onPress={addFoodItem}>
-                                    <Ionicons name="add" size={24} color="#FFF" />
-                                </TouchableOpacity>
-                            </View>
-                            <View style={styles.chipRowWrap}>
-                                {selectedFoodItems.map((item) => (
-                                    <View key={item} style={styles.foodChip}>
-                                        <Text style={styles.foodChipText}>{item}</Text>
-                                        <TouchableOpacity onPress={() => removeFoodItem(item)}>
-                                            <Ionicons name="close-circle" size={16} color={Colors.textSecondary} />
-                                        </TouchableOpacity>
-                                    </View>
-                                ))}
-                            </View>
-
-                            <Text style={[styles.subLabel, { marginTop: Spacing.md }]}>💬 Cuisine Description</Text>
-                            <TextInput
-                                style={[styles.input, styles.cuisineDescInput]}
-                                placeholder="e.g. I would like to eat Biryani, but if you have other suggestions, we can try that."
-                                placeholderTextColor={Colors.textMuted}
-                                value={cuisineDescription}
-                                onChangeText={setCuisineDescription}
-                                multiline
-                            />
-                        </View>
-                    )}
+                    <TextInput
+                        style={[styles.textArea, { backgroundColor: inputBg, color: Colors.textPrimary, borderColor: glassBorder }]}
+                        placeholder="Add a craving description... (e.g. I prefer Biryani, but open to other suggestions.)"
+                        placeholderTextColor={Colors.textMuted}
+                        multiline
+                        numberOfLines={3}
+                        value={cuisineDescription}
+                        onChangeText={setCuisineDescription}
+                    />
                 </Section>
 
-                <Section title="📍 Location">
+                {/* Food Options Carousel */}
+                {selectedCuisines.length > 0 && (
+                    <Section title="Popular Dishes 🍽️" subtitle="Tap to select what you're craving — or add your own" icon="flame-outline" colors={Colors} isDarkMode={isDarkMode}>
+                        {/* Search bar */}
+                        {!foodLoading && foodOptions.length > 0 && (
+                            <View style={[styles.searchRow, { backgroundColor: inputBg, borderColor: glassBorder }]}>
+                                <Ionicons name="search" size={18} color={Colors.textMuted} />
+                                <TextInput
+                                    style={[styles.searchInput, { color: Colors.textPrimary }]}
+                                    placeholder="Search dishes..."
+                                    placeholderTextColor={Colors.textMuted}
+                                    value={foodSearch}
+                                    onChangeText={setFoodSearch}
+                                />
+                                {foodSearch.length > 0 && (
+                                    <TouchableOpacity onPress={() => setFoodSearch('')}>
+                                        <Ionicons name="close-circle" size={18} color={Colors.textMuted} />
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        )}
+
+                        {foodLoading ? (
+                            <View style={{ alignItems: 'center', paddingVertical: 30 }}>
+                                <ActivityIndicator size="large" color={Colors.primary} />
+                                <Text style={{ color: Colors.textMuted, marginTop: 10, fontSize: 13 }}>Finding popular dishes...</Text>
+                            </View>
+                        ) : foodOptions.length > 0 ? (
+                            <FlatList
+                                data={foodSearch.trim() ? foodOptions.filter(f => f.name.toLowerCase().includes(foodSearch.toLowerCase())) : foodOptions}
+                                extraData={foodSearch + selectedFoods.map(f => f.name).join(',')}
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                keyExtractor={(item, idx) => `${item.name}-${idx}`}
+                                contentContainerStyle={{ gap: 12, paddingRight: 8 }}
+                                ListEmptyComponent={
+                                    foodSearch.trim() ? (
+                                        <View style={{ paddingVertical: 20, paddingHorizontal: 16 }}>
+                                            <Text style={{ color: Colors.textMuted, fontSize: 13 }}>No dishes found for "{foodSearch}"</Text>
+                                        </View>
+                                    ) : null
+                                }
+                                renderItem={({ item }) => {
+                                    const isSelected = selectedFoods.some(f => f.name === item.name);
+                                    return (
+                                        <TouchableOpacity
+                                            onPress={() => toggleFoodSelection(item)}
+                                            activeOpacity={0.8}
+                                            style={[
+                                                styles.foodCard,
+                                                { backgroundColor: inputBg, borderColor: isSelected ? Colors.primary : Colors.border },
+                                                isSelected && { borderWidth: 2 }
+                                            ]}
+                                        >
+                                            {isSelected && (
+                                                <View style={[styles.foodCheckmark, { backgroundColor: Colors.primary }]}>
+                                                    <Ionicons name="checkmark" size={12} color="#FFF" />
+                                                </View>
+                                            )}
+                                            <Image
+                                                source={{ uri: item.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300' }}
+                                                style={styles.foodImage}
+                                            />
+                                            <View style={styles.foodInfo}>
+                                                <Text numberOfLines={2} style={[styles.foodName, { color: Colors.textPrimary }]}>{item.name}</Text>
+                                                {item.priceRange ? (
+                                                    <View style={[styles.priceBadge, { backgroundColor: Colors.primary + '15' }]}>
+                                                        <Text style={[styles.priceText, { color: Colors.primary }]}>{item.priceRange}</Text>
+                                                    </View>
+                                                ) : null}
+                                            </View>
+                                        </TouchableOpacity>
+                                    );
+                                }}
+                            />
+                        ) : null}
+
+                        {/* Custom food input */}
+                        <View style={[styles.customFoodRow, { marginTop: foodOptions.length > 0 ? 16 : 0 }]}>
+                            <TextInput
+                                style={[styles.input, { flex: 1, backgroundColor: inputBg, color: Colors.textPrimary, borderColor: glassBorder }]}
+                                placeholder="Add new dish"
+                                placeholderTextColor={Colors.textMuted}
+                                value={customFoodName}
+                                onChangeText={setCustomFoodName}
+                                onSubmitEditing={addCustomFood}
+                                returnKeyType="done"
+                            />
+                            <TouchableOpacity
+                                onPress={addCustomFood}
+                                style={[styles.addFoodBtn, { backgroundColor: Colors.primary }]}
+                            >
+                                <Ionicons name="add" size={22} color="#FFF" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Selected foods chips */}
+                        {selectedFoods.length > 0 && (
+                            <View style={{}}>
+                                <Text style={[styles.budgetGroupLabel, { color: Colors.textMuted }]}>Selected ({selectedFoods.length})</Text>
+                                <View style={styles.selectedFoodsWrap}>
+                                    {selectedFoods.map((f) => (
+                                        <View key={f.name} style={[styles.selectedFoodChip, { backgroundColor: Colors.primary + '15', borderColor: Colors.primary }]}>
+                                            <Text style={[styles.selectedFoodText, { color: Colors.primary }]} numberOfLines={1}>
+                                                🍽️ {f.name}
+                                            </Text>
+                                            <TouchableOpacity onPress={() => removeFood(f.name)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                                <Ionicons name="close-circle" size={18} color={Colors.primary} />
+                                            </TouchableOpacity>
+                                        </View>
+                                    ))}
+                                </View>
+                            </View>
+                        )}
+                    </Section>
+                )}
+
+                <Section title="Location" subtitle="Where do you want to dine?" icon="location-outline" colors={Colors} isDarkMode={isDarkMode}>
                     <TextInput
-                        style={styles.input}
-                        placeholder="Restaurant name (optional)"
+                        style={[styles.input, { backgroundColor: inputBg, color: Colors.textPrimary, borderColor: glassBorder }]}
+                        placeholder="Restaurant Name (optional)"
                         placeholderTextColor={Colors.textMuted}
                         value={restaurant}
                         onChangeText={setRestaurant}
                     />
                     <TextInput
-                        style={[styles.input, { marginTop: 8 }]}
+                        style={[styles.input, { marginTop: 12, backgroundColor: inputBg, color: Colors.textPrimary, borderColor: glassBorder }]}
                         placeholder="Neighborhood / Area *"
                         placeholderTextColor={Colors.textMuted}
                         value={area}
@@ -248,306 +508,277 @@ export default function EditPostScreen() {
                     />
                 </Section>
 
-                <Section title="👥 Group Size">
-                    <View style={styles.sizeRow}>
-                        <View style={styles.sizeControl}>
-                            <Text style={styles.sizeLabel}>Min</Text>
-                            <TouchableOpacity onPress={() => setMinSize(Math.max(2, minSize - 1))} style={styles.sizeBtn}>
-                                <Ionicons name="remove" size={18} color={Colors.textPrimary} />
-                            </TouchableOpacity>
-                            <Text style={styles.sizeValue}>{minSize}</Text>
-                            <TouchableOpacity onPress={() => setMinSize(Math.min(maxSize, minSize + 1))} style={styles.sizeBtn}>
-                                <Ionicons name="add" size={18} color={Colors.textPrimary} />
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.sizeDivider}>
-                            <Text style={styles.sizeLabel}>to</Text>
-                        </View>
-                        <View style={styles.sizeControl}>
-                            <Text style={styles.sizeLabel}>Max</Text>
-                            <TouchableOpacity onPress={() => setMaxSize(Math.max(minSize, maxSize - 1))} style={styles.sizeBtn}>
-                                <Ionicons name="remove" size={18} color={Colors.textPrimary} />
-                            </TouchableOpacity>
-                            <Text style={styles.sizeValue}>{maxSize}</Text>
-                            <TouchableOpacity onPress={() => setMaxSize(Math.min(20, maxSize + 1))} style={styles.sizeBtn}>
-                                <Ionicons name="add" size={18} color={Colors.textPrimary} />
-                            </TouchableOpacity>
-                        </View>
+                <Section title="Group & Timing" subtitle="Set your group size (2–6) and schedule" icon="people-outline" colors={Colors} isDarkMode={isDarkMode}>
+                    <View style={[styles.sizeRow, { alignItems: "stretch" }]}>
+                        <GlassCard effect="clear" colorScheme={isDarkMode ? 'dark' : 'light'} style={[styles.sizeBox, { backgroundColor: (Platform.OS === 'android' && !isDarkMode) ? '#FFFFFF' : 'transparent', borderColor: glassBorder, elevation: (Platform.OS === 'android' && !isDarkMode) ? 2 : 0 }]}>
+                            <Text style={[styles.sizeValue, { color: Colors.textPrimary }]}>{maxSize}</Text>
+                            <Text style={[styles.sizeLabel, { color: Colors.textMuted }]}>Group Max</Text>
+                            <View style={styles.sizeActions}>
+                                <TouchableOpacity onPress={() => setMaxSize(Math.max(2, maxSize - 1))} style={[styles.sizeBtn, { backgroundColor: iconBg }]}>
+                                    <Ionicons name="remove" size={16} color={Colors.textPrimary} />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => setMaxSize(Math.min(6, maxSize + 1))} style={[styles.sizeBtn, { backgroundColor: iconBg }]}>
+                                    <Ionicons name="add" size={16} color={Colors.textPrimary} />
+                                </TouchableOpacity>
+                            </View>
+                        </GlassCard>
+                        <GlassCard
+                            effect="clear"
+                            colorScheme={isDarkMode ? 'dark' : 'light'}
+                            style={[styles.timeBox, { backgroundColor: (Platform.OS === 'android' && !isDarkMode) ? '#FFFFFF' : 'transparent', borderColor: glassBorder, elevation: (Platform.OS === 'android' && !isDarkMode) ? 2 : 0 }]}
+                            onPress={() => setCustomPickerVisible(true)}
+                        >
+                            <Text style={[styles.sizeValue, { color: Colors.textPrimary, fontSize: 18 }]}>
+                                {isImmediate ? 'Now' : `${dateTime.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                            </Text>
+                            <Text style={[styles.sizeLabel, { color: Colors.textMuted }]}>Scheduled Date & Time</Text>
+                            <Ionicons name="calendar-outline" size={20} color={Colors.primary} style={{ marginTop: 8 }} />
+                        </GlassCard>
                     </View>
                 </Section>
 
-                <Section title="⏰ Timing">
-                    <View style={styles.switchRow}>
-                        <Text style={styles.switchLabel}>Now (Immediate)</Text>
-                        <Switch
-                            value={isImmediate}
-                            onValueChange={setIsImmediate}
-                            trackColor={{ false: Colors.border, true: Colors.primary }}
-                            thumbColor="#FFF"
-                        />
-                    </View>
-                    {!isImmediate && (
-                        <View>
-                            <TouchableOpacity style={styles.dateBtn} onPress={() => setShowDatePicker(true)}>
-                                <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
-                                <Text style={styles.dateBtnText}>
-                                    {dateTime.toLocaleDateString()}
-                                </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={[styles.dateBtn, { marginTop: 8 }]} onPress={() => setShowDatePicker(true)}>
-                                <Ionicons name="time-outline" size={18} color={Colors.primary} />
-                                <Text style={styles.dateBtnText}>
-                                    {dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </Text>
-                            </TouchableOpacity>
-
-                            {showDatePicker && (
-                                <CustomDateTimePicker
-                                    visible={showDatePicker}
-                                    initialDate={dateTime}
-                                    onClose={() => setShowDatePicker(false)}
-                                    onSave={onDateChange}
-                                />
-                            )}
+                <Section title="Budget & Preferences" subtitle="Set the budget range per person" icon="cash-outline" colors={Colors} isDarkMode={isDarkMode}>
+                    {/* Free button — separate */}
+                    <TouchableOpacity
+                        style={[
+                            styles.freeBtnContainer,
+                            { borderColor: glassBorder, backgroundColor: inputBg },
+                            selectedBudget === 'free' && { borderColor: Colors.success, backgroundColor: Colors.success + '15' }
+                        ]}
+                        onPress={() => setSelectedBudget('free')}
+                    >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Ionicons name="gift-outline" size={20} color={selectedBudget === 'free' ? Colors.success : Colors.textSecondary} />
+                            <Text style={[styles.budgetText, { fontSize: 15, color: selectedBudget === 'free' ? Colors.success : Colors.textPrimary }]}>
+                                Free — It's on me! 🎁
+                            </Text>
                         </View>
-                    )}
-                </Section>
+                        <Text style={[styles.freeSubtext, { color: selectedBudget === 'free' ? Colors.success : Colors.textMuted }]}>
+                            You pay for the entire experience
+                        </Text>
+                    </TouchableOpacity>
 
-                <Section title="💰 Budget Range">
-                    <View style={styles.budgetRow}>
-                        {BUDGET_RANGE_OPTIONS.map((opt) => (
+                    {/* Paid budget options */}
+                    <Text style={[styles.budgetGroupLabel, { color: Colors.textMuted }]}>Or set a budget per person</Text>
+                    <View style={styles.budgetGrid}>
+                        {PAID_BUDGET_OPTIONS.map((opt) => (
                             <TouchableOpacity
                                 key={opt.value}
-                                style={[styles.budgetBtn, selectedBudget === opt.value && styles.budgetBtnActive]}
+                                style={[
+                                    styles.budgetChip,
+                                    { borderColor: glassBorder, backgroundColor: inputBg },
+                                    selectedBudget === opt.value && { borderColor: Colors.primary, backgroundColor: Colors.primary + '10' }
+                                ]}
                                 onPress={() => setSelectedBudget(opt.value as any)}
                             >
-                                <Text style={[styles.budgetText, selectedBudget === opt.value && styles.budgetTextActive]}>
-                                    {opt.label}
+                                <Text style={[styles.budgetText, { color: selectedBudget === opt.value ? Colors.primary : Colors.textSecondary }]}>
+                                    ₹{opt.label}
                                 </Text>
                             </TouchableOpacity>
                         ))}
                     </View>
                     {selectedBudget === 'custom' && (
-                        <View style={styles.customBudgetContainer}>
-                            <View style={styles.customBudgetInputWrapper}>
-                                <Text style={styles.customBudgetLabel}>Min</Text>
-                                <TextInput
-                                    style={styles.customBudgetInput}
-                                    placeholder="0"
-                                    placeholderTextColor={Colors.textMuted}
-                                    keyboardType="numeric"
-                                    value={minBudget}
-                                    onChangeText={setMinBudget}
-                                />
-                            </View>
-                            <View style={styles.customBudgetDivider}>
-                                <Text style={styles.customBudgetText}>to</Text>
-                            </View>
-                            <View style={styles.customBudgetInputWrapper}>
-                                <Text style={styles.customBudgetLabel}>Max</Text>
-                                <TextInput
-                                    style={styles.customBudgetInput}
-                                    placeholder="5000"
-                                    placeholderTextColor={Colors.textMuted}
-                                    keyboardType="numeric"
-                                    value={maxBudget}
-                                    onChangeText={setMaxBudget}
-                                />
+                        <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                            <TextInput
+                                style={[styles.input, { flex: 1, backgroundColor: inputBg, color: Colors.textPrimary, borderColor: glassBorder }]}
+                                placeholder="₹ Min Price"
+                                placeholderTextColor={Colors.textMuted}
+                                keyboardType="numeric"
+                                value={budgetMin}
+                                onChangeText={setBudgetMin}
+                            />
+                            <TextInput
+                                style={[styles.input, { flex: 1, backgroundColor: inputBg, color: Colors.textPrimary, borderColor: glassBorder }]}
+                                placeholder="₹ Max Price"
+                                placeholderTextColor={Colors.textMuted}
+                                keyboardType="numeric"
+                                value={budgetMax}
+                                onChangeText={setBudgetMax}
+                            />
+                        </View>
+                    )}
+                    <TextInput
+                        style={[styles.textArea, { marginTop: 12, backgroundColor: inputBg, color: Colors.textPrimary, borderColor: glassBorder }]}
+                        placeholder="Add details... (e.g. Payment method, preferred people like 'food lovers and punctual people')"
+                        placeholderTextColor={Colors.textMuted}
+                        multiline
+                        numberOfLines={4}
+                        value={budgetDescription}
+                        onChangeText={setBudgetDescription}
+                    />
+                </Section>
+
+                <Section title="Others" subtitle="Extras you're offering — select all that apply" icon="sparkles-outline" colors={Colors} isDarkMode={isDarkMode}>
+                    <View style={styles.othersGrid}>
+                        {OTHER_OPTIONS.map((opt) => {
+                            const isSelected = selectedOthers.includes(opt.value);
+                            return (
+                                <TouchableOpacity
+                                    key={opt.value}
+                                    style={[
+                                        styles.otherChip,
+                                        { borderColor: glassBorder, backgroundColor: inputBg },
+                                        isSelected && { borderColor: Colors.secondary, backgroundColor: Colors.secondary + '15' }
+                                    ]}
+                                    onPress={() => toggleOther(opt.value)}
+                                >
+                                    <Text style={[styles.otherChipText, { color: isSelected ? Colors.secondary : Colors.textSecondary }]}>
+                                        {opt.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+
+                    {/* Custom other input */}
+                    <View style={[styles.customFoodRow, {}]}>
+                        <TextInput
+                            style={[styles.input, { flex: 1, backgroundColor: inputBg, color: Colors.textPrimary, borderColor: glassBorder }]}
+                            placeholder="Add a custom extra (e.g. Board games, Live music)"
+                            placeholderTextColor={Colors.textMuted}
+                            value={customOtherName}
+                            onChangeText={setCustomOtherName}
+                            onSubmitEditing={addCustomOther}
+                            returnKeyType="done"
+                        />
+                        <TouchableOpacity
+                            onPress={addCustomOther}
+                            style={[styles.addFoodBtn, { backgroundColor: Colors.secondary }]}
+                        >
+                            <Ionicons name="add" size={22} color="#FFF" />
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Selected others chips */}
+                    {selectedOthers.length > 0 && (
+                        <View style={{}}>
+                            <Text style={[styles.budgetGroupLabel, { color: Colors.textMuted }]}>Selected ({selectedOthers.length})</Text>
+                            <View style={styles.selectedFoodsWrap}>
+                                {selectedOthers.map((val) => {
+                                    const opt = OTHER_OPTIONS.find(o => o.value === val);
+                                    return (
+                                        <View key={val} style={[styles.selectedFoodChip, { backgroundColor: Colors.secondary + '15', borderColor: Colors.secondary }]}>
+                                            <Text style={[styles.selectedFoodText, { color: Colors.secondary }]} numberOfLines={1}>
+                                                {opt?.label || val}
+                                            </Text>
+                                            <TouchableOpacity onPress={() => removeOther(val)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                                <Ionicons name="close-circle" size={18} color={Colors.secondary} />
+                                            </TouchableOpacity>
+                                        </View>
+                                    );
+                                })}
                             </View>
                         </View>
                     )}
                 </Section>
 
-                <Section title="👁️ Visibility">
-                    <View style={styles.visibilityRow}>
-                        {VISIBILITIES.map((v) => (
-                            <TouchableOpacity
-                                key={v}
-                                style={[styles.visBtn, visibility === v && styles.visBtnActive]}
-                                onPress={() => setVisibility(v)}
-                            >
-                                <Ionicons
-                                    name={v === 'public' ? 'globe-outline' : v === 'friends' ? 'people-outline' : 'shield-checkmark-outline'}
-                                    size={16}
-                                    color={visibility === v ? '#FFF' : Colors.textMuted}
-                                />
-                                <Text style={[styles.visText, visibility === v && styles.visTextActive]}>
-                                    {v.charAt(0).toUpperCase() + v.slice(1)}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </Section>
 
-                <Section title="💬 Description">
-                    <TextInput
-                        style={[styles.input, styles.descInput]}
-                        placeholder="Tell people what to expect from this dining experience..."
-                        placeholderTextColor={Colors.textMuted}
-                        value={description}
-                        onChangeText={setDescription}
-                        multiline
-                        numberOfLines={4}
+
+                <View style={[styles.switchRow, { backgroundColor: (Platform.OS === 'android' && !isDarkMode) ? '#FFFFFF' : inputBg, borderColor: glassBorder, marginBottom: 20 }]}>
+                    <View style={{ flex: 1 }}>
+                        <Text style={[styles.switchTitle, { color: Colors.textPrimary }]}>Auto-Approve Requests</Text>
+                        <Text style={[styles.switchSub, { color: Colors.textMuted }]}>Instantly add anyone who requests to join</Text>
+                    </View>
+                    <Switch
+                        value={autoApprove}
+                        onValueChange={setAutoApprove}
+                        trackColor={{ false: '#767577', true: Colors.primary }}
+                        thumbColor={Platform.OS === 'ios' ? '#FFF' : autoApprove ? Colors.primary : '#f4f3f4'}
                     />
-                </Section>
+                </View>
+            </ScrollView >
 
-                <Section title="⚙️ Settings">
-                    <View style={styles.switchRow}>
-                        <View>
-                            <Text style={styles.switchLabel}>Auto-approve requests</Text>
-                            <Text style={styles.switchSub}>Skip manual review</Text>
-                        </View>
-                        <Switch
-                            value={autoApprove}
-                            onValueChange={setAutoApprove}
-                            trackColor={{ false: Colors.border, true: Colors.primary }}
-                            thumbColor="#FFF"
-                        />
-                    </View>
-                </Section>
-
-                {/* Create button at bottom */}
-                <TouchableOpacity onPress={handleUpdate} activeOpacity={0.85} style={styles.createBtnWrapper}>
-                    <LinearGradient colors={['#FF6B35', '#FF3CAC']} style={styles.createBtn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-                        <Text style={styles.createBtnText}>💾 Update Dining Plan</Text>
+            <BlurView intensity={isDarkMode ? 30 : 60} tint={isDarkMode ? 'dark' : 'light'} style={[styles.publishFooter, { borderTopWidth: 1, borderTopColor: glassBorder }]}>
+                <TouchableOpacity style={styles.publishBtn} onPress={handleUpdate}>
+                    <LinearGradient colors={Colors.gradientPrimary} style={styles.publishGradient}>
+                        <Text style={styles.publishText}>Save Changes</Text>
                     </LinearGradient>
                 </TouchableOpacity>
+            </BlurView>
 
-                <View style={{ height: 40 }} />
-            </ScrollView>
-        </SafeAreaView >
+            <CustomDateTimePicker
+                visible={customPickerVisible}
+                initialDate={dateTime}
+                onClose={() => setCustomPickerVisible(false)}
+                onSave={(date) => {
+                    setDateTime(date);
+                    setIsImmediate(false);
+                }}
+            />
+
+            <CustomAlert
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                type={alertConfig.type}
+                onClose={() => setAlertConfig({ ...alertConfig, visible: false })}
+                onConfirm={alertConfig.onConfirm}
+            />
+        </View >
     );
 }
 
-const getStyles = (Colors: any) => StyleSheet.create({
-    safeArea: { flex: 1, backgroundColor: Colors.background },
-    header: {
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md,
-        borderBottomWidth: 1, borderBottomColor: Colors.border,
-    },
-    headerTitle: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.textPrimary },
-    postBtn: { paddingVertical: 8, paddingHorizontal: 18, borderRadius: BorderRadius.full },
-    postBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: '#FFF' },
-    container: { padding: Spacing.xl, gap: 2 },
-    section: { marginBottom: Spacing.xl },
-    sectionTitle: { fontSize: FontSize.md, fontWeight: FontWeight.semibold, color: Colors.textPrimary, marginBottom: Spacing.sm },
-    input: {
-        backgroundColor: Colors.backgroundInput, borderRadius: BorderRadius.md,
-        borderWidth: 1, borderColor: Colors.border, paddingHorizontal: Spacing.md,
-        height: 52, fontSize: FontSize.md, color: Colors.textPrimary,
-    },
-    descInput: { height: 100, paddingTop: 14, textAlignVertical: 'top' },
-    chipRow: { flexDirection: 'row', gap: 8, paddingBottom: 4 },
-    chip: {
-        paddingVertical: 8, paddingHorizontal: 14, borderRadius: BorderRadius.full,
-        borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.backgroundCard,
-    },
-    chipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-    chipText: { fontSize: FontSize.sm, color: Colors.textSecondary },
-    chipTextActive: { color: '#FFF', fontWeight: FontWeight.semibold },
-    sizeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-    sizeControl: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Colors.backgroundCard, borderRadius: BorderRadius.md, padding: 10 },
-    sizeLabel: { fontSize: FontSize.xs, color: Colors.textMuted, flex: 1 },
-    sizeDivider: { alignItems: 'center' },
-    sizeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.backgroundElevated, justifyContent: 'center', alignItems: 'center' },
-    sizeValue: { fontSize: FontSize.xl, fontWeight: FontWeight.bold, color: Colors.textPrimary, minWidth: 28, textAlign: 'center' },
-    switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: Colors.backgroundCard, borderRadius: BorderRadius.md, padding: Spacing.md },
-    switchLabel: { fontSize: FontSize.md, color: Colors.textPrimary, fontWeight: FontWeight.medium },
-    switchSub: { fontSize: FontSize.xs, color: Colors.textMuted, marginTop: 2 },
-    dateBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, padding: Spacing.md, backgroundColor: Colors.backgroundCard, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed' },
-    dateBtnText: { fontSize: FontSize.md, color: Colors.primary },
-    budgetRow: { flexDirection: 'row', gap: 8 },
-    budgetBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: BorderRadius.md, backgroundColor: Colors.backgroundCard, borderWidth: 1, borderColor: Colors.border },
-    budgetBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-    budgetText: { fontSize: FontSize.xs, color: Colors.textMuted, textAlign: 'center' },
-    budgetTextActive: { color: '#FFF', fontWeight: FontWeight.bold },
-    visibilityRow: { flexDirection: 'row', gap: 8 },
-    visBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 10, borderRadius: BorderRadius.md, backgroundColor: Colors.backgroundCard, borderWidth: 1, borderColor: Colors.border },
-    visBtnActive: { backgroundColor: Colors.secondary, borderColor: Colors.secondary },
-    visText: { fontSize: FontSize.xs, color: Colors.textMuted, fontWeight: FontWeight.medium },
-    visTextActive: { color: '#FFF' },
-    createBtnWrapper: { marginTop: Spacing.md },
-    createBtn: { height: 56, borderRadius: BorderRadius.full, justifyContent: 'center', alignItems: 'center' },
-    createBtnText: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: '#FFF' },
-    customBudgetContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: Spacing.md,
-        gap: Spacing.md,
-    },
-    customBudgetInputWrapper: {
-        flex: 1,
-        gap: 4,
-    },
-    customBudgetLabel: {
-        fontSize: FontSize.xs,
-        color: Colors.textMuted,
-        marginLeft: 4,
-    },
-    customBudgetInput: {
-        backgroundColor: Colors.backgroundInput,
-        borderRadius: BorderRadius.md,
-        borderWidth: 1,
-        borderColor: Colors.border,
-        paddingHorizontal: Spacing.md,
-        height: 48,
-        fontSize: FontSize.md,
-        color: Colors.textPrimary,
-    },
-    customBudgetDivider: {
-        justifyContent: 'center',
-        paddingTop: 18,
-    },
-    customBudgetText: {
-        fontSize: FontSize.md,
-        color: Colors.textSecondary,
-    },
-    subLabel: {
-        fontSize: FontSize.xs,
-        fontWeight: FontWeight.semibold,
-        color: Colors.textSecondary,
-        marginBottom: 6,
-        marginLeft: 4,
-    },
-    cuisineDescInput: {
-        height: 80,
-        paddingTop: 10,
-        textAlignVertical: 'top',
-        fontSize: FontSize.sm,
-    },
-    foodInputRow: {
-        flexDirection: 'row',
-        gap: 8,
-        marginBottom: 8,
-    },
-    addFoodBtn: {
-        width: 44,
-        height: 44,
-        borderRadius: BorderRadius.md,
-        backgroundColor: Colors.secondary,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    chipRowWrap: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-    },
-    foodChip: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: BorderRadius.full,
-        backgroundColor: Colors.backgroundElevated,
-        borderWidth: 1,
-        borderColor: Colors.border,
-    },
-    foodChipText: {
-        fontSize: FontSize.xs,
-        color: Colors.textPrimary,
-        fontWeight: FontWeight.medium,
-    },
+const styles = StyleSheet.create({
+    container: { flex: 1 },
+    customHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1 },
+    headerTitle: { fontSize: 18, fontWeight: '800' },
+    backBtn: { padding: 4 },
+    scrollContent: { padding: 16, paddingBottom: 120 },
+    section: { marginBottom: 20, borderWidth: 1, elevation: 4 },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+    iconContainer: { width: 36, height: 36, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+    sectionContent: { gap: 12 },
+    sectionTitle: { fontSize: 17, fontWeight: '800' },
+    sectionSubtitle: { fontSize: 12, marginTop: 2, fontWeight: '500' },
+    input: { height: 54, borderRadius: 16, borderWidth: 1, paddingHorizontal: 16, fontSize: 15 },
+    textArea: { borderRadius: 16, borderWidth: 1, padding: 16, fontSize: 15, textAlignVertical: 'top', minHeight: 100 },
+    chipRow: { flexDirection: 'row', gap: 10 },
+    chip: { paddingVertical: 10, paddingHorizontal: 18, borderRadius: 12, borderWidth: 1 },
+    chipText: { fontSize: 14, fontWeight: '700' },
+    sizeRow: { flexDirection: 'row', gap: 16 },
+    sizeBox: { flex: 0.9, paddingVertical: 20, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'space-between' },
+    timeBox: { flex: 1.1, paddingVertical: 20, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
+    sizeValue: { fontSize: 24, fontWeight: '900' },
+    sizeLabel: { fontSize: 11, fontWeight: '700', marginTop: 2, textTransform: 'uppercase' },
+    sizeActions: { flexDirection: 'row', gap: 12, marginTop: 12 },
+    sizeBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+    // Budget
+    freeBtnContainer: { padding: 16, borderRadius: 16, borderWidth: 1.5, marginBottom: 16 },
+    freeSubtext: { fontSize: 11, fontWeight: '600', marginTop: 4, marginLeft: 28 },
+    budgetGroupLabel: { fontSize: 12, fontWeight: '700', marginBottom: 10, textTransform: 'uppercase' },
+    budgetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    budgetChip: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, minWidth: '30%', alignItems: 'center' },
+    budgetText: { fontSize: 13, fontWeight: '700' },
+    // Others
+    othersGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    otherChip: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1 },
+    otherChipText: { fontSize: 13, fontWeight: '700' },
+    // Publish
+    publishFooter: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, paddingBottom: 40, borderTopWidth: 1 },
+    publishBtn: { height: 56, borderRadius: 28, overflow: 'hidden' },
+    publishGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    publishText: { color: '#FFF', fontSize: 16, fontWeight: '900' },
+    switchRow: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, borderWidth: 1, gap: 12 },
+    switchTitle: { fontSize: 15, fontWeight: '800' },
+    switchSub: { fontSize: 12, marginTop: 2 },
+    // Food carousel
+    foodCard: { width: 140, borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
+    searchRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, borderRadius: 14, borderWidth: 1, height: 46, gap: 8, marginBottom: 14 },
+    searchInput: { flex: 1, fontSize: 14, height: 46 },
+    foodCheckmark: { position: 'absolute', top: 8, right: 8, zIndex: 10, width: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center' },
+    foodImage: { width: 140, height: 110, resizeMode: 'cover' },
+    foodInfo: { padding: 10, gap: 6 },
+    foodName: { fontSize: 13, fontWeight: '700', lineHeight: 17 },
+    priceBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+    priceText: { fontSize: 11, fontWeight: '800' },
+    customFoodRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    addFoodBtn: { width: 54, height: 54, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+    selectedFoodsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    selectedFoodChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1 },
+    selectedFoodText: { fontSize: 13, fontWeight: '600', maxWidth: 150 },
+    // Buddy invite
+    buddyChip: { alignItems: 'center', width: 80, paddingVertical: 12, borderRadius: 16, borderWidth: 1.5 },
+    buddyAvatar: { width: 44, height: 44, borderRadius: 22 },
+    buddyCheck: { position: 'absolute', top: 8, right: 12, width: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center' },
+    buddyName: { fontSize: 11, fontWeight: '700', marginTop: 6, textAlign: 'center', paddingHorizontal: 4 },
 });

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    Image, Dimensions
+    Image, Dimensions, TextInput
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -38,13 +38,16 @@ export default function PostDetailScreen() {
     const route = useRoute<any>();
     const { postId } = route.params;
     const { user } = useAuthStore();
-    const { posts, joinRequests, updatePost, deletePost, addJoinRequest, updateJoinRequest, leavePost } = usePostStore();
+    const { posts, joinRequests, invites, updatePost, deletePost, addJoinRequest, updateJoinRequest, updateInvite, removeInvite, leavePost } = usePostStore();
     const { addNotification } = useNotificationStore();
     const { createGroupChat, addGroupMember } = useChatStore();
     const { currentTheme } = useThemeStore();
     const { Colors, Spacing, FontSize, FontWeight, BorderRadius } = currentTheme;
 
     const [creatingGroup, setCreatingGroup] = useState(false);
+    const [inviteAction, setInviteAction] = useState<'accept' | 'reject' | null>(null);
+    const [inviteNote, setInviteNote] = useState('');
+    const [respondingInviteId, setRespondingInviteId] = useState<string | null>(null);
 
     const [alertConfig, setAlertConfig] = useState<{ visible: boolean; title: string; message: string; type?: 'success' | 'error' | 'info' | 'warning'; onConfirm?: () => void; confirmText?: string; cancelText?: string }>({ visible: false, title: '', message: '' });
     const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info', onConfirm?: () => void, confirmText = 'OK', cancelText?: string) =>
@@ -73,6 +76,8 @@ export default function PostDetailScreen() {
     const hasRejectedRequest = myRequest?.status === 'rejected';
 
     const postRequests = joinRequests.filter(r => r.postId === postId && r.status === 'pending');
+    const postInvites = invites.filter(i => i.postId === postId);
+    const myInvite = postInvites.find(i => i.inviteeId === user?.id);
 
     const hostParticipant = post.participants.find(p => p.id === post.hostId) || { name: 'Host', age: 25 };
     const participants = post.participants || [];
@@ -305,6 +310,39 @@ export default function PostDetailScreen() {
                         </View>
                     </View>
 
+                    {/* Join Request Status Banner */}
+                    {!isHost && myRequest && (
+                        <View style={[styles.card, {
+                            backgroundColor: myRequest.status === 'pending' ? Colors.warning + '12' : myRequest.status === 'accepted' ? Colors.success + '12' : Colors.error + '12',
+                            borderColor: myRequest.status === 'pending' ? Colors.warning : myRequest.status === 'accepted' ? Colors.success : Colors.error,
+                        }]}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                <View style={{
+                                    width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center',
+                                    backgroundColor: myRequest.status === 'pending' ? Colors.warning + '25' : myRequest.status === 'accepted' ? Colors.success + '25' : Colors.error + '25',
+                                }}>
+                                    <Ionicons
+                                        name={myRequest.status === 'pending' ? 'hourglass-outline' : myRequest.status === 'accepted' ? 'checkmark-circle' : 'close-circle'}
+                                        size={24}
+                                        color={myRequest.status === 'pending' ? Colors.warning : myRequest.status === 'accepted' ? Colors.success : Colors.error}
+                                    />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ fontSize: 15, fontWeight: '800', color: myRequest.status === 'pending' ? Colors.warning : myRequest.status === 'accepted' ? Colors.success : Colors.error }}>
+                                        {myRequest.status === 'pending' ? 'Request Pending' : myRequest.status === 'accepted' ? 'Request Accepted!' : 'Request Declined'}
+                                    </Text>
+                                    <Text style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 2 }}>
+                                        {myRequest.status === 'pending'
+                                            ? 'Waiting for the host to review your request.'
+                                            : myRequest.status === 'accepted'
+                                                ? 'You have been approved to join this meal!'
+                                                : 'The host did not accept your request this time.'}
+                                    </Text>
+                                </View>
+                            </View>
+                        </View>
+                    )}
+
                     {/* Join Requests for Host */}
                     {isHost && postRequests.length > 0 && (
                         <View style={styles.section}>
@@ -340,6 +378,174 @@ export default function PostDetailScreen() {
                                         </View>
                                     </View>
                                 ))}
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Invite Status for Invitee */}
+                    {!isHost && myInvite && (
+                        <View style={[styles.card, {
+                            backgroundColor: myInvite.status === 'pending' ? Colors.primary + '08' : myInvite.status === 'accepted' ? Colors.success + '12' : Colors.error + '12',
+                            borderColor: myInvite.status === 'pending' ? Colors.primary : myInvite.status === 'accepted' ? Colors.success : Colors.error,
+                        }]}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: myInvite.status === 'pending' && !respondingInviteId ? 14 : 0 }}>
+                                <View style={{
+                                    width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center',
+                                    backgroundColor: myInvite.status === 'pending' ? Colors.primary + '20' : myInvite.status === 'accepted' ? Colors.success + '25' : Colors.error + '25',
+                                }}>
+                                    <Ionicons
+                                        name={myInvite.status === 'pending' ? 'mail-outline' : myInvite.status === 'accepted' ? 'checkmark-circle' : 'close-circle'}
+                                        size={24}
+                                        color={myInvite.status === 'pending' ? Colors.primary : myInvite.status === 'accepted' ? Colors.success : Colors.error}
+                                    />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ fontSize: 16, fontWeight: '800', color: myInvite.status === 'pending' ? Colors.primary : myInvite.status === 'accepted' ? Colors.success : Colors.error }}>
+                                        {myInvite.status === 'pending' ? "You're Invited!" : myInvite.status === 'accepted' ? 'Invite Accepted' : 'Invite Declined'}
+                                    </Text>
+                                    <Text style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 2 }}>
+                                        {myInvite.status === 'pending'
+                                            ? 'The host personally invited you to this meal.'
+                                            : myInvite.status === 'accepted'
+                                                ? 'You accepted this invite and joined the meal!'
+                                                : 'You declined this invite.'}
+                                    </Text>
+                                </View>
+                            </View>
+
+                            {/* Accept / Reject buttons */}
+                            {myInvite.status === 'pending' && !respondingInviteId && (
+                                <View style={{ flexDirection: 'row', gap: 12 }}>
+                                    <TouchableOpacity
+                                        style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.success, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 6 }}
+                                        onPress={() => { setInviteAction('accept'); setRespondingInviteId(myInvite.id); }}
+                                    >
+                                        <Ionicons name="checkmark" size={18} color="#FFF" />
+                                        <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 14 }}>Accept</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.error + '15', borderWidth: 1.5, borderColor: Colors.error, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 6 }}
+                                        onPress={() => { setInviteAction('reject'); setRespondingInviteId(myInvite.id); }}
+                                    >
+                                        <Ionicons name="close" size={18} color={Colors.error} />
+                                        <Text style={{ color: Colors.error, fontWeight: '800', fontSize: 14 }}>Decline</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+
+                            {/* Note input after choosing Accept/Reject */}
+                            {respondingInviteId === myInvite.id && inviteAction && (
+                                <View style={{ marginTop: 14, backgroundColor: Colors.backgroundCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: Colors.border }}>
+                                    <Text style={{ fontSize: 14, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8 }}>
+                                        {inviteAction === 'accept' ? 'Accept Invite' : 'Decline Invite'}
+                                    </Text>
+                                    <TextInput
+                                        style={{ backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, padding: 12, color: Colors.textPrimary, fontSize: 14, minHeight: 60, textAlignVertical: 'top' }}
+                                        placeholder="Add a note (optional)..."
+                                        placeholderTextColor={Colors.textMuted}
+                                        multiline
+                                        value={inviteNote}
+                                        onChangeText={setInviteNote}
+                                    />
+                                    <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+                                        <TouchableOpacity
+                                            style={{ flex: 1, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: Colors.border }}
+                                            onPress={() => { setRespondingInviteId(null); setInviteAction(null); setInviteNote(''); }}
+                                        >
+                                            <Text style={{ color: Colors.textMuted, fontWeight: '700' }}>Cancel</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={{ flex: 2, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 10, backgroundColor: inviteAction === 'accept' ? Colors.success : Colors.error }}
+                                            onPress={() => {
+                                                const chosenAction = inviteAction;
+                                                const status = chosenAction === 'accept' ? 'accepted' : 'rejected';
+                                                updateInvite(myInvite.id, status, inviteNote || undefined);
+                                                addNotification({
+                                                    userId: myInvite.inviterId,
+                                                    type: chosenAction === 'accept' ? 'invite_accepted' : 'invite_rejected',
+                                                    title: chosenAction === 'accept' ? 'Invite Accepted!' : 'Invite Declined',
+                                                    body: (user?.name || 'Someone') + (chosenAction === 'accept' ? ' accepted' : ' declined') + ' your invite to "' + post.title + '"' + (inviteNote ? ' — "' + inviteNote + '"' : ''),
+                                                    data: { postId: post.id },
+                                                });
+                                                if (chosenAction === 'accept') {
+                                                    addGroupMember('group_' + post.id, user?.id || '');
+                                                }
+                                                setRespondingInviteId(null);
+                                                setInviteAction(null);
+                                                setInviteNote('');
+                                                showAlert(
+                                                    chosenAction === 'accept' ? 'Joined!' : 'Declined',
+                                                    chosenAction === 'accept' ? 'You have accepted the invite and joined this meal.' : 'You have declined this invite.',
+                                                    chosenAction === 'accept' ? 'success' : 'info'
+                                                );
+                                            }}
+                                        >
+                                            <Text style={{ color: '#FFF', fontWeight: '800' }}>
+                                                {inviteAction === 'accept' ? 'Confirm Accept' : 'Confirm Decline'}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            )}
+                        </View>
+                    )}
+
+                    {/* Invited Buddies — Host View */}
+                    {isHost && postInvites.length > 0 && (
+                        <View style={styles.section}>
+                            <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Invited Buddies ({postInvites.length})</Text>
+                            <View style={styles.requestList}>
+                                {postInvites.map((inv) => {
+                                    const statusColor = inv.status === 'pending' ? Colors.warning : inv.status === 'accepted' ? Colors.success : Colors.error;
+                                    const statusIcon = inv.status === 'pending' ? 'hourglass-outline' : inv.status === 'accepted' ? 'checkmark-circle' : 'close-circle';
+                                    return (
+                                        <View key={inv.id} style={[styles.requestItem, { backgroundColor: Colors.backgroundElevated, borderColor: Colors.border }]}>
+                                            <TouchableOpacity
+                                                style={styles.requesterInfo}
+                                                onPress={() => navigation.navigate('UserProfile' as any, { userId: inv.inviteeId })}
+                                            >
+                                                {inv.inviteePhotoURL ? (
+                                                    <Image source={{ uri: inv.inviteePhotoURL }} style={{ width: 36, height: 36, borderRadius: 18 }} />
+                                                ) : (
+                                                    <View style={[styles.rAvatar, { backgroundColor: Colors.backgroundCard }]}>
+                                                        <Text style={{ fontSize: 14 }}>👤</Text>
+                                                    </View>
+                                                )}
+                                                <View style={{ flex: 1 }}>
+                                                    <Text style={[styles.rName, { color: Colors.textPrimary }]}>{inv.inviteeName}</Text>
+                                                    {inv.note && (
+                                                        <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }} numberOfLines={1}>Note: {inv.note}</Text>
+                                                    )}
+                                                </View>
+                                            </TouchableOpacity>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: statusColor + '15' }}>
+                                                    <Ionicons name={statusIcon} size={14} color={statusColor} />
+                                                    <Text style={{ fontSize: 11, fontWeight: '800', color: statusColor, textTransform: 'capitalize' }}>{inv.status}</Text>
+                                                </View>
+                                                {inv.status === 'pending' && (
+                                                    <TouchableOpacity
+                                                        style={[styles.actionIcon, { backgroundColor: Colors.error + '15' }]}
+                                                        onPress={() => {
+                                                            showAlert('Uninvite', 'Remove this invite?', 'warning', () => {
+                                                                removeInvite(inv.id);
+                                                                addNotification({
+                                                                    userId: inv.inviteeId,
+                                                                    type: 'system',
+                                                                    title: 'Invite Withdrawn',
+                                                                    body: 'The host withdrew your invite to "' + post.title + '"',
+                                                                    data: { postId: post.id },
+                                                                });
+                                                            }, 'Uninvite', 'Cancel');
+                                                        }}
+                                                    >
+                                                        <Ionicons name="person-remove-outline" size={16} color={Colors.error} />
+                                                    </TouchableOpacity>
+                                                )}
+                                            </View>
+                                        </View>
+                                    );
+                                })}
                             </View>
                         </View>
                     )}

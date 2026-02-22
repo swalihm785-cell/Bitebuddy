@@ -25,6 +25,9 @@ const TYPE_CONFIG: Record<string, { icon: string; color: string; emoji: string }
     follow_request: { icon: 'person-outline', color: '#3CA5FF', emoji: '👤' },
     follow_accepted: { icon: 'people-outline', color: '#22C55E', emoji: '🤝' },
     new_meal: { icon: 'restaurant-outline', color: '#FF6B35', emoji: '🍽️' },
+    invite_received: { icon: 'mail-outline', color: '#6C63FF', emoji: '📨' },
+    invite_accepted: { icon: 'checkmark-circle-outline', color: '#22C55E', emoji: '✅' },
+    invite_rejected: { icon: 'close-circle-outline', color: '#EF4444', emoji: '❌' },
     report: { icon: 'flag-outline', color: '#EF4444', emoji: '🚩' },
     welcome: { icon: 'heart-outline', color: '#FF3CAC', emoji: '👋' },
     system: { icon: 'information-circle-outline', color: '#6C63FF', emoji: 'ℹ️' },
@@ -59,7 +62,10 @@ export default function NotificationsScreen() {
                 case 'request_accepted':
                 case 'request_rejected':
                 case 'participant_left':
-                case 'new_meal': {
+                case 'new_meal':
+                case 'invite_received':
+                case 'invite_accepted':
+                case 'invite_rejected': {
                     if (!postId) { setFallbackAlert(true); return; }
                     const postExists = posts.find(p => p.id === postId);
                     if (!postExists) { setFallbackAlert(true); return; }
@@ -137,7 +143,7 @@ export default function NotificationsScreen() {
     };
 
     const getActionBtnText = (type: string) => {
-        if (['join_request', 'request_accepted', 'request_rejected', 'participant_left', 'new_meal'].includes(type)) return 'View Post';
+        if (['join_request', 'request_accepted', 'request_rejected', 'participant_left', 'new_meal', 'invite_received', 'invite_accepted', 'invite_rejected'].includes(type)) return 'View Post';
         if (type === 'new_message') return 'View Chat';
         if (['follow_request', 'follow_accepted', 'review'].includes(type)) return 'View Profile';
         return null;

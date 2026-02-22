@@ -24,6 +24,9 @@ const NOTIF_CONFIG: Record<string, { icon: string; color: string }> = {
     follow_request: { icon: 'person-outline', color: '#FF3CAC' },
     follow_accepted: { icon: 'people-outline', color: '#2ECC71' },
     new_meal: { icon: 'restaurant-outline', color: '#FF6B35' },
+    invite_received: { icon: 'mail-outline', color: '#6C63FF' },
+    invite_accepted: { icon: 'checkmark-circle-outline', color: '#2ECC71' },
+    invite_rejected: { icon: 'close-circle-outline', color: '#E74C3C' },
     report: { icon: 'flag-outline', color: '#E74C3C' },
     welcome: { icon: 'hand-left-outline', color: '#FF6B35' },
     system: { icon: 'information-circle-outline', color: '#3CA5FF' },
@@ -61,7 +64,7 @@ export default function NotificationsScreen() {
         // Route based on notification type and available data
         const { type, data } = notif;
 
-        if ((type === 'join_request' || type === 'request_accepted' || type === 'request_rejected' || type === 'participant_left' || type === 'new_meal') && data?.postId) {
+        if ((type === 'join_request' || type === 'request_accepted' || type === 'request_rejected' || type === 'participant_left' || type === 'new_meal' || type === 'invite_received' || type === 'invite_accepted' || type === 'invite_rejected') && data?.postId) {
             navigation.navigate('PostDetail', { postId: data.postId });
         } else if ((type === 'follow_request' || type === 'follow_accepted') && data?.userId) {
             navigation.navigate('UserProfile', { userId: data.userId });

@@ -90,9 +90,18 @@ export default function ProfileScreen() {
                     <View style={[styles.statsRow, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border, marginTop: 20 }]}>
                         <StatCard value={myPosts.length} label="Plans" />
                         <View style={[styles.vDivider, { backgroundColor: Colors.border }]} />
-                        <StatCard value={user?.followersCount || 0} label="Followers" />
-                        <View style={[styles.vDivider, { backgroundColor: Colors.border }]} />
-                        <StatCard value={user?.followingCount || 0} label="Following" />
+                        <StatCard
+                            value={new Set([...(user?.followers || []), ...(user?.following || [])]).size}
+                            label="Food Buddies"
+                            onPress={() => {
+                                const buddyIds = [...new Set([...(user?.followers || []), ...(user?.following || [])])];
+                                const buddyUsers = buddyIds.map(id => {
+                                    const testUser = Object.values(require('../../data/testUsers').TEST_USERS).find((u: any) => u.user.id === id) as any;
+                                    return testUser ? { id: testUser.user.id, name: testUser.user.name, bio: testUser.user.bio || '', photoURL: testUser.user.photoURL } : { id, name: id, bio: '', photoURL: `https://i.pravatar.cc/150?u=${id}` };
+                                });
+                                navigation.navigate('FollowList' as any, { title: 'Food Buddies 🍕', users: buddyUsers });
+                            }}
+                        />
                     </View>
                 </View>
 
