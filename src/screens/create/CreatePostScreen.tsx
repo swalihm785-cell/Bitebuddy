@@ -104,6 +104,9 @@ export default function CreatePostScreen() {
     const fetchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
     const foodCuisineMap = useRef<Map<string, string>>(new Map()); // food name -> cuisine
 
+    // Client-side dish cache: cuisine -> FoodOption[]
+    const foodCacheRef = useRef<Map<string, FoodOption[]>>(new Map());
+
     // Expanded cuisine for nested dishes
     const [expandedCuisine, setExpandedCuisine] = useState<string | null>(null);
 
@@ -130,13 +133,21 @@ export default function CreatePostScreen() {
         });
     }, [user]);
 
-    // Fetch food options when expanded cuisine changes (debounced)
+    // Fetch food options when expanded cuisine changes — uses client cache
     useEffect(() => {
         if (fetchTimeout.current) clearTimeout(fetchTimeout.current);
         if (!expandedCuisine) {
             setFoodOptions([]);
             return;
         }
+        // Serve from cache instantly if available
+        const cached = foodCacheRef.current.get(expandedCuisine);
+        if (cached) {
+            setFoodOptions(cached);
+            setFoodLoading(false);
+            return;
+        }
+        // Otherwise fetch with short debounce
         fetchTimeout.current = setTimeout(async () => {
             setFoodLoading(true);
             try {
@@ -146,15 +157,48 @@ export default function CreatePostScreen() {
                     body: JSON.stringify({ cuisine: expandedCuisine, location: area || 'Kochi' }),
                 });
                 const data = await resp.json();
-                if (Array.isArray(data)) setFoodOptions(data.slice(0, 30));
+                if (Array.isArray(data)) {
+                    foodCacheRef.current.set(expandedCuisine, data.slice(0, 30));
+                    setFoodOptions(data.slice(0, 30));
+                }
             } catch (err) {
                 console.log('Food options fetch error:', err);
             } finally {
                 setFoodLoading(false);
             }
-        }, 500);
+        }, 150);
         return () => { if (fetchTimeout.current) clearTimeout(fetchTimeout.current); };
     }, [expandedCuisine]);
+
+    // Batch-prefetch dishes for all selected cuisines that aren't cached yet
+    useEffect(() => {
+        const uncached = selectedCuisines.filter(c => !foodCacheRef.current.has(c));
+        if (uncached.length === 0) return;
+        (async () => {
+            try {
+                const resp = await fetch(`${API_URL}/api/food-options/batch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cuisines: uncached, location: area || 'Kochi' }),
+                });
+                const data = await resp.json();
+                if (data && typeof data === 'object') {
+                    Object.entries(data).forEach(([cuisine, items]) => {
+                        if (Array.isArray(items)) {
+                            foodCacheRef.current.set(cuisine, (items as FoodOption[]).slice(0, 30));
+                        }
+                    });
+                    // If the currently expanded cuisine was just prefetched, update display
+                    if (expandedCuisine && data[expandedCuisine]) {
+                        setFoodOptions((data[expandedCuisine] as FoodOption[]).slice(0, 30));
+                        setFoodLoading(false);
+                    }
+                }
+            } catch (err) {
+                console.log('Batch prefetch error:', err);
+            }
+        })();
+    }, [selectedCuisines.join(',')]);
 
     // Google Places autocomplete
     const fetchPlaceSuggestions = (text: string) => {
@@ -234,11 +278,15 @@ export default function CreatePostScreen() {
         }
     };
 
-    // Unlimited cuisine selection (no cap) — also manages expanded cuisine
+    // Tap cuisine chip: toggles select/deselect. Selecting also expands dishes.
     const toggleCuisine = (c: string) => {
         if (selectedCuisines.includes(c)) {
             setSelectedCuisines(selectedCuisines.filter((x) => x !== c));
-            if (expandedCuisine === c) setExpandedCuisine(null);
+            if (expandedCuisine === c) {
+                // Switch to next available cuisine or null
+                const remaining = selectedCuisines.filter(x => x !== c);
+                setExpandedCuisine(remaining.length > 0 ? remaining[remaining.length - 1] : null);
+            }
             // Remove selected foods from this cuisine
             setSelectedFoods(prev => prev.filter(f => foodCuisineMap.current.get(f.name) !== c));
             // Clean up the map entries
@@ -251,13 +299,9 @@ export default function CreatePostScreen() {
         }
     };
 
-    // Tap already-selected cuisine chip to toggle expand/collapse its dishes
-    const handleCuisineChipPress = (c: string) => {
-        if (selectedCuisines.includes(c)) {
-            setExpandedCuisine(expandedCuisine === c ? null : c);
-        } else {
-            toggleCuisine(c);
-        }
+    // Tap cuisine tab in the secondary row: expand/collapse dishes (does not deselect)
+    const handleCuisineTabPress = (c: string) => {
+        setExpandedCuisine(expandedCuisine === c ? null : c);
     };
 
     const toggleOther = (val: string) => {
@@ -272,6 +316,9 @@ export default function CreatePostScreen() {
         if (!title.trim()) { setAlertConfig({ visible: true, title: 'Missing Info', message: 'Please add a catchy title for your meal.', type: 'error' }); return; }
         if (selectedCuisines.length === 0) { setAlertConfig({ visible: true, title: 'Cuisine Required', message: 'Pick at least one cuisine you\'d like to eat.', type: 'error' }); return; }
         if (!area.trim()) { setAlertConfig({ visible: true, title: 'Location Needed', message: 'Specify an area or neighborhood.', type: 'error' }); return; }
+
+        // Capture title before reset for use in modal and notifications
+        const postTitle = title;
 
         const newPost: any = {
             id: Math.random().toString(36).substr(2, 9),
@@ -313,6 +360,8 @@ export default function CreatePostScreen() {
         // Reset all form fields
         setTitle('');
         setSelectedCuisines([]);
+        setCuisineDescription('');
+        setRestaurant('');
         setArea('');
         setMinSize(2);
         setMaxSize(4);
@@ -334,9 +383,14 @@ export default function CreatePostScreen() {
         setCustomOtherName('');
         setInvitedBuddies([]);
         setBuddySearch('');
+        setExpandedCuisine(null);
+        setPlaceSuggestions([]);
+        setShowPlaceSuggestions(false);
+        foodCuisineMap.current.clear();
+        foodCacheRef.current.clear();
 
         // Show success modal instead of flash message
-        setSuccessModal({ visible: true, postId: newPost.id, title });
+        setSuccessModal({ visible: true, postId: newPost.id, title: postTitle });
 
         // Create invites for selected buddies
         if (invitedBuddies.length > 0) {
@@ -357,7 +411,7 @@ export default function CreatePostScreen() {
                     userId: buddyId,
                     type: 'invite_received',
                     title: 'You are Invited!',
-                    body: (user?.name || 'A Food Buddy') + ' invited you to "' + title + '"',
+                    body: (user?.name || 'A Food Buddy') + ' invited you to "' + postTitle + '"',
                     data: { postId: newPost.id },
                 });
             });
@@ -371,7 +425,7 @@ export default function CreatePostScreen() {
                 userId: buddyId,
                 type: 'new_meal',
                 title: 'New Dining Plan!',
-                body: (user?.name || 'Someone') + ' just posted "' + title + '"',
+                body: (user?.name || 'Someone') + ' just posted "' + postTitle + '"',
                 data: { postId: newPost.id },
             });
         });
@@ -398,7 +452,7 @@ export default function CreatePostScreen() {
                     />
                 </Section>
 
-                <Section title="Cuisines & Dishes" subtitle="Pick cuisines, then tap to explore dishes" icon="restaurant-outline" colors={Colors} isDarkMode={isDarkMode}>
+                <Section title="Cuisines & Dishes" subtitle="Tap to select/deselect cuisines" icon="restaurant-outline" colors={Colors} isDarkMode={isDarkMode}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
                         <View style={styles.chipRow}>
                             {CUISINE_TYPES.map((c) => {
@@ -413,12 +467,7 @@ export default function CreatePostScreen() {
                                             isSelected && { backgroundColor: Colors.primary, borderColor: Colors.primary },
                                             isExpanded && { borderWidth: 2 }
                                         ]}
-                                        onPress={() => handleCuisineChipPress(c)}
-                                        onLongPress={() => {
-                                            if (isSelected) {
-                                                toggleCuisine(c);
-                                            }
-                                        }}
+                                        onPress={() => toggleCuisine(c)}
                                     >
                                         <Text style={[styles.chipText, { color: isSelected ? '#FFF' : Colors.textSecondary }]}>
                                             {c}
@@ -439,7 +488,7 @@ export default function CreatePostScreen() {
                                         return (
                                             <TouchableOpacity
                                                 key={c}
-                                                onPress={() => setExpandedCuisine(isActive ? null : c)}
+                                                onPress={() => handleCuisineTabPress(c)}
                                                 style={[styles.cuisineTab, {
                                                     backgroundColor: isActive ? Colors.primary : inputBg,
                                                     borderColor: isActive ? Colors.primary : glassBorder,
