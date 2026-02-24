@@ -22,115 +22,149 @@ interface PostState {
 const hoursFromNow = (h: number) => new Date(Date.now() + h * 3600000);
 const daysFromNow = (d: number) => new Date(Date.now() + d * 86400000);
 
-const MOCK_POSTS: DiningPost[] = [
+const SEED_POSTS: DiningPost[] = [
     {
-        id: 'post_1',
+        id: 'plan_kozhikode_1',
         hostId: 'swalih',
-        title: 'Cozy Italian Night 🍝',
-        cuisineTypes: ['Italian'],
-        restaurantName: 'La Bella Roma',
-        restaurantAddress: 'MG Road, Bangalore',
-        area: 'MG Road',
-        city: 'Bangalore',
+        title: 'Legendary Malabar Biryani 🍛',
+        cuisineTypes: ['Indian', 'Malabar'],
+        area: 'Beach Road',
+        city: 'Kozhikode',
+        restaurantName: 'Paragon Restaurant',
+        location: { latitude: 11.2622, longitude: 75.7735 },
         minGroupSize: 2,
-        maxGroupSize: 4,
+        maxGroupSize: 6,
         currentParticipants: 1,
-        dateTime: daysFromNow(1),
+        dateTime: daysFromNow(10),
         isImmediate: false,
         budgetRange: 'range2',
         visibility: 'public',
         status: 'open',
-        description: 'Looking for Italian food lovers! Let\'s share a homely Italian dinner and exchange stories over pasta and wine.',
+        description: 'Experience the world-famous Malabar Biryani at the iconic Paragon. A must-try for every foodie!',
         autoApprove: false,
-        expiresAt: daysFromNow(2),
+        expiresAt: daysFromNow(11),
         createdAt: new Date(),
-        participants: [
-            { id: 'swalih', name: 'Swalih', age: 24, gender: 'Male' }
-        ]
+        imageURL: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=80',
+        participants: [{ id: 'swalih', name: 'Swalih', age: 24, gender: 'Male' }]
     },
     {
-        id: 'post_2',
+        id: 'plan_kochi_1',
         hostId: 'roshan',
-        title: 'Biryani & Chai Meetup 🍛',
-        cuisineTypes: ['Indian'],
-        restaurantName: 'Paradise Biryani',
-        restaurantAddress: 'Koramangala, Bangalore',
-        area: 'Koramangala',
-        city: 'Bangalore',
-        minGroupSize: 3,
-        maxGroupSize: 6,
-        currentParticipants: 1,
-        dateTime: daysFromNow(2),
-        isImmediate: false,
-        budgetRange: 'range1',
-        visibility: 'public',
-        status: 'open',
-        description: 'Big fans of biryani? Let\'s get together for an authentic hyderabadi biryani experience. Chai included!',
-        autoApprove: true,
-        expiresAt: daysFromNow(3),
-        createdAt: new Date(),
-        participants: [
-            { id: 'roshan', name: 'Roshan', age: 26, gender: 'Male' }
-        ]
-    },
-    {
-        id: 'post_3',
-        hostId: 'viknesh',
-        title: 'Vegan Power Lunch 🥗',
-        cuisineTypes: ['Vegan'],
-        restaurantName: 'The Green House',
-        restaurantAddress: 'Indiranagar, Bangalore',
-        area: 'Indiranagar',
-        city: 'Bangalore',
+        title: 'LuLu Mall Food Adventure 🍔',
+        cuisineTypes: ['American', 'Fast Food'],
+        area: 'Edappally',
+        city: 'Kochi',
+        restaurantName: 'LuLu Mall Food Court',
+        location: { latitude: 10.0270, longitude: 76.3080 },
         minGroupSize: 2,
-        maxGroupSize: 5,
-        currentParticipants: 1,
-        dateTime: daysFromNow(7),
+        maxGroupSize: 4,
+        currentParticipants: 2,
+        dateTime: daysFromNow(12),
         isImmediate: false,
-        budgetRange: 'range1',
+        budgetRange: 'range2',
         visibility: 'public',
         status: 'open',
-        description: 'Calling all plant-based food enthusiasts! Let\'s have a healthy vegan lunch and talk about sustainable living.',
+        description: 'Exploring the massive food court at LuLu. Burgers, pizzas, and more!',
         autoApprove: true,
-        expiresAt: daysFromNow(8),
+        expiresAt: daysFromNow(13),
         createdAt: new Date(),
+        imageURL: 'https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?auto=format&fit=crop&w=800&q=80',
         participants: [
+            { id: 'roshan', name: 'Roshan', age: 26, gender: 'Male' },
             { id: 'viknesh', name: 'Viknesh', age: 23, gender: 'Male' }
         ]
     },
     {
-        id: 'post_4',
-        hostId: 'don',
-        title: 'Sushi & Sake Evening 🍣',
-        cuisineTypes: ['Japanese'],
-        restaurantName: 'Hashi Sushi Bar',
-        restaurantAddress: 'Whitefield, Bangalore',
-        area: 'Whitefield',
-        city: 'Bangalore',
+        id: 'plan_tvm_1',
+        hostId: 'viknesh',
+        title: 'Vazhuthacaud Traditional Lunch 🍱',
+        cuisineTypes: ['Kerala', 'Indian'],
+        area: 'Vazhuthacaud',
+        city: 'Trivandrum',
+        restaurantName: 'Azad Hotel',
+        location: { latitude: 8.4997, longitude: 76.9575 },
         minGroupSize: 2,
-        maxGroupSize: 4,
+        maxGroupSize: 3,
         currentParticipants: 1,
-        dateTime: daysFromNow(10),
+        dateTime: daysFromNow(14),
         isImmediate: false,
-        budgetRange: 'range3',
+        budgetRange: 'range2',
         visibility: 'public',
         status: 'open',
-        description: 'Love Japanese cuisine? Let\'s explore the best sushi platter in town. A curated tasting menu with optional sake pairing.',
+        description: 'Authentic Trivandrum style lunch with traditional curries.',
         autoApprove: false,
-        expiresAt: daysFromNow(11),
+        expiresAt: daysFromNow(15),
         createdAt: new Date(),
-        participants: [
-            { id: 'don', name: 'Don', age: 25, gender: 'Male' }
-        ]
+        imageURL: 'https://images.unsplash.com/photo-1516714435131-44d6b64dc6a2?auto=format&fit=crop&w=800&q=80',
+        participants: [{ id: 'viknesh', name: 'Viknesh', age: 23, gender: 'Male' }]
+    },
+    {
+        id: 'plan_blr_1',
+        hostId: 'don',
+        title: 'MTR 1924 South Indian Classics 🥘',
+        cuisineTypes: ['Indian', 'South Indian'],
+        area: 'Lalbagh',
+        city: 'Bangalore',
+        restaurantName: 'MTR 1924',
+        location: { latitude: 12.9550, longitude: 77.5855 },
+        minGroupSize: 2,
+        maxGroupSize: 8,
+        currentParticipants: 1,
+        dateTime: daysFromNow(15),
+        isImmediate: false,
+        budgetRange: 'range2',
+        visibility: 'public',
+        status: 'open',
+        description: 'Famous Rava Idli and Filter Coffee at the legendary MTR.',
+        autoApprove: true,
+        expiresAt: daysFromNow(16),
+        createdAt: new Date(),
+        imageURL: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=800&q=80',
+        participants: [{ id: 'don', name: 'Don', age: 25, gender: 'Male' }]
     }
 ];
+
+const SEED_JOIN_REQUESTS: JoinRequest[] = [
+    {
+        id: 'req_1',
+        postId: 'plan_kozhikode_1',
+        requesterId: 'roshan',
+        status: 'pending',
+        message: 'Would love to join for the Biryani!',
+        createdAt: new Date(),
+        requester: { id: 'roshan', name: 'Roshan', age: 26, gender: 'Male' } as any
+    },
+    {
+        id: 'req_2',
+        postId: 'plan_tvm_1',
+        requesterId: 'don',
+        status: 'rejected',
+        message: 'Hi, I will be in TVM that day.',
+        createdAt: new Date(),
+        requester: { id: 'don', name: 'Don', age: 25, gender: 'Male' } as any
+    }
+];
+
+const SEED_INVITES: Invite[] = [
+    {
+        id: 'inv_1',
+        postId: 'plan_kozhikode_1',
+        inviterId: 'swalih',
+        inviteeId: 'don',
+        inviteeName: 'Don',
+        status: 'pending',
+        note: 'Hey Don, join us for Biryani!',
+        createdAt: new Date()
+    }
+];
+
 
 export const usePostStore = create<PostState>()(
     persist(
         (set) => ({
-            posts: MOCK_POSTS,
-            joinRequests: [],
-            invites: [],
+            posts: SEED_POSTS,
+            joinRequests: SEED_JOIN_REQUESTS,
+            invites: SEED_INVITES,
             addPost: (post) => set((state) => ({ posts: [post, ...state.posts] })),
             updatePost: (id, updates) => set((state) => ({
                 posts: state.posts.map((p) => p.id === id ? { ...p, ...updates } : p)
@@ -224,7 +258,7 @@ export const usePostStore = create<PostState>()(
             })),
         }),
         {
-            name: 'bite-buddy-posts-v2',  // Changed key to force reset of old data
+            name: 'bite-buddy-posts-v3',  // Incremented to v3 to reset all data
             storage: createJSONStorage(() => ({
                 getItem: async (name) => {
                     const str = await AsyncStorage.getItem(name);

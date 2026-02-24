@@ -140,13 +140,32 @@ export interface Chat {
 
 export interface Review {
     id: string;
-    postId: string;
+    postId?: string; // Optional if it's a general restaurant review not tied to a dining plan
     reviewerId: string;
-    revieweeId: string;
-    isPunctual: number; // 1-5
-    isFriendly: number; // 1-5
-    foodCompatibility: number; // 1-5
+    revieweeId?: string; // Optional if it's a restaurant review
+    restaurantName?: string;
+    rating: number; // 1-5
+    reviewText?: string;
+    mediaUri?: string;
+    likes: string[]; // user ids
+    commentsCount: number;
+    isPunctual?: number; // 1-5 (for user reviews)
+    isFriendly?: number; // 1-5 (for user reviews)
+    foodCompatibility?: number; // 1-5 (for user reviews)
     written?: string;
+    createdAt: Date;
+}
+
+export interface SocialPost {
+    id: string;
+    userId: string;
+    content: string;
+    mediaUri?: string;
+    mediaType?: 'image' | 'video';
+    location?: string;
+    cuisine?: string;
+    likes: string[]; // user ids
+    commentsCount: number;
     createdAt: Date;
 }
 
@@ -189,6 +208,7 @@ export type RootStackParamList = {
     OTP: { phoneNumber: string };
     ProfileSetup: undefined;
     Main: undefined;
+    Profile: undefined;
     PostDetail: { postId: string };
     ChatDetail: { chatId: string; chatName: string; isGroup?: boolean };
     EditProfile: undefined;
@@ -202,12 +222,17 @@ export type RootStackParamList = {
     SnapDetails: { snapId: string };
     FollowList: undefined;
     BlockedUsers: undefined;
+    Offers: undefined;
+    CreateGeneralPost: undefined;
+    CreateReview: undefined;
+    CreateMenu: undefined;
+    Community: undefined;
 };
 
 export type MainTabParamList = {
     Dashboard: undefined;
+    Community: undefined;
     Create: undefined;
     Messages: undefined;
     Snap: undefined;
-    Profile: undefined;
 };

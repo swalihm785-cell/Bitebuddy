@@ -39,7 +39,7 @@ const formatTime = (date?: Date) => {
 
 export default function ChatListScreen() {
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-    const { currentTheme } = useThemeStore();
+    const { currentTheme, isDarkMode } = useThemeStore();
     const { Colors, FontSize, FontWeight, Spacing } = currentTheme;
     const { user } = useAuthStore();
     const { conversations, sendChatRequest, acceptRequest, blockConversation, deleteRequest, markRead } = useChatStore();
@@ -209,18 +209,43 @@ export default function ChatListScreen() {
     );
 
     return (
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: Colors.background }]}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: Colors.background }]} edges={['top']}>
             {/* Header */}
-            <View style={[styles.header, { paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderBottomColor: Colors.border }]}>
-                <View>
-                    <Text style={[styles.headerTitle, { fontSize: FontSize.xxl, fontWeight: FontWeight.extrabold, color: Colors.textPrimary }]}>
-                        Messages
-                    </Text>
-                    {pendingIncoming.length > 0 && (
-                        <Text style={{ fontSize: FontSize.xs, color: Colors.warning, fontWeight: '600', marginTop: 2 }}>
-                            {pendingIncoming.length} pending request{pendingIncoming.length > 1 ? 's' : ''}
+            <View style={[styles.header, { backgroundColor: isDarkMode ? Colors.background : '#FFFFFF', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderBottomColor: Colors.border, borderBottomWidth: 1 }]}>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <TouchableOpacity
+                        style={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: 24,
+                            borderWidth: 2,
+                            borderColor: Colors.primary,
+                            backgroundColor: Colors.backgroundCard,
+                            padding: 2,
+                            overflow: 'hidden',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                        }}
+                        onPress={() => navigation.navigate('Profile')}
+                    >
+                        <Ionicons name="person" size={24} color={Colors.textMuted} />
+                        {user?.photoURL && (
+                            <Image
+                                source={{ uri: user.photoURL }}
+                                style={{ position: 'absolute', width: 44, height: 44, borderRadius: 22 }}
+                            />
+                        )}
+                    </TouchableOpacity>
+                    <View style={{ justifyContent: 'center' }}>
+                        <Text style={[styles.headerTitle, { fontSize: FontSize.xxl, fontWeight: FontWeight.extrabold, color: Colors.textPrimary, lineHeight: 32 }]}>
+                            Messages
                         </Text>
-                    )}
+                        {pendingIncoming.length > 0 && (
+                            <Text style={{ fontSize: FontSize.xs, color: Colors.warning, fontWeight: '600', marginTop: 0 }}>
+                                {pendingIncoming.length} pending request{pendingIncoming.length > 1 ? 's' : ''}
+                            </Text>
+                        )}
+                    </View>
                 </View>
                 <TouchableOpacity
                     style={[styles.newChatBtn, { backgroundColor: Colors.primary }]}

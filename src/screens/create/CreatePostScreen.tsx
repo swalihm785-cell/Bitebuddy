@@ -2,14 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
     TextInput, Switch, Platform, Image, FlatList, ActivityIndicator,
-    Modal, Share, Clipboard, Linking
+    Modal, Share, Clipboard, Linking, Dimensions
 } from 'react-native';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { CUISINE_TYPES, BUDGET_LABELS, BUDGET_RANGE_OPTIONS } from '../../theme/theme';
+import * as ImagePicker from 'expo-image-picker';
 import { usePostStore } from '../../store/usePostStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useThemeStore } from '../../store/useThemeStore';
@@ -17,6 +19,7 @@ import { useNotificationStore } from '../../store/useNotificationStore';
 import { CustomAlert } from '../../components/common/CustomAlert';
 import { CustomDateTimePicker } from '../../components/common/CustomDateTimePicker';
 import { showMessage } from 'react-native-flash-message';
+import { PostSuccessModal } from '../../components/common/PostSuccessModal';
 import { GlassCard, GlassButton } from '../../theme/LiquidGlassTheme';
 import { API_URL } from '../../store/useChatStore';
 import { FoodOption } from '../../types';
@@ -34,11 +37,11 @@ let OTHER_OPTIONS = [
 
 const PAID_BUDGET_OPTIONS = BUDGET_RANGE_OPTIONS.filter(o => o.value !== 'free');
 
-const Section = ({ title, subtitle, children, icon, colors, isDarkMode }: { title: string, subtitle?: string, children: React.ReactNode, icon?: string, colors: any, isDarkMode?: boolean }) => (
+const Section = ({ title, subtitle, children, icon, colors, isDarkMode, style }: { title: string, subtitle?: string, children: React.ReactNode, icon?: string, colors: any, isDarkMode?: boolean, style?: any }) => (
     <GlassCard
         effect="regular"
         colorScheme={isDarkMode ? 'dark' : 'light'}
-        style={[styles.section, { borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', shadowOpacity: isDarkMode ? 0.2 : 0.05, backgroundColor: (Platform.OS === 'android' && !isDarkMode) ? '#FFFFFF' : undefined }]}
+        style={[styles.section, { borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', shadowOpacity: isDarkMode ? 0.2 : 0.05, backgroundColor: (Platform.OS === 'android' && !isDarkMode) ? '#FFFFFF' : undefined }, style]}
     >
         <View style={styles.sectionHeader}>
             {icon && (
@@ -86,6 +89,7 @@ export default function CreatePostScreen() {
     const [dateTime, setDateTime] = useState(new Date());
     const [autoApprove, setAutoApprove] = useState(false);
     const [selectedOthers, setSelectedOthers] = useState<string[]>([]);
+    const [imageURL, setImageURL] = useState<string | null>(null);
 
     const [customPickerVisible, setCustomPickerVisible] = useState(false);
     const [alertConfig, setAlertConfig] = useState<{ visible: boolean, title: string, message: string, type: 'error' | 'success', onConfirm?: () => void }>({
@@ -98,6 +102,13 @@ export default function CreatePostScreen() {
     const [selectedFoods, setSelectedFoods] = useState<FoodOption[]>([]);
     const [customFoodName, setCustomFoodName] = useState('');
     const [foodSearch, setFoodSearch] = useState('');
+
+    // Google Maps integration states
+    const [selectedLocation, setSelectedLocation] = useState<{ latitude: number, longitude: number } | null>(null);
+    const [mapModalVisible, setMapModalVisible] = useState(false);
+    const [tempLocation, setTempLocation] = useState<{ latitude: number, longitude: number } | null>(null);
+
+    // Friend list for invite
     const [customOtherName, setCustomOtherName] = useState('');
     const [invitedBuddies, setInvitedBuddies] = useState<string[]>([]);
     const [buddySearch, setBuddySearch] = useState('');
@@ -111,15 +122,12 @@ export default function CreatePostScreen() {
     const [expandedCuisine, setExpandedCuisine] = useState<string | null>(null);
 
     // Google Places autocomplete state
-    const [placeSuggestions, setPlaceSuggestions] = useState<{ description: string, place_id: string }[]>([]);
+    const [placeSuggestions, setPlaceSuggestions] = useState<{ description: string, place_id: string, lat?: string, lon?: string }[]>([]);
     const [showPlaceSuggestions, setShowPlaceSuggestions] = useState(false);
+    const [placesError, setPlacesError] = useState<string | null>(null);
     const placesTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const GOOGLE_PLACES_API_KEY = 'YOUR_GOOGLE_PLACES_API_KEY'; // TODO: Replace with actual key
 
-    // Success modal state
-    const [successModal, setSuccessModal] = useState<{ visible: boolean, postId: string, title: string }>({
-        visible: false, postId: '', title: ''
-    });
+    const [publishedPost, setPublishedPost] = useState<any | null>(null);
 
     // Compute Food Buddies (merged followers + following)
     const foodBuddies = React.useMemo(() => {
@@ -211,27 +219,95 @@ export default function CreatePostScreen() {
         }
         placesTimeout.current = setTimeout(async () => {
             try {
+                // Using OpenStreetMap Nominatim API (Free, requires User-Agent)
                 const response = await fetch(
-                    `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&types=geocode|establishment&key=${GOOGLE_PLACES_API_KEY}`
+                    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&limit=5&addressdetails=1`,
+                    {
+                        headers: {
+                            'User-Agent': 'BiteBuddyApp/1.0',
+                        }
+                    }
                 );
                 const data = await response.json();
-                if (data.predictions) {
-                    setPlaceSuggestions(data.predictions.map((p: any) => ({
-                        description: p.description,
-                        place_id: p.place_id
+                if (Array.isArray(data)) {
+                    setPlaceSuggestions(data.map((p: any) => ({
+                        description: p.display_name,
+                        place_id: p.place_id.toString(),
+                        lat: p.lat,
+                        lon: p.lon
                     })));
                     setShowPlaceSuggestions(true);
+                    setPlacesError(null);
                 }
             } catch (err) {
-                console.log('Places API error:', err);
+                console.log('OSM Places error:', err);
+                setPlacesError('Could not fetch suggestions');
             }
-        }, 400);
+        }, 500);
     };
 
-    const selectPlace = (description: string) => {
-        setArea(description);
+    const selectPlace = (description: string, place_id: string) => {
+        const suggestion = placeSuggestions.find(p => p.place_id === place_id);
+        const nameOnly = description.split(',')[0];
+        setArea(nameOnly || description);
         setShowPlaceSuggestions(false);
         setPlaceSuggestions([]);
+
+        if (suggestion && suggestion.lat && suggestion.lon) {
+            const loc = {
+                latitude: parseFloat(suggestion.lat),
+                longitude: parseFloat(suggestion.lon)
+            };
+            setSelectedLocation(loc);
+            setTempLocation(loc);
+        }
+    };
+
+    const pickImage = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            setAlertConfig({
+                visible: true,
+                title: 'Permission Required',
+                message: 'We need access to your gallery to upload a featured image.',
+                type: 'error'
+            });
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [16, 9],
+            quality: 0.8,
+        });
+
+        if (!result.canceled) {
+            setImageURL(result.assets[0].uri);
+        }
+    };
+
+    const reverseGeocode = async (lat: number, lon: number) => {
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+                {
+                    headers: {
+                        'User-Agent': 'BiteBuddyApp/1.0',
+                    }
+                }
+            );
+            const data = await response.json();
+            if (data && data.display_name) {
+                // Return a shortened version if possible (e.g., just the first few parts of the address)
+                const parts = data.display_name.split(',');
+                const shortAddress = parts.slice(0, 3).join(',');
+                setArea(shortAddress || data.display_name);
+            }
+        } catch (err) {
+            console.log('Reverse Geocode error:', err);
+            setArea("Selected via Map");
+        }
     };
 
     const toggleFoodSelection = (food: FoodOption) => {
@@ -313,9 +389,27 @@ export default function CreatePostScreen() {
     };
 
     const handlePublish = () => {
-        if (!title.trim()) { setAlertConfig({ visible: true, title: 'Missing Info', message: 'Please add a catchy title for your meal.', type: 'error' }); return; }
+        if (!title.trim()) {
+            setAlertConfig({ visible: true, title: 'Missing Title', message: 'Please give your dining plan a title.', type: 'error' });
+            return;
+        }
+
+        if (!imageURL) {
+            setAlertConfig({ visible: true, title: 'Image Required', message: 'Every dining post needs a featured image to showcase the experience.', type: 'error' });
+            return;
+        }
+
         if (selectedCuisines.length === 0) { setAlertConfig({ visible: true, title: 'Cuisine Required', message: 'Pick at least one cuisine you\'d like to eat.', type: 'error' }); return; }
-        if (!area.trim()) { setAlertConfig({ visible: true, title: 'Location Needed', message: 'Specify an area or neighborhood.', type: 'error' }); return; }
+
+        if (!selectedLocation) {
+            setAlertConfig({ visible: true, title: 'Location Required', message: 'Please search for a location or pick one on the map.', type: 'error' });
+            return;
+        }
+
+        if (!area.trim()) {
+            setAlertConfig({ visible: true, title: 'Location Needed', message: 'Please select a valid area or neighborhood from the suggestions.', type: 'error' });
+            return;
+        }
 
         // Capture title before reset for use in modal and notifications
         const postTitle = title;
@@ -328,6 +422,7 @@ export default function CreatePostScreen() {
             cuisineDescription,
             restaurantName: restaurant || undefined,
             area,
+            location: selectedLocation,
             city: 'New York',
             minGroupSize: minSize,
             maxGroupSize: maxSize,
@@ -351,6 +446,7 @@ export default function CreatePostScreen() {
             autoApprove,
             foodItems: selectedFoods.map(f => f.name),
             selectedFoodOptions: selectedFoods,
+            imageURL: imageURL || undefined,
             expiresAt: new Date(Date.now() + 86400000).toISOString(),
             createdAt: new Date().toISOString(),
         };
@@ -379,18 +475,17 @@ export default function CreatePostScreen() {
         setFoodOptions([]);
         setSelectedFoods([]);
         setCustomFoodName('');
-        setFoodSearch('');
-        setCustomOtherName('');
-        setInvitedBuddies([]);
         setBuddySearch('');
         setExpandedCuisine(null);
         setPlaceSuggestions([]);
         setShowPlaceSuggestions(false);
+        setSelectedLocation(null);
+        setImageURL(null);
         foodCuisineMap.current.clear();
         foodCacheRef.current.clear();
 
-        // Show success modal instead of flash message
-        setSuccessModal({ visible: true, postId: newPost.id, title: postTitle });
+        // Show success modal
+        setPublishedPost(newPost);
 
         // Create invites for selected buddies
         if (invitedBuddies.length > 0) {
@@ -433,7 +528,7 @@ export default function CreatePostScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: Colors.background }]}>
-            <SafeAreaView style={[styles.customHeader, { borderBottomColor: Colors.border }]}>
+            <SafeAreaView edges={['top']} style={[styles.customHeader, { borderBottomColor: Colors.border }]}>
                 <TouchableOpacity onPress={() => safeGoBack()} style={styles.backBtn}>
                     <Ionicons name="close-outline" size={28} color={Colors.textPrimary} />
                 </TouchableOpacity>
@@ -441,7 +536,11 @@ export default function CreatePostScreen() {
                 <View style={{ width: 44 }} />
             </SafeAreaView>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+            >
                 <Section title="Name Your Feast" subtitle="Give your dining plan a catchy name" icon="bookmark-outline" colors={Colors} isDarkMode={isDarkMode}>
                     <TextInput
                         style={[styles.input, { backgroundColor: inputBg, color: Colors.textPrimary, borderColor: glassBorder }]}
@@ -450,6 +549,22 @@ export default function CreatePostScreen() {
                         value={title}
                         onChangeText={setTitle}
                     />
+                </Section>
+
+                <Section title="Featured Image" subtitle="A meal is better when seen" icon="image-outline" colors={Colors} isDarkMode={isDarkMode}>
+                    {imageURL ? (
+                        <View style={styles.imagePreviewContainer}>
+                            <Image source={{ uri: imageURL }} style={styles.imagePreview} />
+                            <TouchableOpacity style={styles.removeImageBtn} onPress={() => setImageURL(null)}>
+                                <Ionicons name="close-circle" size={24} color="#FFF" />
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <TouchableOpacity style={[styles.imagePickerBtn, { backgroundColor: inputBg, borderColor: glassBorder }]} onPress={pickImage}>
+                            <Ionicons name="camera-outline" size={32} color={Colors.primary} />
+                            <Text style={[styles.imagePickerText, { color: Colors.textSecondary }]}>Add a featured image</Text>
+                        </TouchableOpacity>
+                    )}
                 </Section>
 
                 <Section title="Cuisines & Dishes" subtitle="Tap to select/deselect cuisines" icon="restaurant-outline" colors={Colors} isDarkMode={isDarkMode}>
@@ -638,7 +753,14 @@ export default function CreatePostScreen() {
                     />
                 </Section>
 
-                <Section title="Venue" subtitle="Where do you want to dine?" icon="location-outline" colors={Colors} isDarkMode={isDarkMode}>
+                <Section
+                    title="Venue"
+                    subtitle="Where do you want to dine?"
+                    icon="location-outline"
+                    colors={Colors}
+                    isDarkMode={isDarkMode}
+                    style={{ zIndex: 1000, overflow: 'visible' }}
+                >
                     <TextInput
                         style={[styles.input, { backgroundColor: inputBg, color: Colors.textPrimary, borderColor: glassBorder }]}
                         placeholder="Restaurant Name (optional)"
@@ -646,25 +768,41 @@ export default function CreatePostScreen() {
                         value={restaurant}
                         onChangeText={setRestaurant}
                     />
-                    <View style={{ position: 'relative', zIndex: 10 }}>
-                        <TextInput
-                            style={[styles.input, { marginTop: 12, backgroundColor: inputBg, color: Colors.textPrimary, borderColor: glassBorder }]}
-                            placeholder="Neighborhood / Area *"
-                            placeholderTextColor={Colors.textMuted}
-                            value={area}
-                            onChangeText={fetchPlaceSuggestions}
-                            onFocus={() => { if (placeSuggestions.length > 0) setShowPlaceSuggestions(true); }}
-                            onBlur={() => setTimeout(() => setShowPlaceSuggestions(false), 200)}
-                        />
+
+                    <View style={{ marginTop: 12, zIndex: 1001 }}>
+                        <View style={[styles.searchRow, { backgroundColor: inputBg, borderColor: glassBorder, marginBottom: 0 }]}>
+                            <Ionicons name="search-outline" size={20} color={Colors.textMuted} />
+                            <TextInput
+                                style={[styles.searchInput, { color: Colors.textPrimary }]}
+                                placeholder="Search Location / Address *"
+                                placeholderTextColor={Colors.textMuted}
+                                value={area}
+                                onChangeText={fetchPlaceSuggestions}
+                                onFocus={() => { if (placeSuggestions.length > 0) setShowPlaceSuggestions(true); }}
+                                onBlur={() => setTimeout(() => setShowPlaceSuggestions(false), 500)}
+                            />
+                            {area.length > 0 && (
+                                <TouchableOpacity onPress={() => {
+                                    setArea('');
+                                    setPlaceSuggestions([]);
+                                    setPlacesError(null);
+                                    setSelectedLocation(null);
+                                    setTempLocation(null);
+                                }}>
+                                    <Ionicons name="close-circle" size={18} color={Colors.textMuted} />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+
                         {showPlaceSuggestions && placeSuggestions.length > 0 && (
                             <View style={[styles.suggestionsDropdown, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
                                 {placeSuggestions.map((place) => (
                                     <TouchableOpacity
                                         key={place.place_id}
                                         style={[styles.suggestionItem, { borderBottomColor: Colors.border }]}
-                                        onPress={() => selectPlace(place.description)}
+                                        onPress={() => selectPlace(place.description, place.place_id)}
                                     >
-                                        <Ionicons name="location-outline" size={16} color={Colors.textMuted} />
+                                        <Ionicons name="location-outline" size={18} color={Colors.primary} />
                                         <Text style={[styles.suggestionText, { color: Colors.textPrimary }]} numberOfLines={2}>
                                             {place.description}
                                         </Text>
@@ -673,6 +811,52 @@ export default function CreatePostScreen() {
                             </View>
                         )}
                     </View>
+
+                    {!selectedLocation && (
+                        <TouchableOpacity
+                            style={[styles.pickOnMapBtn, { borderColor: Colors.primary + '40' }]}
+                            onPress={() => {
+                                if (!selectedLocation) {
+                                    setTempLocation({ latitude: 12.9716, longitude: 77.5946 }); // Default to a city center if none selected
+                                }
+                                setMapModalVisible(true);
+                            }}
+                        >
+                            <Ionicons name="map-outline" size={18} color={Colors.primary} />
+                            <Text style={[styles.pickOnMapText, { color: Colors.primary }]}>Pick on Map</Text>
+                        </TouchableOpacity>
+                    )}
+
+                    {/* Integrated Map Preview */}
+                    {selectedLocation && (
+                        <View style={[styles.mapPreviewContainer, { borderColor: glassBorder, backgroundColor: inputBg }]}>
+                            <MapView
+                                style={styles.mapPreview}
+                                provider={PROVIDER_GOOGLE}
+                                initialRegion={{
+                                    latitude: selectedLocation.latitude,
+                                    longitude: selectedLocation.longitude,
+                                    latitudeDelta: 0.05,
+                                    longitudeDelta: 0.05,
+                                }}
+                                scrollEnabled={false}
+                                zoomEnabled={false}
+                                pitchEnabled={false}
+                                rotateEnabled={false}
+                                onPress={() => setMapModalVisible(true)}
+                            >
+                                <Marker coordinate={selectedLocation}>
+                                    <View style={styles.markerBadge}>
+                                        <Ionicons name="restaurant" size={12} color="#FFF" />
+                                    </View>
+                                </Marker>
+                            </MapView>
+                            <TouchableOpacity style={[styles.mapAdjustBtn, { backgroundColor: Colors.primary }]} onPress={() => setMapModalVisible(true)}>
+                                <Ionicons name="expand-outline" size={14} color="#FFF" />
+                                <Text style={styles.mapAdjustText}>Adjust</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </Section>
 
                 <Section title="Group & Timing" subtitle="Set your group size (2–6) and schedule" icon="people-outline" colors={Colors} isDarkMode={isDarkMode}>
@@ -956,74 +1140,93 @@ export default function CreatePostScreen() {
                 onConfirm={alertConfig.onConfirm}
             />
 
-            {/* Success Modal */}
-            <Modal transparent visible={successModal.visible} animationType="fade">
-                <View style={styles.successOverlay}>
-                    <View style={[styles.successCard, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
-                        <View style={styles.successIcon}>
-                            <Text style={{ fontSize: 48 }}>🎉</Text>
-                        </View>
-                        <Text style={[styles.successTitle, { color: Colors.textPrimary }]}>Published!</Text>
-                        <Text style={[styles.successSubtitle, { color: Colors.textMuted }]}>
-                            Your dining plan "{successModal.title}" is now live.
-                        </Text>
+            <PostSuccessModal
+                visible={!!publishedPost}
+                post={publishedPost}
+                onClose={() => setPublishedPost(null)}
+                onViewPlan={() => {
+                    if (publishedPost) {
+                        const pid = publishedPost.id;
+                        setPublishedPost(null);
+                        navigation.navigate('PostDetail', { postId: pid });
+                    }
+                }}
+            />
 
-                        <View style={styles.successActions}>
-                            <TouchableOpacity
-                                style={[styles.successBtn, { backgroundColor: Colors.primary }]}
-                                onPress={async () => {
-                                    const shareUrl = `https://bitebuddy.app/post/${successModal.postId}`;
-                                    try {
-                                        await Share.share({
-                                            message: `🍽️ Join my dining plan "${successModal.title}" on Bite Buddy!\n${shareUrl}`,
-                                            url: shareUrl,
-                                        });
-                                    } catch (err) {
-                                        console.log('Share error:', err);
-                                    }
-                                }}
-                            >
-                                <Ionicons name="share-social" size={18} color="#FFF" />
-                                <Text style={styles.successBtnText}>Share</Text>
+            {/* Interactive FULL SCREEN MAP Modal */}
+            <Modal visible={mapModalVisible} animationType="slide" transparent>
+                <View style={[styles.mapModalContainer, { backgroundColor: Colors.background }]}>
+                    <View style={[styles.mapModalHeader, { borderBottomColor: Colors.border, backgroundColor: Colors.background }]}>
+                        <SafeAreaView edges={['top']} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingHorizontal: 20, paddingBottom: 12 }}>
+                            <TouchableOpacity onPress={() => setMapModalVisible(false)} style={styles.modalCloseBtn}>
+                                <Ionicons name="close" size={24} color={Colors.textPrimary} />
                             </TouchableOpacity>
-
+                            <Text style={[styles.modalTitle, { color: Colors.textPrimary }]}>Choose Location</Text>
                             <TouchableOpacity
-                                style={[styles.successBtn, { backgroundColor: Colors.secondary }]}
                                 onPress={() => {
-                                    const shareUrl = `https://bitebuddy.app/post/${successModal.postId}`;
-                                    Clipboard.setString(shareUrl);
-                                    showMessage({
-                                        message: 'Link Copied!',
-                                        description: 'Share it with your friends.',
-                                        type: 'success',
-                                        duration: 2000,
+                                    if (tempLocation) {
+                                        setSelectedLocation(tempLocation);
+                                        reverseGeocode(tempLocation.latitude, tempLocation.longitude);
+                                    }
+                                    setMapModalVisible(false);
+                                }}
+                                style={[styles.saveLocationBtn, { backgroundColor: Colors.primary }]}
+                            >
+                                <Text style={styles.saveLocationText}>Confirm</Text>
+                            </TouchableOpacity>
+                        </SafeAreaView>
+                    </View>
+
+                    {tempLocation ? (
+                        <View style={{ flex: 1 }}>
+                            <MapView
+                                style={{ flex: 1 }}
+                                provider={PROVIDER_GOOGLE}
+                                initialRegion={{
+                                    latitude: tempLocation.latitude,
+                                    longitude: tempLocation.longitude,
+                                    latitudeDelta: 0.01,
+                                    longitudeDelta: 0.01,
+                                }}
+                                onRegionChangeComplete={(region) => {
+                                    setTempLocation({
+                                        latitude: region.latitude,
+                                        longitude: region.longitude
                                     });
                                 }}
-                            >
-                                <Ionicons name="copy" size={18} color="#FFF" />
-                                <Text style={styles.successBtnText}>Copy Link</Text>
-                            </TouchableOpacity>
+                            />
+                            {/* Animated Map Picker Pin */}
+                            <View style={styles.mapPickerWrapper} pointerEvents="none">
+                                <View style={styles.mapPickerPin}>
+                                    <Ionicons name="location" size={44} color={Colors.primary} />
+                                    <View style={[styles.mapPickerShadow, { backgroundColor: Colors.primary + '30' }]} />
+                                </View>
+                            </View>
+
+                            <View style={styles.mapModalControls}>
+                                <TouchableOpacity
+                                    style={[styles.myLocationBtn, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}
+                                    onPress={() => {
+                                        // Here we would use geolocation to center the map
+                                        // For now, keep it simple as requested
+                                    }}
+                                >
+                                    <Ionicons name="locate" size={24} color={Colors.primary} />
+                                </TouchableOpacity>
+
+                                <View style={[styles.mapInstructionCard, { backgroundColor: '#FFF', borderColor: Colors.border }]}>
+                                    <Ionicons name="hand-right-outline" size={20} color={Colors.primary} />
+                                    <Text style={[styles.mapInstructionText, { color: '#334155' }]}>
+                                        Move the map to place the pin at the restaurant location.
+                                    </Text>
+                                </View>
+                            </View>
                         </View>
-
-                        <TouchableOpacity
-                            style={[styles.successViewBtn]}
-                            onPress={() => {
-                                setSuccessModal({ visible: false, postId: '', title: '' });
-                                navigation.navigate('PostDetail', { postId: successModal.postId });
-                            }}
-                        >
-                            <LinearGradient colors={Colors.gradientPrimary} style={styles.successViewGradient}>
-                                <Text style={styles.successViewText}>View Post</Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            onPress={() => setSuccessModal({ visible: false, postId: '', title: '' })}
-                            style={{ marginTop: 12 }}
-                        >
-                            <Text style={{ color: Colors.textMuted, fontSize: 14, fontWeight: '600' }}>Dismiss</Text>
-                        </TouchableOpacity>
-                    </View>
+                    ) : (
+                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                            <ActivityIndicator size="large" color={Colors.primary} />
+                        </View>
+                    )}
                 </View>
             </Modal>
         </View>
@@ -1099,9 +1302,36 @@ const styles = StyleSheet.create({
     // Expanded dish area (nested inside cuisine section)
     expandedDishArea: { padding: 16, borderRadius: 16, borderWidth: 1, marginTop: 4 },
     // Places autocomplete
-    suggestionsDropdown: { position: 'absolute', top: 68, left: 0, right: 0, borderRadius: 12, borderWidth: 1, zIndex: 100, elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-    suggestionItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: 0.5 },
-    suggestionText: { flex: 1, fontSize: 14, fontWeight: '500' },
+    suggestionsDropdown: {
+        position: 'absolute',
+        top: 54,
+        left: 0,
+        right: 0,
+        borderRadius: 16,
+        borderWidth: 1,
+        zIndex: 2000,
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.2,
+        shadowRadius: 15,
+        overflow: 'hidden'
+    },
+    suggestionItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderBottomWidth: 0.5
+    },
+    suggestionText: { flex: 1, fontSize: 14, fontWeight: '600' },
+    // Featured Image
+    imagePreviewContainer: { marginTop: 12, height: 200, borderRadius: 20, overflow: 'hidden', position: 'relative' },
+    imagePreview: { width: '100%', height: '100%', resizeMode: 'cover' },
+    removeImageBtn: { position: 'absolute', top: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12 },
+    imagePickerBtn: { height: 160, borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 12 },
+    imagePickerText: { fontSize: 14, fontWeight: '700' },
     // Success modal
     successOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 24 },
     successCard: { width: '100%', borderRadius: 28, padding: 32, alignItems: 'center', borderWidth: 1 },
@@ -1114,4 +1344,26 @@ const styles = StyleSheet.create({
     successViewBtn: { width: '100%', height: 52, borderRadius: 26, overflow: 'hidden' },
     successViewGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     successViewText: { color: '#FFF', fontSize: 15, fontWeight: '900' },
+    // Map Preview
+    mapPreviewContainer: { marginTop: 12, height: 160, borderRadius: 16, overflow: 'hidden', borderWidth: 1, position: 'relative' },
+    mapPreview: { ...StyleSheet.absoluteFillObject },
+    markerBadge: { backgroundColor: '#F59E0B', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 3, elevation: 3 },
+    mapAdjustBtn: { position: 'absolute', bottom: 12, right: 12, flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4, elevation: 4 },
+    mapAdjustText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
+    mapModalContainer: { flex: 1 },
+    mapModalHeader: { borderBottomWidth: 1, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
+    modalCloseBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
+    modalTitle: { fontSize: 17, fontWeight: '800' },
+    saveLocationBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    saveLocationText: { color: '#FFF', fontSize: 14, fontWeight: '800' },
+    mapPickerWrapper: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' },
+    mapPickerPin: { alignItems: 'center', marginBottom: 44 }, // Offset for the pin tip
+    mapPickerShadow: { width: 12, height: 4, borderRadius: 2, marginTop: -2 },
+    mapModalControls: { position: 'absolute', bottom: 40, left: 20, right: 20, gap: 16 },
+    myLocationBtn: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 4, alignSelf: 'flex-end' },
+    mapInstructionCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 20, borderWidth: 1, backgroundColor: '#FFF' },
+    mapInstructionText: { flex: 1, fontSize: 13, fontWeight: '600', lineHeight: 18 },
+    pickOnMapBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 44, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', marginTop: 12 },
+    pickOnMapText: { fontSize: 14, fontWeight: '700' },
 });
+

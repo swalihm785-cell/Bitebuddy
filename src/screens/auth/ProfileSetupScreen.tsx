@@ -87,7 +87,7 @@ export default function ProfileSetupScreen() {
 
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
             {/* Progress */}
             <View style={styles.progressBar}>
                 {STEPS.map((s, i) => (

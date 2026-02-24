@@ -307,7 +307,7 @@ export default function EditPostScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: Colors.background }]}>
-            <SafeAreaView style={[styles.customHeader, { borderBottomColor: Colors.border }]}>
+            <SafeAreaView edges={['top']} style={[styles.customHeader, { borderBottomColor: Colors.border }]}>
                 <TouchableOpacity onPress={() => safeGoBack()} style={styles.backBtn}>
                     <Ionicons name="close-outline" size={28} color={Colors.textPrimary} />
                 </TouchableOpacity>

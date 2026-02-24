@@ -44,7 +44,7 @@ export default function PlanScreen() {
     };
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]} edges={['top']}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <Ionicons name="close" size={24} color={Colors.textPrimary} />

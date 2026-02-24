@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-    View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert, Modal, Share, TextInput
+    View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert, Modal, Share, TextInput, Clipboard
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +14,7 @@ import { useThemeStore } from '../../store/useThemeStore';
 import { useNotificationStore } from '../../store/useNotificationStore';
 import { useReportStore } from '../../store/useReportStore';
 import { isCurrentlyPro } from '../../utils/authUtils';
+import { showMessage } from 'react-native-flash-message';
 
 const { width } = Dimensions.get('window');
 
@@ -131,14 +132,29 @@ export default function UserProfileScreen() {
 
     const handleShare = async () => {
         setMenuVisible(false);
+        const shareUrl = `https://bitebuddy.app/profile/${userId}`;
+        const shareMessage = `👤 Check out ${user.name}'s profile on Bite Buddy!\n${shareUrl}`;
+
         try {
             await Share.share({
-                message: `Check out ${user.name}'s profile on Bite Buddy!`,
-                url: `bitebuddy://profile/${userId}`
+                message: shareMessage,
+                url: shareUrl
             });
         } catch (error) {
             console.log(error);
         }
+    };
+
+    const handleCopyLink = () => {
+        setMenuVisible(false);
+        const shareUrl = `https://bitebuddy.app/profile/${userId}`;
+        Clipboard.setString(shareUrl);
+        showMessage({
+            message: 'Link Copied!',
+            description: 'Profile link copied to clipboard.',
+            type: 'success',
+            icon: 'success'
+        });
     };
 
     const handleBlock = () => {
@@ -209,10 +225,10 @@ export default function UserProfileScreen() {
         <View style={[styles.container, { backgroundColor: Colors.background }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
                 <LinearGradient colors={Colors.gradientPrimary} style={styles.hero}>
-                    <SafeAreaView>
+                    <SafeAreaView edges={['top']}>
                         <View style={styles.topActions}>
                             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.circleBtn}>
-                                <Ionicons name="arrow-back" size={20} color="#FFF" />
+                                <Ionicons name="chevron-back" size={20} color="#FFF" />
                             </TouchableOpacity>
                             {!isMe && (
                                 <TouchableOpacity style={styles.circleBtn} onPress={() => setMenuVisible(true)}>
@@ -352,6 +368,11 @@ export default function UserProfileScreen() {
                         <TouchableOpacity style={styles.menuItem} onPress={handleShare}>
                             <Ionicons name="share-social-outline" size={20} color={Colors.textPrimary} />
                             <Text style={[styles.menuText, { color: Colors.textPrimary }]}>Share Profile</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.menuItem} onPress={handleCopyLink}>
+                            <Ionicons name="copy-outline" size={20} color={Colors.textPrimary} />
+                            <Text style={[styles.menuText, { color: Colors.textPrimary }]}>Copy Profile Link</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.menuItem} onPress={() => { setMenuVisible(false); setReportModalVisible(true); }}>
                             <Ionicons name="flag-outline" size={20} color={Colors.error} />

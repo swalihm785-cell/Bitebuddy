@@ -11,10 +11,33 @@ interface NotificationState {
     clearNotifications: () => void;
 }
 
+const SEED_NOTIFICATIONS: NotificationType[] = [
+    {
+        id: 'notif_1',
+        userId: 'swalih',
+        type: 'join_request',
+        title: 'New Join Request',
+        body: 'Roshan wants to join your Malabar Biryani plan.',
+        isRead: false,
+        createdAt: new Date(),
+        data: { postId: 'plan_kozhikode_1' }
+    },
+    {
+        id: 'notif_2',
+        userId: 'don',
+        type: 'invite_received',
+        title: 'Dining Invite',
+        body: 'Swalih invited you to join Legendary Malabar Biryani.',
+        isRead: false,
+        createdAt: new Date(),
+        data: { postId: 'plan_kozhikode_1' }
+    }
+];
+
 export const useNotificationStore = create<NotificationState>()(
     persist(
         (set) => ({
-            notifications: [],
+            notifications: SEED_NOTIFICATIONS,
             addNotification: (notif, isFromSocket = false) => set((state) => {
                 const newNotif = {
                     ...notif,
@@ -44,7 +67,7 @@ export const useNotificationStore = create<NotificationState>()(
             clearNotifications: () => set({ notifications: [] }),
         }),
         {
-            name: 'bite-buddy-notifications-v2',
+            name: 'bite-buddy-notifications-v3', // Incremented to v3 to reset all data
             storage: createJSONStorage(() => ({
                 getItem: async (name) => {
                     const str = await AsyncStorage.getItem(name);

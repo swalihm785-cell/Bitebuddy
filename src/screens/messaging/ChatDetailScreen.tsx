@@ -4,7 +4,7 @@ import {
     KeyboardAvoidingView, Platform, Image, Modal, Alert, ActivityIndicator, Linking, ScrollView
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -16,6 +16,7 @@ import { useChatStore, ALL_USERS, API_URL } from '../../store/useChatStore';
 import { RootStackParamList } from '../../types';
 import { isCurrentlyPro } from '../../utils/authUtils';
 import { CustomAlert } from '../../components/common/CustomAlert';
+import { usePostStore } from '../../store/usePostStore';
 
 type MessageType = 'text' | 'image' | 'video' | 'contact';
 
@@ -51,6 +52,9 @@ export default function ChatDetailScreen() {
         sendMessageOut, fetchMessages, respondToGroupInvite, leaveGroupChat,
         removeGroupMember, deleteGroupChat
     } = useChatStore();
+    const { posts } = usePostStore();
+
+    const insets = useSafeAreaInsets();
 
     const chat = conversations.find(c => c.id === chatId);
     const isBlocked = chat?.status === 'blocked';
@@ -304,7 +308,33 @@ export default function ChatDetailScreen() {
                 ]}>
                     {item.type === 'text' && (
                         <>
-                            <Text style={[styles.msgText, { color: isMe ? '#FFF' : Colors.textPrimary }]}>{item.text}</Text>
+                            {(() => {
+                                const postUrlMatch = item.text?.match(/https:\/\/bitebuddy\.app\/post\/([a-zA-Z0-9]+)/);
+                                if (postUrlMatch) {
+                                    const postId = postUrlMatch[1];
+                                    const sharedPost = posts.find(p => p.id === postId);
+                                    if (sharedPost) {
+                                        return (
+                                            <TouchableOpacity
+                                                style={[styles.sharePreviewCard, { backgroundColor: isMe ? 'rgba(255,255,255,0.1)' : Colors.backgroundElevated }]}
+                                                onPress={() => navigation.navigate('PostDetail', { postId })}
+                                            >
+                                                <View style={styles.sharePreviewIcon}>
+                                                    <Ionicons name="restaurant" size={20} color={isMe ? '#FFF' : Colors.primary} />
+                                                </View>
+                                                <View style={{ flex: 1 }}>
+                                                    <Text style={[styles.sharePreviewTitle, { color: isMe ? '#FFF' : Colors.textPrimary }]} numberOfLines={1}>{sharedPost.title}</Text>
+                                                    <Text style={[styles.sharePreviewSub, { color: isMe ? 'rgba(255,255,255,0.7)' : Colors.textMuted }]} numberOfLines={1}>
+                                                        📍 {sharedPost.restaurantName || sharedPost.area}
+                                                    </Text>
+                                                </View>
+                                                <Ionicons name="chevron-forward" size={16} color={isMe ? 'rgba(255,255,255,0.5)' : Colors.textMuted} />
+                                            </TouchableOpacity>
+                                        );
+                                    }
+                                }
+                                return <Text style={[styles.msgText, { color: isMe ? '#FFF' : Colors.textPrimary }]}>{item.text}</Text>;
+                            })()}
                             <View style={styles.timeRow}>
                                 <Text style={[styles.msgTime, { color: isMe ? 'rgba(255,255,255,0.7)' : Colors.textMuted }]}>{item.time}</Text>
                                 {isMe && <Ionicons name="checkmark-done" size={14} color="rgba(255,255,255,0.9)" style={{ marginLeft: 4 }} />}
@@ -361,11 +391,11 @@ export default function ChatDetailScreen() {
     };
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]}>
+        <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: Colors.background }]}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: Colors.border }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
                 {chat?.participantAvatar ? (
                     <Image source={{ uri: chat.participantAvatar }} style={styles.headerAvatar} />
@@ -427,11 +457,11 @@ export default function ChatDetailScreen() {
 
             {/* Input / Actions */}
             {isBlocked ? (
-                <View style={[styles.inputArea, { backgroundColor: Colors.backgroundCard, borderTopColor: Colors.border, justifyContent: 'center', paddingVertical: 16 }]}>
+                <View style={[styles.inputArea, { backgroundColor: Colors.backgroundCard, borderTopColor: Colors.border, justifyContent: 'center', paddingBottom: Math.max(insets.bottom, 20), paddingTop: 16 }]}>
                     <Text style={{ color: Colors.error, fontWeight: '600' }}>You cannot reply to this conversation.</Text>
                 </View>
             ) : isPending && chat && !chat.initiatedByMe ? (
-                <View style={[styles.inputArea, { backgroundColor: Colors.backgroundCard, borderTopColor: Colors.border, flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 16 }]}>
+                <View style={[styles.inputArea, { backgroundColor: Colors.backgroundCard, borderTopColor: Colors.border, flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: Math.max(insets.bottom, 20), paddingTop: 16 }]}>
                     <TouchableOpacity style={{ flex: 1, backgroundColor: Colors.success, padding: 14, borderRadius: 16, alignItems: 'center' }} onPress={() => acceptRequest(chat.id)}>
                         <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Accept</Text>
                     </TouchableOpacity>
@@ -443,12 +473,12 @@ export default function ChatDetailScreen() {
                     </TouchableOpacity>
                 </View>
             ) : isPending ? (
-                <View style={[styles.inputArea, { backgroundColor: Colors.backgroundCard, borderTopColor: Colors.border, justifyContent: 'center', paddingVertical: 16 }]}>
+                <View style={[styles.inputArea, { backgroundColor: Colors.backgroundCard, borderTopColor: Colors.border, justifyContent: 'center', paddingBottom: Math.max(insets.bottom, 20), paddingTop: 16 }]}>
                     <Text style={{ color: Colors.warning, fontWeight: '600' }}>Waiting for user to accept request...</Text>
                 </View>
             ) : (
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
-                    <View style={[styles.inputArea, { backgroundColor: Colors.backgroundCard, borderTopColor: Colors.border }]}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+                    <View style={[styles.inputArea, { backgroundColor: Colors.backgroundCard, borderTopColor: Colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
                         <TouchableOpacity style={styles.attachBtn} onPress={() => setShowMediaMenu(true)}>
                             <Ionicons name="camera-outline" size={26} color={Colors.primary} />
                         </TouchableOpacity>
@@ -839,6 +869,31 @@ const styles = StyleSheet.create({
     myRow: { justifyContent: 'flex-end' },
     otherRow: { justifyContent: 'flex-start' },
     bubble: { maxWidth: '80%', paddingHorizontal: 14, paddingVertical: 12, borderRadius: 24 },
+    sharePreviewCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        borderRadius: 12,
+        marginBottom: 8,
+        gap: 12,
+        minWidth: 220,
+    },
+    sharePreviewIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    sharePreviewTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    sharePreviewSub: {
+        fontSize: 12,
+        marginTop: 2,
+    },
     msgText: { fontSize: 16, lineHeight: 22 },
     timeRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', marginTop: 4 },
     msgTime: { fontSize: 11 },

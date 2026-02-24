@@ -248,7 +248,7 @@ const SnapPreviewCard = ({
 
 // ─── Main Snap Screen ─────────────────────────────────────────────
 export default function SnapScreen() {
-    const { currentTheme } = useThemeStore();
+    const { currentTheme, isDarkMode } = useThemeStore();
     const { Colors } = currentTheme;
     const { user } = useAuthStore();
     const { snaps, addSnap, viewSnap, clearExpiredSnaps } = useSnapStore();
@@ -336,10 +336,35 @@ export default function SnapScreen() {
     const hasUnseenSnap = (s: Snap[]) => s.some(snap => !snap.viewers.includes(user?.id || ''));
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]} edges={['top']}>
             {/* Header */}
-            <View style={[styles.header, { borderBottomColor: Colors.border }]}>
-                <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>Snaps</Text>
+            <View style={[styles.header, { backgroundColor: isDarkMode ? Colors.background : '#FFFFFF', borderBottomColor: Colors.border, borderBottomWidth: 1 }]}>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <TouchableOpacity
+                        style={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: 24,
+                            borderWidth: 2,
+                            borderColor: Colors.primary,
+                            backgroundColor: Colors.backgroundCard,
+                            padding: 2,
+                            overflow: 'hidden',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                        }}
+                        onPress={() => navigation.navigate('Profile')}
+                    >
+                        <Ionicons name="person" size={24} color={Colors.textMuted} />
+                        {user?.photoURL && (
+                            <Image
+                                source={{ uri: user.photoURL }}
+                                style={{ position: 'absolute', width: 44, height: 44, borderRadius: 22 }}
+                            />
+                        )}
+                    </TouchableOpacity>
+                    <Text style={[styles.headerTitle, { color: Colors.textPrimary, lineHeight: 32 }]}>Snaps</Text>
+                </View>
                 {isPro && (
                     <TouchableOpacity onPress={handleAddSnap} style={[styles.addBtn, { backgroundColor: Colors.primary + '15' }]}>
                         <Ionicons name="camera-outline" size={20} color={Colors.primary} />
@@ -460,7 +485,7 @@ const sv = StyleSheet.create({
 });
 
 const snapCardStyles = StyleSheet.create({
-    cardWrap: { width: (SCREEN_W - 48) / 2, height: SCREEN_H * 0.32, borderRadius: 16, overflow: 'hidden', backgroundColor: '#333' },
+    cardWrap: { width: SCREEN_W * 0.43, height: SCREEN_H * 0.85 * 0.4, borderRadius: 16, overflow: 'hidden', backgroundColor: '#333' },
     cover: { ...StyleSheet.absoluteFillObject },
     content: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 14 },
     avatarRing: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', marginBottom: 10, padding: 2, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' },

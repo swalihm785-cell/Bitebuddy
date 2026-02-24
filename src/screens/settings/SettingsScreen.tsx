@@ -32,10 +32,10 @@ export default function SettingsScreen() {
     );
 
     return (
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: Colors.background }]}>
+        <SafeAreaView style={[styles.safeArea, { backgroundColor: Colors.background }]} edges={['top']}>
             <View style={[styles.header, { borderBottomColor: Colors.border }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>Settings</Text>
                 <View style={{ width: 32 }} />

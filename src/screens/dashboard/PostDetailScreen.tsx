@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    Image, Dimensions, TextInput
+    Image, Dimensions, TextInput, Modal, Alert, Share, Clipboard
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -17,8 +17,10 @@ import { DiningPost, RootStackParamList, JoinRequest, Participant } from '../../
 import { BUDGET_LABELS } from '../../theme/theme';
 import { CustomAlert } from '../../components/common/CustomAlert';
 import { isCurrentlyPro } from '../../utils/authUtils';
+import { TEST_USERS } from '../../data/testUsers';
+import { handleDiningPlanShare } from '../../utils/diningPlanShareUtils';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 const CUISINE_IMAGES: Record<string, string> = {
     Italian: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=800&q=80',
@@ -43,11 +45,17 @@ export default function PostDetailScreen() {
     const { createGroupChat, addGroupMember } = useChatStore();
     const { currentTheme } = useThemeStore();
     const { Colors, Spacing, FontSize, FontWeight, BorderRadius } = currentTheme;
+    const insets = useSafeAreaInsets();
 
     const [creatingGroup, setCreatingGroup] = useState(false);
     const [inviteAction, setInviteAction] = useState<'accept' | 'reject' | null>(null);
     const [inviteNote, setInviteNote] = useState('');
     const [respondingInviteId, setRespondingInviteId] = useState<string | null>(null);
+
+    // Invite Modal State
+    const [inviteModalVisible, setInviteModalVisible] = useState(false);
+    const [inviteSearchQuery, setInviteSearchQuery] = useState('');
+    const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
 
     const [alertConfig, setAlertConfig] = useState<{ visible: boolean; title: string; message: string; type?: 'success' | 'error' | 'info' | 'warning'; onConfirm?: () => void; confirmText?: string; cancelText?: string }>({ visible: false, title: '', message: '' });
     const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info', onConfirm?: () => void, confirmText = 'OK', cancelText?: string) =>
@@ -82,7 +90,7 @@ export default function PostDetailScreen() {
     const hostParticipant = post.participants.find(p => p.id === post.hostId) || { name: 'Host', age: 25 };
     const participants = post.participants || [];
     const spotsLeft = post.maxGroupSize - participants.length;
-    const cuisineImage = CUISINE_IMAGES[post.cuisineTypes[0]] || DEFAULT_IMAGE;
+    const cuisineImage = post.imageURL || CUISINE_IMAGES[post.cuisineTypes[0]] || DEFAULT_IMAGE;
 
     const formatDate = (date: any) => {
         const d = date instanceof Date ? date : new Date(date);
@@ -105,7 +113,6 @@ export default function PostDetailScreen() {
             const updatedParticipants = [...participants, newParticipant];
             updatePost(post.id, { participants: updatedParticipants, currentParticipants: updatedParticipants.length });
 
-            // Notifications
             addNotification({
                 userId: post.hostId,
                 type: 'join_request',
@@ -114,9 +121,7 @@ export default function PostDetailScreen() {
                 data: { postId: post.id }
             });
 
-            // Auto-add to Group Chat if exists
             addGroupMember(`group_${post.id}`, user.id);
-
             showAlert('Joined! 🎉', 'You have been automatically added to this dining plan.', 'success');
         } else {
             const newRequest: JoinRequest = {
@@ -129,7 +134,6 @@ export default function PostDetailScreen() {
             };
             addJoinRequest(newRequest);
 
-            // Notify Host
             addNotification({
                 userId: post.hostId,
                 type: 'join_request',
@@ -139,6 +143,56 @@ export default function PostDetailScreen() {
             });
 
             showAlert('Request Sent 📨', 'Your request has been sent to the host for approval.', 'info');
+        }
+    };
+
+    const handleSendInvites = () => {
+        if (!user || !post) return;
+        if (selectedUserIds.size === 0) {
+            showAlert('No Users Selected', 'Please select at least one user to invite.', 'warning');
+            return;
+        }
+
+        let sentCount = 0;
+        selectedUserIds.forEach(id => {
+            const targetUser = Object.values(TEST_USERS).map(t => t.user).find(u => u.id === id);
+            if (!targetUser) return;
+
+            const alreadyJoined = participants.some(p => p.id === id);
+            const alreadyInvited = postInvites.some(i => i.inviteeId === id && i.status !== 'rejected');
+
+            if (!alreadyJoined && !alreadyInvited) {
+                const newInvite = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    postId: post.id,
+                    inviterId: user.id,
+                    inviteeId: targetUser.id,
+                    inviteeName: targetUser.name,
+                    inviteePhotoURL: targetUser.photoURL,
+                    status: 'pending' as const,
+                    createdAt: new Date()
+                };
+
+                usePostStore.getState().addInvite(newInvite);
+
+                addNotification({
+                    userId: targetUser.id,
+                    type: 'system',
+                    title: 'New Dining Invite! 🍽️',
+                    body: `${user.name} invited you to join: ${post.title}`,
+                    data: { postId: post.id }
+                });
+                sentCount++;
+            }
+        });
+
+        setInviteModalVisible(false);
+        setSelectedUserIds(new Set());
+
+        if (sentCount > 0) {
+            showAlert('Invites Sent! 🚀', `Successfully sent ${sentCount} invite(s).`, 'success');
+        } else {
+            showAlert('Notice', 'Selected users are already invited or participating.', 'info');
         }
     };
 
@@ -156,7 +210,6 @@ export default function PostDetailScreen() {
             const res = await createGroupChat(user.id, post.id, post.title, participantIds, isPro);
 
             if (res.success && res.chatId) {
-                // Notify Everyone
                 participants.forEach(p => {
                     if (p.id !== user.id) {
                         addNotification({
@@ -189,8 +242,6 @@ export default function PostDetailScreen() {
             'warning',
             () => {
                 leavePost(post.id, user!.id);
-
-                // Remove from group chat if exists
                 fetch(`${API_URL}/chats/group/group_${post.id}/remove`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -211,13 +262,26 @@ export default function PostDetailScreen() {
         );
     };
 
+    const handleDelete = () => {
+        showAlert(
+            'Cancel Dining Plan',
+            'Are you sure you want to cancel this dining plan? This cannot be undone.',
+            'error',
+            () => {
+                deletePost(post.id);
+                navigation.goBack();
+            },
+            'Delete Plan',
+            'Keep'
+        );
+    };
+
     const handleRequestAction = (requestId: string, action: 'accepted' | 'rejected') => {
         const request = joinRequests.find(r => r.id === requestId);
         if (!request) return;
 
         updateJoinRequest(requestId, action);
 
-        // Notify User
         addNotification({
             userId: request.requesterId,
             type: action === 'accepted' ? 'request_accepted' : 'request_rejected',
@@ -229,7 +293,6 @@ export default function PostDetailScreen() {
         });
 
         if (action === 'accepted') {
-            // Auto-add to Group Chat if exists
             addGroupMember(`group_${post.id}`, request.requesterId);
         }
 
@@ -247,16 +310,21 @@ export default function PostDetailScreen() {
                         style={StyleSheet.absoluteFill}
                     />
 
-                    <SafeAreaView style={styles.headerActions}>
+                    <View style={[styles.headerActions, { paddingTop: Math.max(insets.top, 10) }]}>
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.circleBtn}>
-                            <Ionicons name="arrow-back" size={22} color="#FFF" />
+                            <Ionicons name="chevron-back" size={24} color="#FFF" />
                         </TouchableOpacity>
-                        {isHost && (
-                            <TouchableOpacity onPress={() => navigation.navigate('EditPost' as any, { postId: post.id })} style={styles.circleBtn}>
-                                <Ionicons name="create-outline" size={22} color="#FFF" />
+                        <View style={{ flexDirection: 'row', gap: 10 }}>
+                            <TouchableOpacity onPress={() => handleDiningPlanShare(post)} style={styles.circleBtn}>
+                                <Ionicons name="share-social-outline" size={22} color="#FFF" />
                             </TouchableOpacity>
-                        )}
-                    </SafeAreaView>
+                            {isHost && (
+                                <TouchableOpacity onPress={() => navigation.navigate('EditPost' as any, { postId: post.id })} style={styles.circleBtn}>
+                                    <Ionicons name="create-outline" size={22} color="#FFF" />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    </View>
 
                     <View style={styles.heroContent}>
                         <View style={styles.cuisineRow}>
@@ -274,7 +342,7 @@ export default function PostDetailScreen() {
                     </View>
                 </View>
 
-                <View style={styles.body}>
+                <View style={[styles.body, { backgroundColor: Colors.background }]}>
                     {/* Host Card */}
                     <View style={[styles.card, { backgroundColor: Colors.backgroundElevated, borderColor: Colors.border }]}>
                         <View style={styles.hostRow}>
@@ -382,174 +450,6 @@ export default function PostDetailScreen() {
                         </View>
                     )}
 
-                    {/* Invite Status for Invitee */}
-                    {!isHost && myInvite && (
-                        <View style={[styles.card, {
-                            backgroundColor: myInvite.status === 'pending' ? Colors.primary + '08' : myInvite.status === 'accepted' ? Colors.success + '12' : Colors.error + '12',
-                            borderColor: myInvite.status === 'pending' ? Colors.primary : myInvite.status === 'accepted' ? Colors.success : Colors.error,
-                        }]}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: myInvite.status === 'pending' && !respondingInviteId ? 14 : 0 }}>
-                                <View style={{
-                                    width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center',
-                                    backgroundColor: myInvite.status === 'pending' ? Colors.primary + '20' : myInvite.status === 'accepted' ? Colors.success + '25' : Colors.error + '25',
-                                }}>
-                                    <Ionicons
-                                        name={myInvite.status === 'pending' ? 'mail-outline' : myInvite.status === 'accepted' ? 'checkmark-circle' : 'close-circle'}
-                                        size={24}
-                                        color={myInvite.status === 'pending' ? Colors.primary : myInvite.status === 'accepted' ? Colors.success : Colors.error}
-                                    />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={{ fontSize: 16, fontWeight: '800', color: myInvite.status === 'pending' ? Colors.primary : myInvite.status === 'accepted' ? Colors.success : Colors.error }}>
-                                        {myInvite.status === 'pending' ? "You're Invited!" : myInvite.status === 'accepted' ? 'Invite Accepted' : 'Invite Declined'}
-                                    </Text>
-                                    <Text style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 2 }}>
-                                        {myInvite.status === 'pending'
-                                            ? 'The host personally invited you to this meal.'
-                                            : myInvite.status === 'accepted'
-                                                ? 'You accepted this invite and joined the meal!'
-                                                : 'You declined this invite.'}
-                                    </Text>
-                                </View>
-                            </View>
-
-                            {/* Accept / Reject buttons */}
-                            {myInvite.status === 'pending' && !respondingInviteId && (
-                                <View style={{ flexDirection: 'row', gap: 12 }}>
-                                    <TouchableOpacity
-                                        style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.success, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 6 }}
-                                        onPress={() => { setInviteAction('accept'); setRespondingInviteId(myInvite.id); }}
-                                    >
-                                        <Ionicons name="checkmark" size={18} color="#FFF" />
-                                        <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 14 }}>Accept</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={{ flex: 1, height: 44, borderRadius: 12, backgroundColor: Colors.error + '15', borderWidth: 1.5, borderColor: Colors.error, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 6 }}
-                                        onPress={() => { setInviteAction('reject'); setRespondingInviteId(myInvite.id); }}
-                                    >
-                                        <Ionicons name="close" size={18} color={Colors.error} />
-                                        <Text style={{ color: Colors.error, fontWeight: '800', fontSize: 14 }}>Decline</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            )}
-
-                            {/* Note input after choosing Accept/Reject */}
-                            {respondingInviteId === myInvite.id && inviteAction && (
-                                <View style={{ marginTop: 14, backgroundColor: Colors.backgroundCard, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: Colors.border }}>
-                                    <Text style={{ fontSize: 14, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8 }}>
-                                        {inviteAction === 'accept' ? 'Accept Invite' : 'Decline Invite'}
-                                    </Text>
-                                    <TextInput
-                                        style={{ backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, padding: 12, color: Colors.textPrimary, fontSize: 14, minHeight: 60, textAlignVertical: 'top' }}
-                                        placeholder="Add a note (optional)..."
-                                        placeholderTextColor={Colors.textMuted}
-                                        multiline
-                                        value={inviteNote}
-                                        onChangeText={setInviteNote}
-                                    />
-                                    <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
-                                        <TouchableOpacity
-                                            style={{ flex: 1, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: Colors.border }}
-                                            onPress={() => { setRespondingInviteId(null); setInviteAction(null); setInviteNote(''); }}
-                                        >
-                                            <Text style={{ color: Colors.textMuted, fontWeight: '700' }}>Cancel</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            style={{ flex: 2, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 10, backgroundColor: inviteAction === 'accept' ? Colors.success : Colors.error }}
-                                            onPress={() => {
-                                                const chosenAction = inviteAction;
-                                                const status = chosenAction === 'accept' ? 'accepted' : 'rejected';
-                                                updateInvite(myInvite.id, status, inviteNote || undefined);
-                                                addNotification({
-                                                    userId: myInvite.inviterId,
-                                                    type: chosenAction === 'accept' ? 'invite_accepted' : 'invite_rejected',
-                                                    title: chosenAction === 'accept' ? 'Invite Accepted!' : 'Invite Declined',
-                                                    body: (user?.name || 'Someone') + (chosenAction === 'accept' ? ' accepted' : ' declined') + ' your invite to "' + post.title + '"' + (inviteNote ? ' — "' + inviteNote + '"' : ''),
-                                                    data: { postId: post.id },
-                                                });
-                                                if (chosenAction === 'accept') {
-                                                    addGroupMember('group_' + post.id, user?.id || '');
-                                                }
-                                                setRespondingInviteId(null);
-                                                setInviteAction(null);
-                                                setInviteNote('');
-                                                showAlert(
-                                                    chosenAction === 'accept' ? 'Joined!' : 'Declined',
-                                                    chosenAction === 'accept' ? 'You have accepted the invite and joined this meal.' : 'You have declined this invite.',
-                                                    chosenAction === 'accept' ? 'success' : 'info'
-                                                );
-                                            }}
-                                        >
-                                            <Text style={{ color: '#FFF', fontWeight: '800' }}>
-                                                {inviteAction === 'accept' ? 'Confirm Accept' : 'Confirm Decline'}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
-                            )}
-                        </View>
-                    )}
-
-                    {/* Invited Buddies — Host View */}
-                    {isHost && postInvites.length > 0 && (
-                        <View style={styles.section}>
-                            <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Invited Buddies ({postInvites.length})</Text>
-                            <View style={styles.requestList}>
-                                {postInvites.map((inv) => {
-                                    const statusColor = inv.status === 'pending' ? Colors.warning : inv.status === 'accepted' ? Colors.success : Colors.error;
-                                    const statusIcon = inv.status === 'pending' ? 'hourglass-outline' : inv.status === 'accepted' ? 'checkmark-circle' : 'close-circle';
-                                    return (
-                                        <View key={inv.id} style={[styles.requestItem, { backgroundColor: Colors.backgroundElevated, borderColor: Colors.border }]}>
-                                            <TouchableOpacity
-                                                style={styles.requesterInfo}
-                                                onPress={() => navigation.navigate('UserProfile' as any, { userId: inv.inviteeId })}
-                                            >
-                                                {inv.inviteePhotoURL ? (
-                                                    <Image source={{ uri: inv.inviteePhotoURL }} style={{ width: 36, height: 36, borderRadius: 18 }} />
-                                                ) : (
-                                                    <View style={[styles.rAvatar, { backgroundColor: Colors.backgroundCard }]}>
-                                                        <Text style={{ fontSize: 14 }}>👤</Text>
-                                                    </View>
-                                                )}
-                                                <View style={{ flex: 1 }}>
-                                                    <Text style={[styles.rName, { color: Colors.textPrimary }]}>{inv.inviteeName}</Text>
-                                                    {inv.note && (
-                                                        <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }} numberOfLines={1}>Note: {inv.note}</Text>
-                                                    )}
-                                                </View>
-                                            </TouchableOpacity>
-                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: statusColor + '15' }}>
-                                                    <Ionicons name={statusIcon} size={14} color={statusColor} />
-                                                    <Text style={{ fontSize: 11, fontWeight: '800', color: statusColor, textTransform: 'capitalize' }}>{inv.status}</Text>
-                                                </View>
-                                                {inv.status === 'pending' && (
-                                                    <TouchableOpacity
-                                                        style={[styles.actionIcon, { backgroundColor: Colors.error + '15' }]}
-                                                        onPress={() => {
-                                                            showAlert('Uninvite', 'Remove this invite?', 'warning', () => {
-                                                                removeInvite(inv.id);
-                                                                addNotification({
-                                                                    userId: inv.inviteeId,
-                                                                    type: 'system',
-                                                                    title: 'Invite Withdrawn',
-                                                                    body: 'The host withdrew your invite to "' + post.title + '"',
-                                                                    data: { postId: post.id },
-                                                                });
-                                                            }, 'Uninvite', 'Cancel');
-                                                        }}
-                                                    >
-                                                        <Ionicons name="person-remove-outline" size={16} color={Colors.error} />
-                                                    </TouchableOpacity>
-                                                )}
-                                            </View>
-                                        </View>
-                                    );
-                                })}
-                            </View>
-                        </View>
-                    )}
-
                     {/* Details Grid */}
                     <View style={styles.detailsGrid}>
                         <View style={[styles.detailItem, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
@@ -609,84 +509,26 @@ export default function PostDetailScreen() {
                                             <Text style={{ color: Colors.primary, fontSize: 10, fontWeight: '800' }}>HOST</Text>
                                         </View>
                                     )}
-                                    {isHost && p.id !== post.hostId && (
-                                        <TouchableOpacity
-                                            style={{ padding: 6, backgroundColor: Colors.error + '15', borderRadius: 8 }}
-                                            onPress={() => {
-                                                showAlert(
-                                                    'Remove Participant',
-                                                    `Are you sure you want to remove ${p.name}?`,
-                                                    'error',
-                                                    () => {
-                                                        leavePost(post.id, p.id);
-
-                                                        // Remove from group chat if exists
-                                                        fetch(`${API_URL}/chats/group/group_${post.id}/remove`, {
-                                                            method: 'POST',
-                                                            headers: { 'Content-Type': 'application/json' },
-                                                            body: JSON.stringify({ userId: p.id })
-                                                        }).catch(e => console.error(e));
-
-                                                        // Notify removed user
-                                                        addNotification({
-                                                            userId: p.id,
-                                                            type: 'participant_left',
-                                                            title: 'Removed from Plan',
-                                                            body: `The host removed you from the meal: ${post.title}`,
-                                                            data: { postId: post.id }
-                                                        });
-                                                        // Notify other participants
-                                                        post.participants.forEach(other_p => {
-                                                            if (other_p.id !== p.id && other_p.id !== post.hostId) {
-                                                                addNotification({
-                                                                    userId: other_p.id,
-                                                                    type: 'participant_left',
-                                                                    title: 'Participant Removed',
-                                                                    body: `${p.name} has been removed from the meal: ${post.title}`,
-                                                                    data: { postId: post.id }
-                                                                });
-                                                            }
-                                                        });
-                                                    },
-                                                    'Remove',
-                                                    'Cancel'
-                                                );
-                                            }}
-                                        >
-                                            <Ionicons name="trash-outline" size={18} color={Colors.error} />
-                                        </TouchableOpacity>
-                                    )}
                                 </TouchableOpacity>
                             ))}
                             {Array.from({ length: Math.max(0, post.maxGroupSize - participants.length) }).map((_, i) => (
-                                <View key={`empty-${i}`} style={[styles.participantItem, styles.emptySpot, { borderColor: Colors.border }]}>
-                                    <Ionicons name="add" size={20} color={Colors.textMuted} />
-                                    <Text style={{ color: Colors.textMuted, fontWeight: '600' }}>Spot Available</Text>
-                                </View>
+                                isHost ? (
+                                    <TouchableOpacity
+                                        key={`empty-${i}`}
+                                        style={[styles.participantItem, styles.emptySpot, { borderColor: Colors.primary, backgroundColor: Colors.primary + '08' }]}
+                                        onPress={() => setInviteModalVisible(true)}
+                                    >
+                                        <Ionicons name="person-add-outline" size={20} color={Colors.primary} />
+                                        <Text style={{ color: Colors.primary, fontWeight: '700' }}>Invite People</Text>
+                                    </TouchableOpacity>
+                                ) : (
+                                    <View key={`empty-${i}`} style={[styles.participantItem, styles.emptySpot, { borderColor: Colors.border }]}>
+                                        <Ionicons name="add" size={20} color={Colors.textMuted} />
+                                        <Text style={{ color: Colors.textMuted, fontWeight: '600' }}>Spot Available</Text>
+                                    </View>
+                                )
                             ))}
                         </View>
-
-                        {(isHost || isJoined) && isPro && (
-                            <TouchableOpacity
-                                style={[styles.createGroupBtn, { backgroundColor: Colors.primary + '15', borderColor: Colors.primary }]}
-                                onPress={handleCreateGroupChat}
-                                disabled={creatingGroup}
-                            >
-                                <Ionicons name="chatbubbles-outline" size={20} color={Colors.primary} />
-                                <Text style={[styles.createGroupText, { color: Colors.primary }]}>
-                                    {creatingGroup ? 'Creating...' : 'Create Group Chat'}
-                                </Text>
-                            </TouchableOpacity>
-                        )}
-                        {(isHost || isJoined) && !isPro && (
-                            <TouchableOpacity
-                                style={[styles.createGroupBtn, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}
-                                onPress={() => showAlert('Pro Required', 'You need a Pro membership to create and access group chats. Upgrade now?', 'info', () => navigation.navigate('Plan' as any), 'Upgrade', 'Cancel')}
-                            >
-                                <Ionicons name="lock-closed-outline" size={18} color={Colors.textMuted} />
-                                <Text style={[styles.createGroupText, { color: Colors.textMuted }]}>Create Group Chat (Pro)</Text>
-                            </TouchableOpacity>
-                        )}
                     </View>
                 </View>
 
@@ -694,30 +536,23 @@ export default function PostDetailScreen() {
             </ScrollView>
 
             {/* Bottom CTA */}
-            <View style={[styles.footer, { backgroundColor: Colors.background, borderTopColor: Colors.border }]}>
-                {isHost ? (
-                    <TouchableOpacity
-                        style={[styles.mainBtn, { backgroundColor: Colors.error }]}
-                        onPress={() => {
-                            showAlert(
-                                'Cancel Dining Plan',
-                                'Are you sure you want to cancel this dining plan? This cannot be undone.',
-                                'error',
-                                () => { deletePost(post.id); navigation.goBack(); },
-                                'Delete Plan',
-                                'Keep'
-                            );
-                        }}
-                    >
-                        <Text style={styles.mainBtnText}>Cancel Dining Plan</Text>
-                    </TouchableOpacity>
-                ) : isJoined ? (
-                    <TouchableOpacity
-                        style={[styles.mainBtn, { backgroundColor: Colors.error + '20', borderWidth: 1.5, borderColor: Colors.error }]}
-                        onPress={handleLeave}
-                    >
-                        <Text style={[styles.mainBtnText, { color: Colors.error }]}>Leave Meal</Text>
-                    </TouchableOpacity>
+            <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20), borderTopColor: Colors.border, backgroundColor: Colors.background }]}>
+                {isJoined ? (
+                    isHost ? (
+                        <TouchableOpacity
+                            style={[styles.mainBtn, { backgroundColor: Colors.error }]}
+                            onPress={handleDelete}
+                        >
+                            <Text style={styles.mainBtnText}>Cancel Dining Plan</Text>
+                        </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity
+                            style={[styles.mainBtn, { backgroundColor: Colors.error }]}
+                            onPress={handleLeave}
+                        >
+                            <Text style={styles.mainBtnText}>Leave Dining Plan</Text>
+                        </TouchableOpacity>
+                    )
                 ) : (
                     <TouchableOpacity
                         style={[
@@ -734,6 +569,100 @@ export default function PostDetailScreen() {
                     </TouchableOpacity>
                 )}
             </View>
+
+            {/* User Selection Modal (Invite Feature) */}
+            <Modal
+                visible={inviteModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setInviteModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: Colors.background }]}>
+                        <View style={[styles.modalHeader, { borderBottomColor: Colors.border }]}>
+                            <Text style={[styles.modalTitle, { color: Colors.textPrimary }]}>Invite People</Text>
+                            <TouchableOpacity onPress={() => setInviteModalVisible(false)} style={styles.closeBtn}>
+                                <Ionicons name="close" size={24} color={Colors.textPrimary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.searchContainer}>
+                            <Ionicons name="search" size={20} color={Colors.textMuted} />
+                            <TextInput
+                                style={[styles.searchInput, { color: Colors.textPrimary }]}
+                                placeholder="Search by name or username..."
+                                placeholderTextColor={Colors.textMuted}
+                                value={inviteSearchQuery}
+                                onChangeText={setInviteSearchQuery}
+                            />
+                        </View>
+
+                        <ScrollView style={styles.userList} contentContainerStyle={{ padding: 20, gap: 12 }}>
+                            {Object.values(TEST_USERS)
+                                .map(t => t.user)
+                                .filter(u => u.id !== user?.id)
+                                .filter(u => !participants.some(p => p.id === u.id))
+                                .filter(u => u.name.toLowerCase().includes(inviteSearchQuery.toLowerCase()) || u.id.toLowerCase().includes(inviteSearchQuery.toLowerCase()))
+                                .map(u => {
+                                    const isSelected = selectedUserIds.has(u.id);
+                                    const isAlreadyInvited = postInvites.some(i => i.inviteeId === u.id && i.status !== 'rejected');
+
+                                    return (
+                                        <TouchableOpacity
+                                            key={u.id}
+                                            style={[styles.userItem, {
+                                                backgroundColor: isSelected ? Colors.primary + '08' : Colors.backgroundElevated,
+                                                borderColor: isSelected ? Colors.primary : Colors.border,
+                                                opacity: isAlreadyInvited ? 0.6 : 1
+                                            }]}
+                                            onPress={() => {
+                                                if (isAlreadyInvited) return;
+                                                const next = new Set(selectedUserIds);
+                                                if (isSelected) next.delete(u.id);
+                                                else next.add(u.id);
+                                                setSelectedUserIds(next);
+                                            }}
+                                            disabled={isAlreadyInvited}
+                                        >
+                                            <Image source={{ uri: u.photoURL || 'https://via.placeholder.com/100' }} style={styles.userItemAvatar} />
+                                            <View style={{ flex: 1 }}>
+                                                <Text style={[styles.userItemName, { color: Colors.textPrimary }]}>{u.name}</Text>
+                                                <Text style={{ color: Colors.textMuted, fontSize: 13 }}>@{u.id}</Text>
+                                            </View>
+
+                                            {isAlreadyInvited ? (
+                                                <View style={[styles.invitedBadge, { backgroundColor: Colors.backgroundCard }]}>
+                                                    <Text style={{ color: Colors.textMuted, fontSize: 12, fontWeight: '700' }}>Invited</Text>
+                                                </View>
+                                            ) : (
+                                                <View style={[
+                                                    styles.checkbox,
+                                                    {
+                                                        borderColor: isSelected ? Colors.primary : Colors.textMuted,
+                                                        backgroundColor: isSelected ? Colors.primary : 'transparent'
+                                                    }
+                                                ]}>
+                                                    {isSelected && <Ionicons name="checkmark" size={14} color="#FFF" />}
+                                                </View>
+                                            )}
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                        </ScrollView>
+
+                        <View style={[styles.modalFooter, { paddingBottom: Math.max(insets.bottom, 20), borderTopColor: Colors.border, backgroundColor: Colors.background }]}>
+                            <TouchableOpacity
+                                style={[styles.mainBtn, { flex: 1, backgroundColor: selectedUserIds.size > 0 ? Colors.primary : Colors.textMuted }]}
+                                disabled={selectedUserIds.size === 0}
+                                onPress={handleSendInvites}
+                            >
+                                <Text style={styles.mainBtnText}>Send {selectedUserIds.size > 0 ? selectedUserIds.size : ''} Invite{selectedUserIds.size !== 1 ? 's' : ''}</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
             <CustomAlert
                 visible={alertConfig.visible}
                 title={alertConfig.title}
@@ -752,7 +681,7 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     heroContainer: { height: 350, width: '100%' },
     heroImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-    headerActions: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 10 },
+    headerActions: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20 },
     circleBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
     heroContent: { position: 'absolute', bottom: 30, left: 20, right: 20 },
     cuisineRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
@@ -791,8 +720,22 @@ const styles = StyleSheet.create({
     rName: { fontSize: 14, fontWeight: '800' },
     requestActions: { flexDirection: 'row', gap: 10 },
     actionIcon: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-    footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, borderTopWidth: 1, paddingBottom: 40 },
+    footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, borderTopWidth: 1 },
     mainBtn: { height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center' },
     mainBtnText: { color: '#FFF', fontSize: 16, fontWeight: '900' },
     errorText: { fontSize: 18, fontWeight: '700', marginTop: 20 },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+    modalContent: { height: height * 0.85, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden' },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, paddingBottom: 16, borderBottomWidth: 1 },
+    modalTitle: { fontSize: 22, fontWeight: '900' },
+    closeBtn: { padding: 4 },
+    searchContainer: { flexDirection: 'row', alignItems: 'center', margin: 20, marginBottom: 0, paddingHorizontal: 16, height: 48, borderRadius: 24, backgroundColor: 'rgba(150,150,150,0.1)' },
+    searchInput: { flex: 1, marginLeft: 10, fontSize: 15, fontWeight: '500' },
+    userList: { flex: 1 },
+    userItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 20, borderWidth: 1.5, gap: 14 },
+    userItemAvatar: { width: 48, height: 48, borderRadius: 24 },
+    userItemName: { fontSize: 16, fontWeight: '800', marginBottom: 2 },
+    checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
+    invitedBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+    modalFooter: { padding: 20, borderTopWidth: 1 }
 });

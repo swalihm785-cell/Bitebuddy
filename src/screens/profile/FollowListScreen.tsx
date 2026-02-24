@@ -35,10 +35,10 @@ export default function FollowListScreen() {
     );
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]} edges={['top']}>
             <View style={[styles.header, { borderBottomColor: Colors.border }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+                <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 4 }}>
+                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>{title}</Text>
                 <View style={{ width: 24 }} />

@@ -150,7 +150,7 @@ export default function NotificationsScreen() {
     };
 
     return (
-        <SafeAreaView style={[styles.safe, { backgroundColor: Colors.background }]}>
+        <SafeAreaView style={[styles.safe, { backgroundColor: Colors.background }]} edges={['top']}>
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: Colors.border, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md }]}>
                 <View>
