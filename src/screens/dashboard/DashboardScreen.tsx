@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../types';
@@ -463,7 +464,14 @@ export default function DashboardScreen() {
         <View style={[s.safe, { backgroundColor: Colors.background }]}>
             <SafeAreaView edges={['top']} style={{ flex: 1 }}>
                 {/* ─── SHARED TOP SECTION ─── */}
-                <View style={{ backgroundColor: isDarkMode ? Colors.background : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: cardBorder }}>
+                <View style={{ backgroundColor: Platform.OS === 'ios' ? 'transparent' : (isDarkMode ? Colors.background : '#FFFFFF'), borderBottomWidth: 1, borderBottomColor: cardBorder }}>
+                    {Platform.OS === 'ios' && (
+                        <BlurView
+                            intensity={80}
+                            tint={isDarkMode ? 'dark' : 'light'}
+                            style={StyleSheet.absoluteFill}
+                        />
+                    )}
                     {/* Header: Greeting + Notifications */}
                     <View style={s.header}>
                         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -492,8 +500,8 @@ export default function DashboardScreen() {
                                 )}
                             </TouchableOpacity>
                             <View style={{ justifyContent: 'center' }}>
-                                <Text style={[s.greeting, { color: Colors.textPrimary, lineHeight: 28 }]}>Hi, {user?.name?.split(' ')[0] || 'Foodie'} 👋</Text>
-                                <Text style={[s.headerSub, { color: Colors.textMuted, marginTop: 0 }]}>
+                                <Text style={[s.greeting, { color: Colors.textPrimary }]}>Hi, {user?.name?.split(' ')[0] || 'Foodie'} 👋</Text>
+                                <Text style={[s.headerSub, { color: Colors.textMuted }]}>
                                     {view === 'list' ? 'Find your next meal companion' : 'Explore nearby plans'}
                                 </Text>
                             </View>
@@ -661,6 +669,7 @@ export default function DashboardScreen() {
                                 </View>
                             )}
 
+                            {/* Section Header */}
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginVertical: 12 }}>
                                 <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.textPrimary }}>
                                     {search ? 'Search Results' : 'Nearby Dining Plans'}

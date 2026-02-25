@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, FlatList, TouchableOpacity,
-    Modal, TextInput, Image, Alert,
+    Modal, TextInput, Image, Alert, Platform
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -211,48 +212,43 @@ export default function ChatListScreen() {
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: Colors.background }]} edges={['top']}>
             {/* Header */}
-            <View style={[styles.header, { backgroundColor: isDarkMode ? Colors.background : '#FFFFFF', paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderBottomColor: Colors.border, borderBottomWidth: 1 }]}>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <TouchableOpacity
-                        style={{
-                            width: 48,
-                            height: 48,
-                            borderRadius: 24,
-                            borderWidth: 2,
-                            borderColor: Colors.primary,
-                            backgroundColor: Colors.backgroundCard,
-                            padding: 2,
-                            overflow: 'hidden',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                        }}
-                        onPress={() => navigation.navigate('Profile')}
-                    >
-                        <Ionicons name="person" size={24} color={Colors.textMuted} />
-                        {user?.photoURL && (
-                            <Image
-                                source={{ uri: user.photoURL }}
-                                style={{ position: 'absolute', width: 44, height: 44, borderRadius: 22 }}
-                            />
-                        )}
-                    </TouchableOpacity>
-                    <View style={{ justifyContent: 'center' }}>
-                        <Text style={[styles.headerTitle, { fontSize: FontSize.xxl, fontWeight: FontWeight.extrabold, color: Colors.textPrimary, lineHeight: 32 }]}>
-                            Messages
-                        </Text>
-                        {pendingIncoming.length > 0 && (
-                            <Text style={{ fontSize: FontSize.xs, color: Colors.warning, fontWeight: '600', marginTop: 0 }}>
-                                {pendingIncoming.length} pending request{pendingIncoming.length > 1 ? 's' : ''}
-                            </Text>
-                        )}
+            <View style={{ backgroundColor: Platform.OS === 'ios' ? 'transparent' : (isDarkMode ? Colors.background : '#FFFFFF'), borderBottomWidth: 1, borderBottomColor: Colors.border, overflow: 'hidden' }}>
+                {Platform.OS === 'ios' && (
+                    <BlurView intensity={80} tint={isDarkMode ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+                )}
+                <View style={[styles.header, { borderBottomWidth: 0, paddingHorizontal: 20, paddingVertical: 14 }]}>
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <TouchableOpacity
+                            style={{
+                                width: 38,
+                                height: 38,
+                                borderRadius: 19,
+                                borderWidth: 2,
+                                borderColor: Colors.primary,
+                                backgroundColor: Colors.backgroundCard,
+                                overflow: 'hidden',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                            }}
+                            onPress={() => navigation.navigate('Profile')}
+                        >
+                            <Ionicons name="person" size={20} color={Colors.textMuted} />
+                            {user?.photoURL && (
+                                <Image
+                                    source={{ uri: user.photoURL }}
+                                    style={{ position: 'absolute', width: 34, height: 34, borderRadius: 17 }}
+                                />
+                            )}
+                        </TouchableOpacity>
+                        <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>Messages</Text>
                     </View>
+                    <TouchableOpacity
+                        style={[styles.newChatBtn, { backgroundColor: Colors.primary + '15' }]}
+                        onPress={() => setNewChatVisible(true)}
+                    >
+                        <Ionicons name="chatbubble-ellipses-outline" size={22} color={Colors.primary} />
+                    </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                    style={[styles.newChatBtn, { backgroundColor: Colors.primary }]}
-                    onPress={() => setNewChatVisible(true)}
-                >
-                    <Ionicons name="create-outline" size={20} color="#FFF" />
-                </TouchableOpacity>
             </View>
 
             <FlatList
@@ -347,7 +343,7 @@ export default function ChatListScreen() {
                     />
                 </SafeAreaView>
             </Modal>
-        </SafeAreaView>
+        </SafeAreaView >
     );
 }
 

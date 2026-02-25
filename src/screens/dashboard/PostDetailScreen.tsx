@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    Image, Dimensions, TextInput, Modal, Alert, Share, Clipboard
+    Image, Dimensions, TextInput, Modal, Alert, Share, Clipboard, Platform, KeyboardAvoidingView
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -87,7 +88,7 @@ export default function PostDetailScreen() {
     const postInvites = invites.filter(i => i.postId === postId);
     const myInvite = postInvites.find(i => i.inviteeId === user?.id);
 
-    const hostParticipant = post.participants.find(p => p.id === post.hostId) || { name: 'Host', age: 25 };
+    const hostParticipant: Participant = post.participants.find(p => p.id === post.hostId) || { id: post.hostId, name: 'Host', age: 25 };
     const participants = post.participants || [];
     const spotsLeft = post.maxGroupSize - participants.length;
     const cuisineImage = post.imageURL || CUISINE_IMAGES[post.cuisineTypes[0]] || DEFAULT_IMAGE;
@@ -310,7 +311,10 @@ export default function PostDetailScreen() {
                         style={StyleSheet.absoluteFill}
                     />
 
-                    <View style={[styles.headerActions, { paddingTop: Math.max(insets.top, 10) }]}>
+                    <View style={[styles.headerActions, { paddingTop: Math.max(insets.top, 10), backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'transparent', overflow: 'hidden' }]}>
+                        {Platform.OS === 'ios' && (
+                            <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
+                        )}
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.circleBtn}>
                             <Ionicons name="chevron-back" size={24} color="#FFF" />
                         </TouchableOpacity>
@@ -347,7 +351,11 @@ export default function PostDetailScreen() {
                     <View style={[styles.card, { backgroundColor: Colors.backgroundElevated, borderColor: Colors.border }]}>
                         <View style={styles.hostRow}>
                             <View style={[styles.hostAvatar, { backgroundColor: Colors.primary }]}>
-                                <Text style={{ fontSize: 24 }}>👤</Text>
+                                {hostParticipant.photoURL ? (
+                                    <Image source={{ uri: hostParticipant.photoURL }} style={{ width: '100%', height: '100%', borderRadius: 24 }} />
+                                ) : (
+                                    <Text style={{ fontSize: 24 }}>👤</Text>
+                                )}
                             </View>
                             <View style={{ flex: 1 }}>
                                 <TouchableOpacity onPress={() => navigation.navigate('UserProfile' as any, { userId: post.hostId })}>
@@ -358,17 +366,36 @@ export default function PostDetailScreen() {
                             {!isHost && (
                                 <TouchableOpacity
                                     style={[styles.chatBtn, { borderColor: Colors.primary }]}
-                                    onPress={() => {
+                                    onPress={async () => {
                                         if (!user) {
                                             showAlert('Login Required', 'Please log in to message the host.', 'warning');
                                             return;
                                         }
-                                        const sortedId = [user.id, post.hostId].sort().join('_');
-                                        navigation.navigate('ChatDetail', {
-                                            chatId: sortedId,
-                                            chatName: hostParticipant.name,
-                                            isGroup: false
-                                        });
+                                        const { findConversationByParticipantId, sendChatRequest } = useChatStore.getState();
+                                        const existing = findConversationByParticipantId(post.hostId);
+
+                                        if (existing) {
+                                            navigation.navigate('ChatDetail', {
+                                                chatId: existing.id,
+                                                chatName: hostParticipant.name,
+                                                isGroup: false,
+                                                chatAvatar: hostParticipant.photoURL
+                                            });
+                                        } else {
+                                            const newChatId = await sendChatRequest(
+                                                { id: user.id, name: user.name, avatar: user.photoURL },
+                                                { id: post.hostId, name: hostParticipant.name, avatar: hostParticipant.photoURL },
+                                                'Hi! I am interested in your dining plan.'
+                                            );
+                                            if (newChatId) {
+                                                navigation.navigate('ChatDetail', {
+                                                    chatId: newChatId,
+                                                    chatName: hostParticipant.name,
+                                                    isGroup: false,
+                                                    chatAvatar: hostParticipant.photoURL
+                                                });
+                                            }
+                                        }
                                     }}
                                 >
                                     <Ionicons name="chatbubble" size={18} color={Colors.primary} />
@@ -530,6 +557,26 @@ export default function PostDetailScreen() {
                             ))}
                         </View>
                     </View>
+
+                    {/* Pending Invites Section */}
+                    {postInvites.filter(i => i.status === 'pending').length > 0 && (
+                        <View style={styles.section}>
+                            <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Invited</Text>
+                            <View style={styles.participantList}>
+                                {postInvites.filter(i => i.status === 'pending').map((invite) => (
+                                    <View key={invite.id} style={[styles.participantItem, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border, opacity: 0.7 }]}>
+                                        <View style={[styles.pAvatar, { backgroundColor: Colors.backgroundElevated }]}>
+                                            <Text style={{ fontSize: 16 }}>⏳</Text>
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={[styles.pName, { color: Colors.textPrimary }]}>{invite.inviteeName || 'User'}</Text>
+                                            <Text style={{ color: Colors.textMuted, fontSize: 11 }}>Invite Sent</Text>
+                                        </View>
+                                    </View>
+                                ))}
+                            </View>
+                        </View>
+                    )}
                 </View>
 
                 <View style={{ height: 120 }} />
@@ -577,90 +624,93 @@ export default function PostDetailScreen() {
                 transparent={true}
                 onRequestClose={() => setInviteModalVisible(false)}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { backgroundColor: Colors.background }]}>
-                        <View style={[styles.modalHeader, { borderBottomColor: Colors.border }]}>
-                            <Text style={[styles.modalTitle, { color: Colors.textPrimary }]}>Invite People</Text>
-                            <TouchableOpacity onPress={() => setInviteModalVisible(false)} style={styles.closeBtn}>
-                                <Ionicons name="close" size={24} color={Colors.textPrimary} />
-                            </TouchableOpacity>
-                        </View>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+                    <View style={styles.modalOverlay}>
+                        <View style={[styles.modalContent, { backgroundColor: Colors.background }]}>
+                            <View style={styles.dragIndicator} />
+                            <View style={[styles.modalHeader, { borderBottomColor: Colors.border }]}>
+                                <Text style={[styles.modalTitle, { color: Colors.textPrimary }]}>Invite People</Text>
+                                <TouchableOpacity onPress={() => setInviteModalVisible(false)} style={styles.closeBtn}>
+                                    <Ionicons name="close" size={24} color={Colors.textPrimary} />
+                                </TouchableOpacity>
+                            </View>
 
-                        <View style={styles.searchContainer}>
-                            <Ionicons name="search" size={20} color={Colors.textMuted} />
-                            <TextInput
-                                style={[styles.searchInput, { color: Colors.textPrimary }]}
-                                placeholder="Search by name or username..."
-                                placeholderTextColor={Colors.textMuted}
-                                value={inviteSearchQuery}
-                                onChangeText={setInviteSearchQuery}
-                            />
-                        </View>
+                            <View style={styles.searchContainer}>
+                                <Ionicons name="search" size={20} color={Colors.textMuted} />
+                                <TextInput
+                                    style={[styles.searchInput, { color: Colors.textPrimary }]}
+                                    placeholder="Search by name or username..."
+                                    placeholderTextColor={Colors.textMuted}
+                                    value={inviteSearchQuery}
+                                    onChangeText={setInviteSearchQuery}
+                                />
+                            </View>
 
-                        <ScrollView style={styles.userList} contentContainerStyle={{ padding: 20, gap: 12 }}>
-                            {Object.values(TEST_USERS)
-                                .map(t => t.user)
-                                .filter(u => u.id !== user?.id)
-                                .filter(u => !participants.some(p => p.id === u.id))
-                                .filter(u => u.name.toLowerCase().includes(inviteSearchQuery.toLowerCase()) || u.id.toLowerCase().includes(inviteSearchQuery.toLowerCase()))
-                                .map(u => {
-                                    const isSelected = selectedUserIds.has(u.id);
-                                    const isAlreadyInvited = postInvites.some(i => i.inviteeId === u.id && i.status !== 'rejected');
+                            <ScrollView style={styles.userList} contentContainerStyle={{ padding: 20, gap: 12 }} keyboardShouldPersistTaps="handled">
+                                {Object.values(TEST_USERS)
+                                    .map(t => t.user)
+                                    .filter(u => u.id !== user?.id)
+                                    .filter(u => !participants.some(p => p.id === u.id))
+                                    .filter(u => u.name.toLowerCase().includes(inviteSearchQuery.toLowerCase()) || u.id.toLowerCase().includes(inviteSearchQuery.toLowerCase()))
+                                    .map(u => {
+                                        const isSelected = selectedUserIds.has(u.id);
+                                        const isAlreadyInvited = postInvites.some(i => i.inviteeId === u.id && i.status !== 'rejected');
 
-                                    return (
-                                        <TouchableOpacity
-                                            key={u.id}
-                                            style={[styles.userItem, {
-                                                backgroundColor: isSelected ? Colors.primary + '08' : Colors.backgroundElevated,
-                                                borderColor: isSelected ? Colors.primary : Colors.border,
-                                                opacity: isAlreadyInvited ? 0.6 : 1
-                                            }]}
-                                            onPress={() => {
-                                                if (isAlreadyInvited) return;
-                                                const next = new Set(selectedUserIds);
-                                                if (isSelected) next.delete(u.id);
-                                                else next.add(u.id);
-                                                setSelectedUserIds(next);
-                                            }}
-                                            disabled={isAlreadyInvited}
-                                        >
-                                            <Image source={{ uri: u.photoURL || 'https://via.placeholder.com/100' }} style={styles.userItemAvatar} />
-                                            <View style={{ flex: 1 }}>
-                                                <Text style={[styles.userItemName, { color: Colors.textPrimary }]}>{u.name}</Text>
-                                                <Text style={{ color: Colors.textMuted, fontSize: 13 }}>@{u.id}</Text>
-                                            </View>
-
-                                            {isAlreadyInvited ? (
-                                                <View style={[styles.invitedBadge, { backgroundColor: Colors.backgroundCard }]}>
-                                                    <Text style={{ color: Colors.textMuted, fontSize: 12, fontWeight: '700' }}>Invited</Text>
+                                        return (
+                                            <TouchableOpacity
+                                                key={u.id}
+                                                style={[styles.userItem, {
+                                                    backgroundColor: isSelected ? Colors.primary + '08' : Colors.backgroundElevated,
+                                                    borderColor: isSelected ? Colors.primary : Colors.border,
+                                                    opacity: isAlreadyInvited ? 0.6 : 1
+                                                }]}
+                                                onPress={() => {
+                                                    if (isAlreadyInvited) return;
+                                                    const next = new Set(selectedUserIds);
+                                                    if (isSelected) next.delete(u.id);
+                                                    else next.add(u.id);
+                                                    setSelectedUserIds(next);
+                                                }}
+                                                disabled={isAlreadyInvited}
+                                            >
+                                                <Image source={{ uri: u.photoURL || 'https://via.placeholder.com/100' }} style={styles.userItemAvatar} />
+                                                <View style={{ flex: 1 }}>
+                                                    <Text style={[styles.userItemName, { color: Colors.textPrimary }]}>{u.name}</Text>
+                                                    <Text style={{ color: Colors.textMuted, fontSize: 13 }}>@{u.id}</Text>
                                                 </View>
-                                            ) : (
-                                                <View style={[
-                                                    styles.checkbox,
-                                                    {
-                                                        borderColor: isSelected ? Colors.primary : Colors.textMuted,
-                                                        backgroundColor: isSelected ? Colors.primary : 'transparent'
-                                                    }
-                                                ]}>
-                                                    {isSelected && <Ionicons name="checkmark" size={14} color="#FFF" />}
-                                                </View>
-                                            )}
-                                        </TouchableOpacity>
-                                    );
-                                })}
-                        </ScrollView>
 
-                        <View style={[styles.modalFooter, { paddingBottom: Math.max(insets.bottom, 20), borderTopColor: Colors.border, backgroundColor: Colors.background }]}>
-                            <TouchableOpacity
-                                style={[styles.mainBtn, { flex: 1, backgroundColor: selectedUserIds.size > 0 ? Colors.primary : Colors.textMuted }]}
-                                disabled={selectedUserIds.size === 0}
-                                onPress={handleSendInvites}
-                            >
-                                <Text style={styles.mainBtnText}>Send {selectedUserIds.size > 0 ? selectedUserIds.size : ''} Invite{selectedUserIds.size !== 1 ? 's' : ''}</Text>
-                            </TouchableOpacity>
+                                                {isAlreadyInvited ? (
+                                                    <View style={[styles.invitedBadge, { backgroundColor: Colors.backgroundCard }]}>
+                                                        <Text style={{ color: Colors.textMuted, fontSize: 12, fontWeight: '700' }}>Invited</Text>
+                                                    </View>
+                                                ) : (
+                                                    <View style={[
+                                                        styles.checkbox,
+                                                        {
+                                                            borderColor: isSelected ? Colors.primary : Colors.textMuted,
+                                                            backgroundColor: isSelected ? Colors.primary : 'transparent'
+                                                        }
+                                                    ]}>
+                                                        {isSelected && <Ionicons name="checkmark" size={14} color="#FFF" />}
+                                                    </View>
+                                                )}
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                            </ScrollView>
+
+                            <View style={[styles.modalFooter, { paddingBottom: Math.max(insets.bottom, 20), borderTopColor: Colors.border, backgroundColor: Colors.background }]}>
+                                <TouchableOpacity
+                                    style={[styles.mainBtn, { flex: 1, backgroundColor: selectedUserIds.size > 0 ? Colors.primary : Colors.textMuted }]}
+                                    disabled={selectedUserIds.size === 0}
+                                    onPress={handleSendInvites}
+                                >
+                                    <Text style={styles.mainBtnText}>Send {selectedUserIds.size > 0 ? selectedUserIds.size : ''} Invite{selectedUserIds.size !== 1 ? 's' : ''}</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
 
             <CustomAlert
@@ -725,7 +775,8 @@ const styles = StyleSheet.create({
     mainBtnText: { color: '#FFF', fontSize: 16, fontWeight: '900' },
     errorText: { fontSize: 18, fontWeight: '700', marginTop: 20 },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-    modalContent: { height: height * 0.85, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden' },
+    modalContent: { maxHeight: height * 0.85, flex: 1, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden' },
+    dragIndicator: { width: 40, height: 5, borderRadius: 3, backgroundColor: 'rgba(150,150,150,0.3)', alignSelf: 'center', marginTop: 12, marginBottom: -10 },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 24, paddingBottom: 16, borderBottomWidth: 1 },
     modalTitle: { fontSize: 22, fontWeight: '900' },
     closeBtn: { padding: 4 },

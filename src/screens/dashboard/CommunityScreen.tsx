@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import {
     View, Text, StyleSheet, FlatList, TouchableOpacity,
-    Animated, Dimensions, StatusBar, Image
+    Animated, Dimensions, StatusBar, Image, Platform
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -61,42 +62,47 @@ export default function CommunityScreen() {
             <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
 
             {/* Header */}
-            <View style={[styles.header, { backgroundColor: isDarkMode ? Colors.background : '#FFFFFF', borderBottomWidth: 1, borderBottomColor: Colors.border }]}>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <TouchableOpacity
-                        style={{
-                            width: 48,
-                            height: 48,
-                            borderRadius: 24,
-                            borderWidth: 2,
-                            borderColor: Colors.primary,
-                            backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : '#F1F5F9',
-                            padding: 2,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            overflow: 'hidden',
-                        }}
-                        onPress={() => navigation.navigate('Profile')}
-                    >
-                        <Ionicons name="person" size={24} color={isDarkMode ? 'rgba(255,255,255,0.3)' : '#94A3B8'} />
-                        {user?.photoURL && (
-                            <Image
-                                source={{ uri: user.photoURL }}
-                                style={{ position: 'absolute', width: 44, height: 44, borderRadius: 22 }}
-                            />
-                        )}
-                    </TouchableOpacity>
-                    <View style={{ justifyContent: 'center' }}>
-                        <Text style={[styles.headerTitle, { color: Colors.textPrimary, lineHeight: 32 }]}>Community</Text>
-                        <Text style={[styles.headerSub, { color: Colors.textMuted, marginTop: 0 }]}>See what's biting in your area</Text>
+            <View style={{ backgroundColor: Platform.OS === 'ios' ? 'transparent' : (isDarkMode ? Colors.background : '#FFFFFF'), borderBottomWidth: 1, borderBottomColor: Colors.border, overflow: 'hidden' }}>
+                {Platform.OS === 'ios' && (
+                    <BlurView intensity={80} tint={isDarkMode ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+                )}
+                <View style={[styles.header, { borderBottomWidth: 0 }]}>
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <TouchableOpacity
+                            style={{
+                                width: 48,
+                                height: 48,
+                                borderRadius: 24,
+                                borderWidth: 2,
+                                borderColor: Colors.primary,
+                                backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : '#F1F5F9',
+                                padding: 2,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                overflow: 'hidden',
+                            }}
+                            onPress={() => navigation.navigate('Profile')}
+                        >
+                            <Ionicons name="person" size={24} color={isDarkMode ? 'rgba(255,255,255,0.3)' : '#94A3B8'} />
+                            {user?.photoURL && (
+                                <Image
+                                    source={{ uri: user.photoURL }}
+                                    style={{ position: 'absolute', width: 44, height: 44, borderRadius: 22 }}
+                                />
+                            )}
+                        </TouchableOpacity>
+                        <View style={{ justifyContent: 'center' }}>
+                            <Text style={[styles.headerTitle, { color: Colors.textPrimary, lineHeight: 32 }]}>Community</Text>
+                            <Text style={[styles.headerSub, { color: Colors.textMuted, marginTop: 0 }]}>See what's biting in your area</Text>
+                        </View>
                     </View>
+                    <TouchableOpacity
+                        style={[styles.createBtn, { backgroundColor: Colors.primary }]}
+                        onPress={() => navigation.navigate('CreateMenu' as any)}
+                    >
+                        <Ionicons name="add" size={24} color="#FFF" />
+                    </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                    style={[styles.createBtn, { backgroundColor: Colors.primary }]}
-                    onPress={() => navigation.navigate('CreateMenu' as any)}
-                >
-                    <Ionicons name="add" size={24} color="#FFF" />
-                </TouchableOpacity>
             </View>
 
             {/* Tabs */}
@@ -154,7 +160,7 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
     },
     headerTitle: {
-        fontSize: 28,
+        fontSize: 24,
         fontWeight: '900',
         letterSpacing: -0.5,
     },

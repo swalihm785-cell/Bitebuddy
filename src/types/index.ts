@@ -47,6 +47,7 @@ export interface Participant {
     name: string;
     age: number;
     gender?: string;
+    photoURL?: string;
 }
 
 export interface GeoPoint {
@@ -210,7 +211,7 @@ export type RootStackParamList = {
     Main: undefined;
     Profile: undefined;
     PostDetail: { postId: string };
-    ChatDetail: { chatId: string; chatName: string; isGroup?: boolean };
+    ChatDetail: { chatId: string; chatName: string; isGroup?: boolean; chatAvatar?: string };
     EditProfile: undefined;
     CreatePost: undefined;
     EditPost: { postId: string };

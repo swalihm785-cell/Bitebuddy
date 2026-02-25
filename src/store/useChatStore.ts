@@ -6,7 +6,7 @@ import { TEST_USERS } from '../data/testUsers';
 import { Platform } from 'react-native';
 import { Notification as NotificationType } from '../types';
 
-export const API_URL = 'http://192.168.29.164:5001';
+export const API_URL = 'http://10.203.2.229:5001';
 
 export type ChatStatus = 'pending' | 'accepted' | 'blocked' | 'deleted';
 export type MessageType = 'text' | 'image' | 'video' | 'contact';
@@ -69,6 +69,7 @@ interface ChatState {
     leaveGroupChat: (chatId: string, userId: string) => Promise<void>;
     removeGroupMember: (chatId: string, userId: string, hostId: string) => Promise<void>;
     deleteGroupChat: (chatId: string, userId: string, deleteAll: boolean) => Promise<void>;
+    findConversationByParticipantId: (participantId: string) => ChatConversation | undefined;
 
     clearAll: () => void;
     wsConnect: (userId: string) => void;
@@ -360,6 +361,10 @@ export const useChatStore = create<ChatState>()(
             } catch (err) {
                 console.error(err);
             }
+        },
+
+        findConversationByParticipantId: (participantId) => {
+            return get().conversations.find(c => !c.isGroup && c.participantId === participantId);
         },
 
         clearAll: () => set({ conversations: [], messages: {} }),

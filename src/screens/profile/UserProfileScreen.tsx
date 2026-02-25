@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import {
-    View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert, Modal, Share, TextInput, Clipboard
+    View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert, Modal, Share, TextInput, Clipboard, Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList, User, ReportReason } from '../../types';
 import { usePostStore } from '../../store/usePostStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useThemeStore } from '../../store/useThemeStore';
+import { useChatStore } from '../../store/useChatStore';
 import { useNotificationStore } from '../../store/useNotificationStore';
 import { useReportStore } from '../../store/useReportStore';
 import { isCurrentlyPro } from '../../utils/authUtils';
@@ -71,7 +73,7 @@ export default function UserProfileScreen() {
     const { addReport } = useReportStore();
     const { posts } = usePostStore();
     const { addNotification } = useNotificationStore();
-    const { currentTheme } = useThemeStore();
+    const { currentTheme, isDarkMode } = useThemeStore();
     const { Colors } = currentTheme;
 
     const [menuVisible, setMenuVisible] = useState(false);
@@ -225,8 +227,11 @@ export default function UserProfileScreen() {
         <View style={[styles.container, { backgroundColor: Colors.background }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
                 <LinearGradient colors={Colors.gradientPrimary} style={styles.hero}>
-                    <SafeAreaView edges={['top']}>
-                        <View style={styles.topActions}>
+                    <SafeAreaView edges={['top']} style={{ backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'transparent' }}>
+                        {Platform.OS === 'ios' && (
+                            <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
+                        )}
+                        <View style={[styles.topActions, { paddingVertical: 12 }]}>
                             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.circleBtn}>
                                 <Ionicons name="chevron-back" size={20} color="#FFF" />
                             </TouchableOpacity>
@@ -250,6 +255,11 @@ export default function UserProfileScreen() {
                                 </View>
                             )}
                         </View>
+                        {userIsPro && (
+                            <LinearGradient colors={['#FFD700', '#FFA500']} style={styles.proBadgeLarge}>
+                                <Ionicons name="star" size={16} color="#FFF" />
+                            </LinearGradient>
+                        )}
                     </View>
 
                     <View style={styles.userInfo}>
@@ -265,39 +275,60 @@ export default function UserProfileScreen() {
                         </Text>
                     </View>
 
-                    {!isMe && (
-                        <View style={styles.actionRow}>
-                            <TouchableOpacity
-                                style={[styles.followBtn, isFollowing ? { backgroundColor: Colors.backgroundCard, borderColor: Colors.border } : { backgroundColor: Colors.primary, borderColor: Colors.primary }]}
-                                onPress={handleFollow}
-                            >
-                                <Text style={[styles.followBtnText, isFollowing ? { color: Colors.textPrimary } : { color: '#FFF' }]}>
-                                    {isFollowing ? 'Buddy ✓' : 'Add Buddy'}
-                                </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.msgBtn, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}
-                                onPress={() => {
-                                    if (!currentUser) return;
-                                    const sortedId = [currentUser.id, userId].sort().join('_');
-                                    navigation.navigate('ChatDetail', {
-                                        chatId: sortedId,
-                                        chatName: user.name || 'User',
-                                        isGroup: false
-                                    });
-                                }}
-                            >
-                                <Ionicons name="chatbubble-outline" size={20} color={Colors.textPrimary} />
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                    {
+                        !isMe && (
+                            <View style={styles.actionRow}>
+                                <TouchableOpacity
+                                    style={[styles.followBtn, isFollowing ? { backgroundColor: Colors.backgroundCard, borderColor: Colors.border } : { backgroundColor: Colors.primary, borderColor: Colors.primary }]}
+                                    onPress={handleFollow}
+                                >
+                                    <Text style={[styles.followBtnText, isFollowing ? { color: Colors.textPrimary } : { color: '#FFF' }]}>
+                                        {isFollowing ? 'Buddy ✓' : 'Add Buddy'}
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.msgBtn, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}
+                                    onPress={async () => {
+                                        if (!currentUser) return;
+                                        const { findConversationByParticipantId, sendChatRequest } = useChatStore.getState();
+                                        const existing = findConversationByParticipantId(userId);
+
+                                        if (existing) {
+                                            navigation.navigate('ChatDetail', {
+                                                chatId: existing.id,
+                                                chatName: user.name || 'User',
+                                                isGroup: false,
+                                                chatAvatar: user.photoURL
+                                            });
+                                        } else {
+                                            const newChatId = await sendChatRequest(
+                                                { id: currentUser.id, name: currentUser.name || 'User', avatar: currentUser.photoURL },
+                                                { id: userId, name: user.name || 'User', avatar: user.photoURL },
+                                                'Hi! Let\'s be buddies!'
+                                            );
+                                            if (newChatId) {
+                                                navigation.navigate('ChatDetail', {
+                                                    chatId: newChatId,
+                                                    chatName: user.name || 'User',
+                                                    isGroup: false,
+                                                    chatAvatar: user.photoURL
+                                                });
+                                            }
+                                        }
+                                    }}
+                                >
+                                    <Ionicons name="chatbubble-outline" size={20} color={Colors.textPrimary} />
+                                </TouchableOpacity>
+                            </View>
+                        )
+                    }
 
                     <View style={[styles.statsRow, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border, marginTop: 20 }]}>
                         <StatCard value={userPosts.length} label="Plans" />
                         <View style={[styles.vDivider, { backgroundColor: Colors.border }]} />
                         <StatCard value={(user?.followersCount || 0) + (user?.followingCount || 0)} label="Food Buddies" />
                     </View>
-                </View>
+                </View >
 
                 <View style={styles.content}>
                     <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>About</Text>
@@ -359,7 +390,7 @@ export default function UserProfileScreen() {
                     )}
                 </View>
                 <View style={{ height: 60 }} />
-            </ScrollView>
+            </ScrollView >
 
             <Modal visible={menuVisible} transparent animationType="slide">
                 <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setMenuVisible(false)}>
@@ -427,7 +458,7 @@ export default function UserProfileScreen() {
                     </View>
                 </View>
             </Modal>
-        </View>
+        </View >
     );
 }
 

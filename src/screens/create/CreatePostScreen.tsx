@@ -76,8 +76,9 @@ export default function CreatePostScreen() {
     const [cuisineDescription, setCuisineDescription] = useState('');
     const [restaurant, setRestaurant] = useState('');
     const [area, setArea] = useState('');
+    const [meetType, setMeetType] = useState<'two_people' | 'group'>('two_people');
     const [minSize, setMinSize] = useState(2);
-    const [maxSize, setMaxSize] = useState(4);
+    const [maxSize, setMaxSize] = useState(2);
     const [isImmediate, setIsImmediate] = useState(false);
     const [isUrgent, setIsUrgent] = useState(false);
     const [selectedBudget, setSelectedBudget] = useState<'range1' | 'range2' | 'range3' | 'range4' | 'free' | 'custom'>('range2');
@@ -263,30 +264,6 @@ export default function CreatePostScreen() {
         }
     };
 
-    const pickImage = async () => {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-            setAlertConfig({
-                visible: true,
-                title: 'Permission Required',
-                message: 'We need access to your gallery to upload a featured image.',
-                type: 'error'
-            });
-            return;
-        }
-
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [16, 9],
-            quality: 0.8,
-        });
-
-        if (!result.canceled) {
-            setImageURL(result.assets[0].uri);
-        }
-    };
-
     const reverseGeocode = async (lat: number, lon: number) => {
         try {
             const response = await fetch(
@@ -394,11 +371,6 @@ export default function CreatePostScreen() {
             return;
         }
 
-        if (!imageURL) {
-            setAlertConfig({ visible: true, title: 'Image Required', message: 'Every dining post needs a featured image to showcase the experience.', type: 'error' });
-            return;
-        }
-
         if (selectedCuisines.length === 0) { setAlertConfig({ visible: true, title: 'Cuisine Required', message: 'Pick at least one cuisine you\'d like to eat.', type: 'error' }); return; }
 
         if (!selectedLocation) {
@@ -446,7 +418,6 @@ export default function CreatePostScreen() {
             autoApprove,
             foodItems: selectedFoods.map(f => f.name),
             selectedFoodOptions: selectedFoods,
-            imageURL: imageURL || undefined,
             expiresAt: new Date(Date.now() + 86400000).toISOString(),
             createdAt: new Date().toISOString(),
         };
@@ -549,22 +520,6 @@ export default function CreatePostScreen() {
                         value={title}
                         onChangeText={setTitle}
                     />
-                </Section>
-
-                <Section title="Featured Image" subtitle="A meal is better when seen" icon="image-outline" colors={Colors} isDarkMode={isDarkMode}>
-                    {imageURL ? (
-                        <View style={styles.imagePreviewContainer}>
-                            <Image source={{ uri: imageURL }} style={styles.imagePreview} />
-                            <TouchableOpacity style={styles.removeImageBtn} onPress={() => setImageURL(null)}>
-                                <Ionicons name="close-circle" size={24} color="#FFF" />
-                            </TouchableOpacity>
-                        </View>
-                    ) : (
-                        <TouchableOpacity style={[styles.imagePickerBtn, { backgroundColor: inputBg, borderColor: glassBorder }]} onPress={pickImage}>
-                            <Ionicons name="camera-outline" size={32} color={Colors.primary} />
-                            <Text style={[styles.imagePickerText, { color: Colors.textSecondary }]}>Add a featured image</Text>
-                        </TouchableOpacity>
-                    )}
                 </Section>
 
                 <Section title="Cuisines & Dishes" subtitle="Tap to select/deselect cuisines" icon="restaurant-outline" colors={Colors} isDarkMode={isDarkMode}>
@@ -859,24 +814,58 @@ export default function CreatePostScreen() {
                     )}
                 </Section>
 
-                <Section title="Group & Timing" subtitle="Set your group size (2–6) and schedule" icon="people-outline" colors={Colors} isDarkMode={isDarkMode}>
-                    <View style={[styles.sizeRow, { alignItems: "stretch" }]}>
-                        <GlassCard effect="clear" colorScheme={isDarkMode ? 'dark' : 'light'} style={[styles.sizeBox, { backgroundColor: (Platform.OS === 'android' && !isDarkMode) ? '#FFFFFF' : 'transparent', borderColor: glassBorder, elevation: (Platform.OS === 'android' && !isDarkMode) ? 2 : 0 }]}>
-                            <Text style={[styles.sizeValue, { color: Colors.textPrimary }]}>{maxSize}</Text>
-                            <Text style={[styles.sizeLabel, { color: Colors.textMuted }]}>Group Max</Text>
-                            <View style={styles.sizeActions}>
-                                <TouchableOpacity onPress={() => setMaxSize(Math.max(2, maxSize - 1))} style={[styles.sizeBtn, { backgroundColor: iconBg }]}>
-                                    <Ionicons name="remove" size={16} color={Colors.textPrimary} />
-                                </TouchableOpacity>
-                                <TouchableOpacity onPress={() => setMaxSize(Math.min(6, maxSize + 1))} style={[styles.sizeBtn, { backgroundColor: iconBg }]}>
-                                    <Ionicons name="add" size={16} color={Colors.textPrimary} />
-                                </TouchableOpacity>
-                            </View>
-                        </GlassCard>
+                <Section title="Group & Timing" subtitle="Choose who you want to meet and when" icon="people-outline" colors={Colors} isDarkMode={isDarkMode}>
+
+                    {/* Meet Type Toggle */}
+                    <View style={styles.meetTypeToggle}>
+                        <TouchableOpacity
+                            style={[
+                                styles.meetTypeBtn,
+                                meetType === 'two_people' ? { backgroundColor: Colors.primary } : { backgroundColor: inputBg, borderColor: glassBorder, borderWidth: 1 }
+                            ]}
+                            onPress={() => {
+                                setMeetType('two_people');
+                                setMaxSize(2); // Lock to 2
+                            }}
+                        >
+                            <Ionicons name="person" size={16} color={meetType === 'two_people' ? '#FFF' : Colors.textSecondary} />
+                            <Text style={[styles.meetTypeText, { color: meetType === 'two_people' ? '#FFF' : Colors.textSecondary }]}>1-on-1 Meet</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[
+                                styles.meetTypeBtn,
+                                meetType === 'group' ? { backgroundColor: Colors.primary } : { backgroundColor: inputBg, borderColor: glassBorder, borderWidth: 1 }
+                            ]}
+                            onPress={() => {
+                                setMeetType('group');
+                                setMaxSize(3); // Default to 3 for a group
+                            }}
+                        >
+                            <Ionicons name="people" size={16} color={meetType === 'group' ? '#FFF' : Colors.textSecondary} />
+                            <Text style={[styles.meetTypeText, { color: meetType === 'group' ? '#FFF' : Colors.textSecondary }]}>Group Meet</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={[styles.sizeRow, { alignItems: "stretch", marginTop: 16 }]}>
+                        {meetType === 'group' && (
+                            <GlassCard effect="clear" colorScheme={isDarkMode ? 'dark' : 'light'} style={[styles.sizeBox, { backgroundColor: (Platform.OS === 'android' && !isDarkMode) ? '#FFFFFF' : 'transparent', borderColor: glassBorder, elevation: (Platform.OS === 'android' && !isDarkMode) ? 2 : 0 }]}>
+                                <Text style={[styles.sizeValue, { color: Colors.textPrimary }]}>{maxSize}</Text>
+                                <Text style={[styles.sizeLabel, { color: Colors.textMuted }]}>Group Max</Text>
+                                <View style={styles.sizeActions}>
+                                    <TouchableOpacity onPress={() => setMaxSize(Math.max(3, maxSize - 1))} style={[styles.sizeBtn, { backgroundColor: iconBg }]}>
+                                        <Ionicons name="remove" size={16} color={Colors.textPrimary} />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={() => setMaxSize(Math.min(4, maxSize + 1))} style={[styles.sizeBtn, { backgroundColor: iconBg }]}>
+                                        <Ionicons name="add" size={16} color={Colors.textPrimary} />
+                                    </TouchableOpacity>
+                                </View>
+                            </GlassCard>
+                        )}
                         <GlassCard
                             effect="clear"
                             colorScheme={isDarkMode ? 'dark' : 'light'}
-                            style={[styles.timeBox, { backgroundColor: (Platform.OS === 'android' && !isDarkMode) ? '#FFFFFF' : 'transparent', borderColor: glassBorder, elevation: (Platform.OS === 'android' && !isDarkMode) ? 2 : 0 }]}
+                            style={[styles.timeBox, meetType === 'two_people' && { flex: 1 }, { backgroundColor: (Platform.OS === 'android' && !isDarkMode) ? '#FFFFFF' : 'transparent', borderColor: glassBorder, elevation: (Platform.OS === 'android' && !isDarkMode) ? 2 : 0 }]}
                             onPress={() => setCustomPickerVisible(true)}
                         >
                             <Text style={[styles.sizeValue, { color: Colors.textPrimary, fontSize: 18 }]}>
@@ -1273,6 +1262,9 @@ const styles = StyleSheet.create({
     publishBtn: { height: 56, borderRadius: 28, overflow: 'hidden' },
     publishGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     publishText: { color: '#FFF', fontSize: 16, fontWeight: '900' },
+    meetTypeToggle: { flexDirection: 'row', gap: 12, width: '100%' },
+    meetTypeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 16, gap: 8 },
+    meetTypeText: { fontSize: 15, fontWeight: '700' },
     switchRow: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, borderWidth: 1, gap: 12 },
     switchTitle: { fontSize: 15, fontWeight: '800' },
     switchSub: { fontSize: 12, marginTop: 2 },

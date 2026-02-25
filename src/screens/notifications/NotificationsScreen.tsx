@@ -4,6 +4,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useThemeStore } from '../../store/useThemeStore';
@@ -37,7 +39,7 @@ const DEFAULT_CONFIG = { icon: 'notifications-outline', color: '#6C63FF', emoji:
 
 export default function NotificationsScreen() {
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-    const { currentTheme } = useThemeStore();
+    const { currentTheme, isDarkMode } = useThemeStore();
     const { Colors, FontSize, FontWeight, Spacing } = currentTheme;
     const { notifications, markAsRead, markAllAsRead, addNotification } = useNotificationStore();
     const { posts } = usePostStore();
@@ -109,34 +111,35 @@ export default function NotificationsScreen() {
             <TouchableOpacity
                 style={[
                     styles.item,
-                    { paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md },
-                    !notif.isRead && { backgroundColor: Colors.primary + '08' }
+                    {
+                        paddingHorizontal: 20,
+                        paddingVertical: 18,
+                        backgroundColor: notif.isRead ? 'transparent' : (isDarkMode ? Colors.primary + '10' : Colors.primary + '08'),
+                    },
                 ]}
                 onPress={() => handlePress(notif)}
-                activeOpacity={0.75}
+                activeOpacity={0.7}
             >
-                {/* Icon circle */}
-                <View style={[styles.iconCircle, { backgroundColor: cfg.color + '18' }]}>
+                <View style={[styles.iconCircle, { backgroundColor: cfg.color + (isDarkMode ? '25' : '15') }]}>
                     <Ionicons name={cfg.icon as any} size={22} color={cfg.color} />
                 </View>
 
                 <View style={styles.content}>
                     <View style={styles.topRow}>
-                        <Text style={[styles.title, { color: Colors.textPrimary, fontSize: FontSize.md, fontWeight: FontWeight.bold }]} numberOfLines={1}>
+                        <Text style={[styles.title, { color: Colors.textPrimary, fontWeight: notif.isRead ? '600' : '800' }]} numberOfLines={1}>
                             {notif.title}
                         </Text>
-                        <Text style={[styles.time, { color: Colors.textMuted, fontSize: FontSize.xs }]}>
+                        <Text style={[styles.time, { color: Colors.textMuted }]}>
                             {formatTime(notif.createdAt)}
                         </Text>
                     </View>
-                    <Text style={[styles.body, { color: Colors.textSecondary, fontSize: FontSize.sm }]} numberOfLines={2}>
+                    <Text style={[styles.body, { color: Colors.textSecondary }]} numberOfLines={2}>
                         {notif.body}
                     </Text>
                 </View>
 
-                {/* Unread dot */}
                 {!notif.isRead && (
-                    <View style={[styles.dot, { backgroundColor: Colors.primary }]} />
+                    <View style={[styles.unreadBadge, { backgroundColor: Colors.primary }]} />
                 )}
             </TouchableOpacity>
         );
@@ -152,38 +155,30 @@ export default function NotificationsScreen() {
     return (
         <SafeAreaView style={[styles.safe, { backgroundColor: Colors.background }]} edges={['top']}>
             {/* Header */}
-            <View style={[styles.header, { borderBottomColor: Colors.border, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md }]}>
-                <View>
-                    <Text style={[styles.headerTitle, { color: Colors.textPrimary, fontSize: FontSize.xxl, fontWeight: FontWeight.extrabold }]}>
+            <View style={[styles.header, { borderBottomColor: Colors.border, paddingHorizontal: 20, paddingVertical: 14, backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'transparent' }]}>
+                {Platform.OS === 'ios' && (
+                    <BlurView intensity={80} tint={isDarkMode ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+                )}
+                <View style={{ flex: 1 }}>
+                    <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>
                         Notifications
                     </Text>
                     {unreadCount > 0 && (
-                        <Text style={[styles.headerSub, { color: Colors.textMuted, fontSize: FontSize.xs }]}>
-                            {unreadCount} unread
+                        <Text style={[styles.headerSub, { color: Colors.textMuted }]}>
+                            {unreadCount} new alert{unreadCount !== 1 ? 's' : ''}
                         </Text>
                     )}
                 </View>
                 {unreadCount > 0 && (
-                    <TouchableOpacity onPress={markAllAsRead} style={[styles.markAllBtn, { backgroundColor: Colors.primary + '15' }]}>
-                        <Ionicons name="checkmark-done-outline" size={16} color={Colors.primary} />
-                        <Text style={[styles.markAllText, { color: Colors.primary, fontSize: FontSize.sm, fontWeight: FontWeight.medium }]}>
-                            Mark all read
-                        </Text>
+                    <TouchableOpacity onPress={markAllAsRead} style={styles.markAllBtn}>
+                        <Ionicons name="checkmark-done" size={20} color={Colors.primary} />
                     </TouchableOpacity>
                 )}
                 <TouchableOpacity onPress={() => {
-                    addNotification({ type: 'join_request', title: 'New Join Request', body: 'Roshan wants to join Pizza Night', data: { postId: '1' }, userId: '1' });
-                    addNotification({ type: 'request_accepted', title: 'Request Accepted', body: 'Your request for Sushi Date was approved!', data: { postId: '1' }, userId: '1' });
-                    addNotification({ type: 'request_rejected', title: 'Request Rejected', body: 'Your request for BBQ Party was declined.', data: { postId: '1' }, userId: '1' });
-                    addNotification({ type: 'new_message', title: 'New Chat Request', body: 'Viknesh sent you a chat request.', data: { chatId: 'chat-viknesh' }, userId: '1' });
-                    addNotification({ type: 'system', title: 'User Blocked', body: 'You have blocked this user successfully.', userId: '1' });
-                    addNotification({ type: 'participant_left', title: 'Participant Left', body: 'Don has left your Pizza Night meal.', data: { postId: '1' }, userId: '1' });
-                    addNotification({ type: 'follow_request', title: 'Follow Request', body: 'Swalih requested to follow you.', data: { userId: 'swalih' }, userId: '1' });
-                    addNotification({ type: 'follow_accepted', title: 'Follow Accepted', body: 'You are now following Swalih.', data: { userId: 'swalih' }, userId: '1' });
-                    addNotification({ type: 'event', title: 'Snap View', body: 'Don viewed your snap.', data: { userId: 'don' }, userId: '1' });
-                    addNotification({ type: 'welcome', title: 'Snap Posted', body: 'A new snap was posted by Roshan.', data: { userId: 'roshan' }, userId: '1' });
-                }} style={[{ marginLeft: 12, backgroundColor: Colors.warning + '15', padding: 8, borderRadius: 16 }]}>
-                    <Text style={{ fontSize: 18 }}>🧪</Text>
+                    addNotification({ type: 'join_request', title: 'New Join Request', body: 'Roshan wants to join Pizza Night', data: { postId: '1' }, userId: 'swalih' });
+                    addNotification({ type: 'request_accepted', title: 'Request Accepted', body: 'Your request for Sushi Date was approved!', data: { postId: '1' }, userId: 'swalih' });
+                }} style={styles.testBtn}>
+                    <Text style={{ fontSize: 16 }}>🧪</Text>
                 </TouchableOpacity>
             </View>
 
@@ -238,7 +233,6 @@ export default function NotificationsScreen() {
                 </View>
             )}
 
-            {/* Fallback when content is gone */}
             <CustomAlert
                 visible={fallbackAlert}
                 title="Content Unavailable"
@@ -255,20 +249,22 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
     safe: { flex: 1 },
     header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', borderBottomWidth: 1 },
-    headerTitle: {},
-    headerSub: { marginTop: 2 },
-    markAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
+    headerTitle: { fontSize: 24, fontWeight: '900' },
+    headerSub: { fontSize: 13, marginTop: 4 },
+    markAllBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(150,150,150,0.1)', justifyContent: 'center', alignItems: 'center' },
+    testBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(150,150,150,0.1)', justifyContent: 'center', alignItems: 'center', marginLeft: 12 },
     markAllText: {},
-    list: {},
-    item: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-    iconCircle: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+    list: { paddingBottom: 100 },
+    item: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+    iconCircle: { width: 48, height: 48, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
     content: { flex: 1 },
     topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-    title: { flex: 1 },
-    time: { marginLeft: 12 },
-    body: { lineHeight: 20 },
+    title: { fontSize: 16 },
+    time: { fontSize: 11 },
+    body: { fontSize: 14, lineHeight: 20 },
+    unreadBadge: { width: 10, height: 10, borderRadius: 5 },
     dot: { width: 10, height: 10, borderRadius: 5, marginLeft: 8 },
-    separator: { height: 1, marginLeft: 78 },
+    separator: { height: 1, marginHorizontal: 20, opacity: 0.5 },
     empty: { alignItems: 'center', paddingTop: 80, gap: 12 },
     emptyIconWrap: { width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
     emptyTitle: {},
