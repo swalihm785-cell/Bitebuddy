@@ -38,6 +38,7 @@ export interface User {
     followers: string[];
     following: string[];
     followRequests: string[];
+    sentBuddyRequests: string[];
     blockedUsers: string[];
     createdAt: Date;
 }

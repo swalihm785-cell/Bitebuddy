@@ -93,6 +93,7 @@ export default function DashboardScreen() {
 
     // Filter modal
     const [filterVisible, setFilterVisible] = useState(false);
+    const [advancedOpen, setAdvancedOpen] = useState(false);
     const [filters, setFilters] = useState<FilterState>({ ...DEFAULT_FILTERS });
     const [appliedFilters, setAppliedFilters] = useState<FilterState>({ ...DEFAULT_FILTERS });
     const slideAnim = useRef(new Animated.Value(0)).current;
@@ -332,23 +333,36 @@ export default function DashboardScreen() {
             return true;
         });
 
-        // Sort
-        if (isPro && af.sortBy !== 'newest') {
-            switch (af.sortBy) {
-                case 'budget_low':
-                    result.sort((a, b) => (a.budgetMin || 0) - (b.budgetMin || 0));
-                    break;
-                case 'budget_high':
-                    result.sort((a, b) => (b.budgetMax || 0) - (a.budgetMax || 0));
-                    break;
-                case 'date_closest':
-                    result.sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
-                    break;
-                case 'most_joined':
-                    result.sort((a, b) => (b.participants?.length || 0) - (a.participants?.length || 0));
-                    break;
+        // Sort — default: active first, then by earliest dining time, then fewest spots needed
+        const now = Date.now();
+        const isActive = (p: typeof result[0]) =>
+            p.status === 'open' && new Date(p.dateTime).getTime() > now;
+
+        // Pro custom sort overrides the secondary sort for active posts only
+        const secondarySort = (a: typeof result[0], b: typeof result[0]) => {
+            if (isPro && af.sortBy !== 'newest') {
+                switch (af.sortBy) {
+                    case 'budget_low': return (a.budgetMin || 0) - (b.budgetMin || 0);
+                    case 'budget_high': return (b.budgetMax || 0) - (a.budgetMax || 0);
+                    case 'date_closest': return new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime();
+                    case 'most_joined': return (b.participants?.length || 0) - (a.participants?.length || 0);
+                }
             }
-        }
+            // Default: earliest dining time, then fewest spots to fill
+            const timeDiff = new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime();
+            if (timeDiff !== 0) return timeDiff;
+            const spotsA = a.maxGroupSize - (a.participants?.length || 0);
+            const spotsB = b.maxGroupSize - (b.participants?.length || 0);
+            return spotsA - spotsB;
+        };
+
+        result.sort((a, b) => {
+            const aActive = isActive(a);
+            const bActive = isActive(b);
+            if (aActive && !bActive) return -1;
+            if (!aActive && bActive) return 1;
+            return secondarySort(a, b);
+        });
 
         return result;
     }, [posts, search, selectedCuisine, appliedFilters, isPro, user, view, mapRange, mapCenter]);
@@ -507,6 +521,7 @@ export default function DashboardScreen() {
                             </View>
                         </View>
                         <View style={{ flexDirection: 'row', gap: 8 }}>
+                            {/* HIDDEN_FEATURE: Promotions and Offers
                             <TouchableOpacity
                                 style={[s.notifBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : '#F1F5F9', borderColor: cardBorder }]}
                                 onPress={() => navigation.navigate('Offers' as any)}
@@ -514,6 +529,7 @@ export default function DashboardScreen() {
                             >
                                 <Ionicons name="ticket-outline" size={20} color={isDarkMode ? '#FFF' : '#334155'} />
                             </TouchableOpacity>
+                            */}
                             <TouchableOpacity
                                 style={[s.notifBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : '#F1F5F9', borderColor: cardBorder }]}
                                 onPress={() => navigation.navigate('Notifications')}
@@ -563,7 +579,7 @@ export default function DashboardScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Map Suggestions Dropdown (Only for map view) */}
+                    {/* HIDDEN_FEATURE: Map search suggestions
                     {view === 'map' && showMapSuggestions && mapSuggestions.length > 0 && (
                         <View style={[s.mapSuggestInHeader, { backgroundColor: isDarkMode ? '#1E1E2E' : '#FFF', borderTopWidth: 1, borderTopColor: cardBorder }]}>
                             {mapSuggestions.map((sg: any, i: number) => (
@@ -578,8 +594,9 @@ export default function DashboardScreen() {
                             ))}
                         </View>
                     )}
+                    */}
 
-                    {/* View toggle */}
+                    {/* HIDDEN_FEATURE: Map view toggle
                     <View style={[s.viewToggle, { backgroundColor: chipBg }]}>
                         {(['list', 'map'] as const).map(v => (
                             <TouchableOpacity key={v} style={[s.toggleBtn, view === v && { backgroundColor: Colors.primary }]} onPress={() => setView(v)}>
@@ -588,8 +605,9 @@ export default function DashboardScreen() {
                             </TouchableOpacity>
                         ))}
                     </View>
+                    */}
 
-                    {/* Range Selector (Only in Map Tab) */}
+                    {/* HIDDEN_FEATURE: Map range selector
                     {view === 'map' && (
                         <View style={s.headerRangeSection}>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -623,6 +641,7 @@ export default function DashboardScreen() {
                             </ScrollView>
                         </View>
                     )}
+                    */}
 
                     {/* Cuisine chips */}
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cuisineRow}>
@@ -646,158 +665,52 @@ export default function DashboardScreen() {
 
                 {/* ─── CONTENT AREA ─── */}
                 <View style={{ flex: 1 }}>
-                    {view === 'list' ? (
-                        <>
-                            {activeFilterCount > 0 && (
-                                <View style={s.activeRow}>
-                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 6, paddingTop: 12 }}>
-                                        <TouchableOpacity style={[s.activeBadge, { backgroundColor: Colors.error + '15' }]} onPress={clearAllAndApply}>
-                                            <Ionicons name="close-circle" size={14} color={Colors.error} />
-                                            <Text style={[s.activeBadgeText, { color: Colors.error }]}>Clear All</Text>
-                                        </TouchableOpacity>
-                                        {appliedFilters.budget !== 'any' && (
-                                            <View style={[s.activeBadge, { backgroundColor: Colors.primary + '15' }]}>
-                                                <Text style={[s.activeBadgeText, { color: Colors.primary }]}>💰 {appliedFilters.budget}</Text>
-                                            </View>
-                                        )}
-                                        {appliedFilters.timing !== 'any' && (
-                                            <View style={[s.activeBadge, { backgroundColor: Colors.primary + '15' }]}>
-                                                <Text style={[s.activeBadgeText, { color: Colors.primary }]}>🕐 {appliedFilters.timing}</Text>
-                                            </View>
-                                        )}
-                                    </ScrollView>
-                                </View>
-                            )}
-
-                            {/* Section Header */}
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginVertical: 12 }}>
-                                <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.textPrimary }}>
-                                    {search ? 'Search Results' : 'Nearby Dining Plans'}
-                                </Text>
-                                <Text style={{ fontSize: 13, color: Colors.textMuted, fontWeight: '600' }}>{filtered.length} found</Text>
-                            </View>
-
-                            <FlatList
-                                data={filtered}
-                                keyExtractor={item => item.id}
-                                renderItem={({ item }) => <PostCard post={item} onPress={() => navigation.navigate('PostDetail', { postId: item.id })} />}
-                                contentContainerStyle={s.list}
-                                showsVerticalScrollIndicator={false}
-                                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
-                                ListEmptyComponent={
-                                    <View style={s.empty}>
-                                        <Text style={{ fontSize: 48 }}>🍽️</Text>
-                                        <Text style={[s.emptyTitle, { color: Colors.textPrimary }]}>No dining plans found</Text>
-                                        <Text style={{ color: Colors.textMuted, fontSize: 14 }}>Try adjusting your filters</Text>
-                                    </View>
-                                }
-                            />
-                        </>
-                    ) : (
-                        <View style={s.fullMapContainer}>
-                            <MapView
-                                ref={mapRef}
-                                style={StyleSheet.absoluteFill}
-                                initialRegion={{ ...mapCenter, latitudeDelta: 0.15, longitudeDelta: 0.15 }}
-                                showsUserLocation
-                                showsMyLocationButton={false}
-                                onRegionChangeComplete={r => setMapCenter({ latitude: r.latitude, longitude: r.longitude })}
-                                onPress={() => setSelectedPost(null)}
-                            >
-                                {userLocation && (
-                                    <Marker
-                                        coordinate={{
-                                            latitude: userLocation.coords.latitude,
-                                            longitude: userLocation.coords.longitude
-                                        }}
-                                        title="You are here"
-                                    >
-                                        <View style={s.userMarkerOuter}>
-                                            <View style={s.userMarkerInner} />
-                                        </View>
-                                    </Marker>
-                                )}
-                                {filtered.map((post, i) => (
-                                    <Marker
-                                        key={post.id}
-                                        coordinate={{
-                                            latitude: post.location?.latitude || 12.9716 + i * 0.01,
-                                            longitude: post.location?.longitude || 77.5946 + i * 0.01
-                                        }}
-                                        onPress={() => setSelectedPost(post)}
-                                    >
-                                        <View style={[s.markerContainer, { backgroundColor: Colors.primary, borderColor: '#FFF' }]}>
-                                            <Text style={s.markerIcon}>
-                                                {post.cuisineTypes[0] === 'Italian' ? '🍕' :
-                                                    post.cuisineTypes[0] === 'Indian' ? '🍛' :
-                                                        post.cuisineTypes[0] === 'Japanese' ? '🍣' :
-                                                            post.cuisineTypes[0] === 'Cafe' ? '☕' : '🍽️'}
-                                            </Text>
-                                        </View>
-                                    </Marker>
-                                ))}
-                                {mapRange > 0 && (
-                                    <Circle
-                                        center={mapCenter}
-                                        radius={mapRange}
-                                        strokeColor={Colors.primary + '80'}
-                                        fillColor={Colors.primary + '15'}
-                                        strokeWidth={2}
-                                    />
-                                )}
-                            </MapView>
-
-                            {/* Locate Me Floating Button */}
-                            <TouchableOpacity
-                                style={[s.locateBtn, { backgroundColor: Colors.background, borderColor: cardBorder }]}
-                                onPress={() => getUserLocation(true)}
-                                activeOpacity={0.8}
-                            >
-                                <Ionicons name="locate" size={24} color={Colors.primary} />
-                            </TouchableOpacity>
-
-                            {/* Marker Preview Selection (Only on map) */}
-                            {selectedPost && (
-                                <Animated.View style={s.previewCardContainer}>
-                                    <TouchableOpacity
-                                        style={[s.previewCard, { backgroundColor: isDarkMode ? '#1E1E2E' : '#FFF' }]}
-                                        activeOpacity={0.9}
-                                        onPress={() => navigation.navigate('PostDetail', { postId: selectedPost.id })}
-                                    >
-                                        <Image source={{ uri: selectedPost.imageURL || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400' }} style={s.previewImage} />
-                                        <View style={s.previewInfo}>
-                                            <View style={s.previewHeader}>
-                                                <Text style={[s.previewTitle, { color: Colors.textPrimary }]} numberOfLines={1}>{selectedPost.title}</Text>
-                                                <View style={[s.typeBadge, { backgroundColor: Colors.primary + '15' }]}>
-                                                    <Text style={[s.typeBadgeText, { color: Colors.primary }]}>{selectedPost.cuisineTypes[0]}</Text>
-                                                </View>
-                                            </View>
-                                            <View style={s.previewMeta}>
-                                                <Ionicons name="location-outline" size={14} color={Colors.textMuted} />
-                                                <Text style={[s.previewAddress, { color: Colors.textMuted }]} numberOfLines={1}>{selectedPost.restaurantName} · {selectedPost.area}</Text>
-                                            </View>
-                                            <View style={s.previewFooter}>
-                                                <View>
-                                                    <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.primary }}>
-                                                        {selectedPost.budgetRange === 'free' ? 'FREE' :
-                                                            selectedPost.budgetRange === 'range1' ? '₹' :
-                                                                selectedPost.budgetRange === 'range2' ? '₹₹' : '₹₹₹'}
-                                                    </Text>
-                                                </View>
-                                                <TouchableOpacity
-                                                    style={[s.viewDetailBtn, { backgroundColor: Colors.primary }]}
-                                                    onPress={() => navigation.navigate('PostDetail', { postId: selectedPost.id })}
-                                                >
-                                                    <Text style={s.viewDetailText}>View Details</Text>
-                                                    <Ionicons name="arrow-forward" size={14} color="#FFF" />
-                                                </TouchableOpacity>
-                                            </View>
-                                        </View>
+                    {/* HIDDEN_FEATURE: Map Section - view toggle and map branch removed, only list view shown */}
+                    <>
+                        {activeFilterCount > 0 && (
+                            <View style={s.activeRow}>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 6, paddingTop: 12 }}>
+                                    <TouchableOpacity style={[s.activeBadge, { backgroundColor: Colors.error + '15' }]} onPress={clearAllAndApply}>
+                                        <Ionicons name="close-circle" size={14} color={Colors.error} />
+                                        <Text style={[s.activeBadgeText, { color: Colors.error }]}>Clear All</Text>
                                     </TouchableOpacity>
-                                </Animated.View>
-                            )}
+                                    {appliedFilters.budget !== 'any' && (
+                                        <View style={[s.activeBadge, { backgroundColor: Colors.primary + '15' }]}>
+                                            <Text style={[s.activeBadgeText, { color: Colors.primary }]}>💰 {appliedFilters.budget}</Text>
+                                        </View>
+                                    )}
+                                    {appliedFilters.timing !== 'any' && (
+                                        <View style={[s.activeBadge, { backgroundColor: Colors.primary + '15' }]}>
+                                            <Text style={[s.activeBadgeText, { color: Colors.primary }]}>🕐 {appliedFilters.timing}</Text>
+                                        </View>
+                                    )}
+                                </ScrollView>
+                            </View>
+                        )}
+
+                        {/* Section Header */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginVertical: 12 }}>
+                            <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.textPrimary }}>
+                                {search ? 'Search Results' : 'Nearby Dining Plans'}
+                            </Text>
                         </View>
-                    )}
+
+                        <FlatList
+                            data={filtered}
+                            keyExtractor={item => item.id}
+                            renderItem={({ item }) => <PostCard post={item} onPress={() => navigation.navigate('PostDetail', { postId: item.id })} />}
+                            contentContainerStyle={s.list}
+                            showsVerticalScrollIndicator={false}
+                            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+                            ListEmptyComponent={
+                                <View style={s.empty}>
+                                    <Text style={{ fontSize: 48 }}>🍽️</Text>
+                                    <Text style={[s.emptyTitle, { color: Colors.textPrimary }]}>No dining plans found</Text>
+                                    <Text style={{ color: Colors.textMuted, fontSize: 14 }}>Try adjusting your filters</Text>
+                                </View>
+                            }
+                        />
+                    </>
                 </View>
             </SafeAreaView>
 
@@ -837,6 +750,28 @@ export default function DashboardScreen() {
                             nestedScrollEnabled={true}
                             keyboardShouldPersistTaps="handled"
                         >
+                            {/* ── Location ── */}
+                            <View style={[s.filterSection, { backgroundColor: sectionBg, borderColor: cardBorder }]}>
+                                <SectionHeader icon="📍" title="Location" />
+                                <TextInput style={[s.filterInput, { backgroundColor: inputBg, color: Colors.textPrimary, borderColor: cardBorder, marginBottom: 10 }]} placeholder="Area / Neighborhood" placeholderTextColor={Colors.textMuted} value={filters.area} onChangeText={v => setFilters(f => ({ ...f, area: v }))} />
+                                <Text style={[s.subLabel, { color: Colors.textSecondary }]}>Radius</Text>
+                                <View style={s.chipWrap}>
+                                    {['any', '2', '5', '10', '20'].map(r => (
+                                        <FilterChip key={r} label={r === 'any' ? 'Any' : `${r} km`} active={filters.radiusKm === r} onPress={() => setFilters(f => ({ ...f, radiusKm: r }))} accent="#F59E0B" />
+                                    ))}
+                                </View>
+                            </View>
+
+                            {/* ── Timing ── */}
+                            <View style={[s.filterSection, { backgroundColor: sectionBg, borderColor: cardBorder }]}>
+                                <SectionHeader icon="🕐" title="Timing" />
+                                <View style={s.chipWrap}>
+                                    {[{ k: 'any', l: 'Any' }, { k: 'morning', l: '🌅 Morning' }, { k: 'afternoon', l: '☀️ Afternoon' }, { k: 'evening', l: '🌆 Evening' }, { k: 'night', l: '🌙 Night' }].map(t => (
+                                        <FilterChip key={t.k} label={t.l} active={filters.timing === t.k} onPress={() => setFilters(f => ({ ...f, timing: t.k }))} />
+                                    ))}
+                                </View>
+                            </View>
+
                             {/* ── Budget ── */}
                             <View style={[s.filterSection, { backgroundColor: sectionBg, borderColor: cardBorder }]}>
                                 <SectionHeader icon="💰" title="Budget" />
@@ -856,16 +791,6 @@ export default function DashboardScreen() {
                                 <FilterToggle label="Free only" icon="gift-outline" value={filters.freeOnly} onChange={v => setFilters(f => ({ ...f, freeOnly: v }))} />
                             </View>
 
-                            {/* ── Timing ── */}
-                            <View style={[s.filterSection, { backgroundColor: sectionBg, borderColor: cardBorder }]}>
-                                <SectionHeader icon="🕐" title="Timing" />
-                                <View style={s.chipWrap}>
-                                    {[{ k: 'any', l: 'Any' }, { k: 'morning', l: '🌅 Morning' }, { k: 'afternoon', l: '☀️ Afternoon' }, { k: 'evening', l: '🌆 Evening' }, { k: 'night', l: '🌙 Night' }].map(t => (
-                                        <FilterChip key={t.k} label={t.l} active={filters.timing === t.k} onPress={() => setFilters(f => ({ ...f, timing: t.k }))} />
-                                    ))}
-                                </View>
-                            </View>
-
                             {/* ── Group Size ── */}
                             <View style={[s.filterSection, { backgroundColor: sectionBg, borderColor: cardBorder }]}>
                                 <SectionHeader icon="👥" title="Group Size" />
@@ -876,106 +801,39 @@ export default function DashboardScreen() {
                                 </View>
                             </View>
 
-                            {/* ── Engagement ── */}
+                            {/* ── Exact Date & Time ── */}
                             <View style={[s.filterSection, { backgroundColor: sectionBg, borderColor: cardBorder }]}>
-                                <SectionHeader icon="🎯" title="Engagement" />
-                                <FilterToggle label="Available spots only" icon="checkmark-circle-outline" value={filters.spotsAvailable} onChange={v => setFilters(f => ({ ...f, spotsAvailable: v }))} />
+                                <SectionHeader icon="📅" title="Exact Date & Time" />
+                                <Text style={[s.subLabel, { color: Colors.textSecondary }]}>Date Range (YYYY-MM-DD)</Text>
+                                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+                                    <TextInput style={[s.filterInput, { flex: 1, backgroundColor: inputBg, color: Colors.textPrimary, borderColor: cardBorder }]} placeholder="From Date" placeholderTextColor={Colors.textMuted} value={filters.dateRangeMin} onChangeText={v => setFilters(f => ({ ...f, dateRangeMin: v }))} />
+                                    <Text style={{ alignSelf: 'center', color: Colors.textMuted, fontWeight: '600' }}>to</Text>
+                                    <TextInput style={[s.filterInput, { flex: 1, backgroundColor: inputBg, color: Colors.textPrimary, borderColor: cardBorder }]} placeholder="To Date" placeholderTextColor={Colors.textMuted} value={filters.dateRangeMax} onChangeText={v => setFilters(f => ({ ...f, dateRangeMax: v }))} />
+                                </View>
+                                <Text style={[s.subLabel, { color: Colors.textSecondary }]}>Time Range (24H - e.g., 08 to 18)</Text>
+                                <View style={{ flexDirection: 'row', gap: 10 }}>
+                                    <TextInput style={[s.filterInput, { flex: 1, backgroundColor: inputBg, color: Colors.textPrimary, borderColor: cardBorder }]} placeholder="Min Hour" placeholderTextColor={Colors.textMuted} keyboardType="numeric" maxLength={2} value={filters.timeRangeMin} onChangeText={v => setFilters(f => ({ ...f, timeRangeMin: v }))} />
+                                    <Text style={{ alignSelf: 'center', color: Colors.textMuted, fontWeight: '600' }}>to</Text>
+                                    <TextInput style={[s.filterInput, { flex: 1, backgroundColor: inputBg, color: Colors.textPrimary, borderColor: cardBorder }]} placeholder="Max Hour" placeholderTextColor={Colors.textMuted} keyboardType="numeric" maxLength={2} value={filters.timeRangeMax} onChangeText={v => setFilters(f => ({ ...f, timeRangeMax: v }))} />
+                                </View>
                             </View>
 
-                            {/* ══════════ ADVANCED (PRO) ══════════ */}
+                            {/* HIDDEN_FEATURE: Advanced Filters accordion
                             <View style={[s.proSection, { borderColor: cardBorder }]}>
-                                <View style={s.proHeader}>
+                                <TouchableOpacity style={s.proHeader} onPress={() => setAdvancedOpen(!advancedOpen)} activeOpacity={0.7}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                         <Ionicons name="diamond" size={18} color="#F59E0B" />
                                         <Text style={[s.proTitle, { color: Colors.textPrimary }]}>Advanced Filters</Text>
                                     </View>
-                                    {!isPro && <View style={s.proTag}><Ionicons name="lock-closed" size={10} color="#FFF" /><Text style={s.proTagText}>PRO</Text></View>}
-                                </View>
-
-                                {isPro ? (
-                                    <>
-                                        {/* Diet */}
-                                        <View style={[s.filterSection, { backgroundColor: sectionBg, borderColor: cardBorder }]}>
-                                            <SectionHeader icon="🥗" title="Dietary Preference" />
-                                            <View style={s.chipWrap}>
-                                                {['any', 'veg', 'non-veg', 'vegan', 'jain', 'halal'].map(d => (
-                                                    <FilterChip key={d} label={d === 'any' ? 'Any' : d.charAt(0).toUpperCase() + d.slice(1)} active={filters.diet === d} onPress={() => setFilters(f => ({ ...f, diet: d }))} accent="#F59E0B" />
-                                                ))}
-                                            </View>
-                                        </View>
-
-                                        {/* Exact Date & Time */}
-                                        <View style={[s.filterSection, { backgroundColor: sectionBg, borderColor: cardBorder }]}>
-                                            <SectionHeader icon="📅" title="Exact Date & Time" />
-                                            <Text style={[s.subLabel, { color: Colors.textSecondary }]}>Date Range (YYYY-MM-DD)</Text>
-                                            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
-                                                <TextInput style={[s.filterInput, { flex: 1, backgroundColor: inputBg, color: Colors.textPrimary, borderColor: cardBorder }]} placeholder="From Date" placeholderTextColor={Colors.textMuted} value={filters.dateRangeMin} onChangeText={v => setFilters(f => ({ ...f, dateRangeMin: v }))} />
-                                                <Text style={{ alignSelf: 'center', color: Colors.textMuted, fontWeight: '600' }}>to</Text>
-                                                <TextInput style={[s.filterInput, { flex: 1, backgroundColor: inputBg, color: Colors.textPrimary, borderColor: cardBorder }]} placeholder="To Date" placeholderTextColor={Colors.textMuted} value={filters.dateRangeMax} onChangeText={v => setFilters(f => ({ ...f, dateRangeMax: v }))} />
-                                            </View>
-                                            <Text style={[s.subLabel, { color: Colors.textSecondary }]}>Time Range (24H - e.g., 08 to 18)</Text>
-                                            <View style={{ flexDirection: 'row', gap: 10 }}>
-                                                <TextInput style={[s.filterInput, { flex: 1, backgroundColor: inputBg, color: Colors.textPrimary, borderColor: cardBorder }]} placeholder="Min Hour" placeholderTextColor={Colors.textMuted} keyboardType="numeric" maxLength={2} value={filters.timeRangeMin} onChangeText={v => setFilters(f => ({ ...f, timeRangeMin: v }))} />
-                                                <Text style={{ alignSelf: 'center', color: Colors.textMuted, fontWeight: '600' }}>to</Text>
-                                                <TextInput style={[s.filterInput, { flex: 1, backgroundColor: inputBg, color: Colors.textPrimary, borderColor: cardBorder }]} placeholder="Max Hour" placeholderTextColor={Colors.textMuted} keyboardType="numeric" maxLength={2} value={filters.timeRangeMax} onChangeText={v => setFilters(f => ({ ...f, timeRangeMax: v }))} />
-                                            </View>
-                                        </View>
-
-                                        {/* Host */}
-                                        <View style={[s.filterSection, { backgroundColor: sectionBg, borderColor: cardBorder }]}>
-                                            <SectionHeader icon="👤" title="Host Filters" />
-                                            <FilterToggle label="Verified hosts only" icon="shield-checkmark-outline" value={filters.verifiedOnly} onChange={v => setFilters(f => ({ ...f, verifiedOnly: v }))} />
-                                            <FilterToggle label="Hosts I follow" icon="heart-outline" value={filters.followedOnly} onChange={v => setFilters(f => ({ ...f, followedOnly: v }))} />
-                                            <View style={{ marginTop: 8 }}>
-                                                <Text style={[s.subLabel, { color: Colors.textSecondary }]}>Min Host Rating</Text>
-                                                <View style={s.chipWrap}>
-                                                    {['any', '3+', '4+', '4.5+'].map(r => (
-                                                        <FilterChip key={r} label={r === 'any' ? 'Any' : `⭐ ${r}`} active={filters.minRating === r} onPress={() => setFilters(f => ({ ...f, minRating: r }))} accent="#F59E0B" />
-                                                    ))}
-                                                </View>
-                                            </View>
-                                        </View>
-
-                                        {/* Location */}
-                                        <View style={[s.filterSection, { backgroundColor: sectionBg, borderColor: cardBorder }]}>
-                                            <SectionHeader icon="📍" title="Location" />
-                                            <TextInput style={[s.filterInput, { backgroundColor: inputBg, color: Colors.textPrimary, borderColor: cardBorder, marginBottom: 10 }]} placeholder="Area / Neighborhood" placeholderTextColor={Colors.textMuted} value={filters.area} onChangeText={v => setFilters(f => ({ ...f, area: v }))} />
-                                            <Text style={[s.subLabel, { color: Colors.textSecondary }]}>Radius</Text>
-                                            <View style={s.chipWrap}>
-                                                {['any', '2', '5', '10', '20'].map(r => (
-                                                    <FilterChip key={r} label={r === 'any' ? 'Any' : `${r} km`} active={filters.radiusKm === r} onPress={() => setFilters(f => ({ ...f, radiusKm: r }))} accent="#F59E0B" />
-                                                ))}
-                                            </View>
-                                        </View>
-
-                                        {/* Sort */}
-                                        <View style={[s.filterSection, { backgroundColor: sectionBg, borderColor: cardBorder }]}>
-                                            <SectionHeader icon="↕️" title="Sort By" />
-                                            <View style={s.chipWrap}>
-                                                {[
-                                                    { k: 'newest', l: 'Newest' },
-                                                    { k: 'budget_low', l: '₹ Low → High' },
-                                                    { k: 'budget_high', l: '₹ High → Low' },
-                                                    { k: 'date_closest', l: 'Soonest' },
-                                                    { k: 'most_joined', l: 'Most Joined' },
-                                                ].map(s2 => (
-                                                    <FilterChip key={s2.k} label={s2.l} active={filters.sortBy === s2.k} onPress={() => setFilters(f => ({ ...f, sortBy: s2.k }))} accent="#F59E0B" />
-                                                ))}
-                                            </View>
-                                        </View>
-                                    </>
-                                ) : (
-                                    <View style={s.upgradePrompt}>
-                                        <Text style={[s.upgradeText, { color: Colors.textMuted }]}>
-                                            Unlock dietary, host-based, location, and sort filters with Pro.
-                                        </Text>
-                                        <TouchableOpacity style={s.upgradeBtn} onPress={() => { closeFilters(); setTimeout(() => navigation.navigate('Plan'), 300); }}>
-                                            <Ionicons name="star" size={14} color="#FFF" />
-                                            <Text style={s.upgradeBtnText}>Upgrade to Pro</Text>
-                                        </TouchableOpacity>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                        {!isPro && <View style={s.proTag}><Ionicons name="lock-closed" size={10} color="#FFF" /><Text style={s.proTagText}>PRO</Text></View>}
+                                        <Ionicons name={advancedOpen ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.textMuted} />
                                     </View>
-                                )}
+                                </TouchableOpacity>
                             </View>
+                            */}
+
+
                         </ScrollView>
 
                         {/* Footer: Clear + Apply */}

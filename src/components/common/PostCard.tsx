@@ -58,6 +58,9 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
     const hostInfo = getHostInfo(post.hostId);
     const cuisineImage = post.imageURL || CUISINE_IMAGES[post.cuisineTypes[0]] || DEFAULT_IMAGE;
 
+    const postDate = post.dateTime instanceof Date ? post.dateTime : new Date(post.dateTime);
+    const isInactive = post.status !== 'open' || postDate.getTime() < Date.now();
+
     const cardBg = isDarkMode ? '#1E1E2E' : '#FFFFFF';
     const cardBorder = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
 
@@ -179,6 +182,16 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
                     </View>
                 </View>
             </View>
+
+            {/* Grey overlay for inactive/closed posts */}
+            {isInactive && (
+                <View style={styles.inactiveOverlay}>
+                    <View style={styles.closedBadge}>
+                        <Ionicons name="lock-closed" size={14} color="#FFF" />
+                        <Text style={styles.closedBadgeText}>Closed</Text>
+                    </View>
+                </View>
+            )}
         </TouchableOpacity>
     );
 };
@@ -296,4 +309,22 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     spotsBadgeText: { fontSize: 11, fontWeight: '700' },
+    // Inactive overlay
+    inactiveOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(120,120,120,0.45)',
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    closedBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+    },
+    closedBadgeText: { fontSize: 14, fontWeight: '800', color: '#FFF', letterSpacing: 0.5 },
 });

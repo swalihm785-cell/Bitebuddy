@@ -9,8 +9,10 @@ import { useChatStore } from '../store/useChatStore';
 import DashboardScreen from '../screens/dashboard/DashboardScreen';
 import CreatePostScreen from '../screens/create/CreatePostScreen';
 import ChatListScreen from '../screens/messaging/ChatListScreen';
-import CommunityScreen from '../screens/dashboard/CommunityScreen';
-import SnapScreen from '../screens/snap/SnapScreen';
+// HIDDEN_FEATURE: Community tab
+// import CommunityScreen from '../screens/dashboard/CommunityScreen';
+// HIDDEN_FEATURE: Snaps tab
+// import SnapScreen from '../screens/snap/SnapScreen';
 import CreateMenuModal from '../screens/create/CreateMenuModal';
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
@@ -62,10 +64,12 @@ export default function MainNavigator() {
                 tabBarIcon: ({ color, size, focused }) => {
                     const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
                         Dashboard: focused ? 'compass' : 'compass-outline',
-                        Community: focused ? 'people' : 'people-outline',
+                        // HIDDEN_FEATURE: Community tab
+                        // Community: focused ? 'people' : 'people-outline',
                         Create: focused ? 'add-circle' : 'add-circle-outline',
                         Messages: focused ? 'chatbubbles' : 'chatbubbles-outline',
-                        Snap: focused ? 'camera' : 'camera-outline',
+                        // HIDDEN_FEATURE: Snaps tab
+                        // Snap: focused ? 'camera' : 'camera-outline',
                     };
                     const iconName = icons[route.name] || 'ellipse';
                     return (
@@ -84,14 +88,16 @@ export default function MainNavigator() {
             })}
         >
             <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'Explore' }} />
+            {/* HIDDEN_FEATURE: Community tab
             <Tab.Screen name="Community" component={CommunityScreen} />
+            */}
             <Tab.Screen
                 name="Create"
                 component={CreatePostScreen}
                 listeners={{
                     tabPress: (e) => {
                         e.preventDefault();
-                        navigation.navigate('CreateMenu');
+                        navigation.navigate('CreatePost');
                     },
                 }}
                 options={{
@@ -124,7 +130,9 @@ export default function MainNavigator() {
                     tabBarLabel: () => null,
                 }}
             />
+            {/* HIDDEN_FEATURE: Snaps tab
             <Tab.Screen name="Snap" component={SnapScreen} />
+            */}
             <Tab.Screen name="Messages" component={ChatListScreen} />
         </Tab.Navigator>
     );

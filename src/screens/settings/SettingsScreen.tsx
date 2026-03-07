@@ -42,7 +42,7 @@ export default function SettingsScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-                {/* Pro CTA */}
+                {/* HIDDEN_FEATURE: Pro Features - Upgrade to Pro CTA
                 {user?.plan === 'free' && (
                     <TouchableOpacity
                         style={[styles.proCard, { backgroundColor: Colors.backgroundCard, borderColor: Colors.primary }]}
@@ -58,6 +58,7 @@ export default function SettingsScreen() {
                         <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
                     </TouchableOpacity>
                 )}
+                */}
 
                 <Text style={[styles.sectionHeader, { color: Colors.textMuted }]}>Preferences</Text>
                 <View style={[styles.card, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
@@ -85,6 +86,7 @@ export default function SettingsScreen() {
                 <Text style={[styles.sectionHeader, { color: Colors.textMuted }]}>Account</Text>
                 <View style={[styles.card, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
                     <SettingRow icon="person-outline" title="Edit Profile" onPress={() => navigation.navigate('EditProfile')} right={<Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />} />
+                    {/* HIDDEN_FEATURE: Tiered Plans - Subscription row
                     <View style={[styles.rowDivider, { backgroundColor: Colors.border }]} />
                     <SettingRow
                         icon="card-outline"
@@ -95,6 +97,7 @@ export default function SettingsScreen() {
                         }}
                         right={<Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />}
                     />
+                    */}
                     <View style={[styles.rowDivider, { backgroundColor: Colors.border }]} />
                     <SettingRow
                         icon="ban-outline"

@@ -517,7 +517,7 @@ export default function EditPostScreen() {
                                 <TouchableOpacity onPress={() => setMaxSize(Math.max(2, maxSize - 1))} style={[styles.sizeBtn, { backgroundColor: iconBg }]}>
                                     <Ionicons name="remove" size={16} color={Colors.textPrimary} />
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => setMaxSize(Math.min(6, maxSize + 1))} style={[styles.sizeBtn, { backgroundColor: iconBg }]}>
+                                <TouchableOpacity onPress={() => setMaxSize(Math.min(4, maxSize + 1))} style={[styles.sizeBtn, { backgroundColor: iconBg }]}>
                                     <Ionicons name="add" size={16} color={Colors.textPrimary} />
                                 </TouchableOpacity>
                             </View>

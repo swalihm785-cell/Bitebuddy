@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList, User, ReportReason } from '../../types';
+import { RootStackParamList, User, ReportReason, DiningPost } from '../../types';
 import { usePostStore } from '../../store/usePostStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useThemeStore } from '../../store/useThemeStore';
@@ -69,7 +69,7 @@ export default function UserProfileScreen() {
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
     const route = useRoute<any>();
     const { userId } = route.params;
-    const { user: currentUser, toggleFollow, blockUser } = useAuthStore();
+    const { user: currentUser, toggleFollow, sendBuddyRequest, cancelBuddyRequest, blockUser } = useAuthStore();
     const { addReport } = useReportStore();
     const { posts } = usePostStore();
     const { addNotification } = useNotificationStore();
@@ -82,7 +82,8 @@ export default function UserProfileScreen() {
     const [reportDescription, setReportDescription] = useState('');
 
     const isMe = userId === currentUser?.id;
-    const isFollowing = currentUser?.following.includes(userId);
+    const isFollowing = currentUser?.following?.includes(userId);
+    const hasRequested = currentUser?.sentBuddyRequests?.includes(userId);
     const isBlocked = currentUser?.blockedUsers?.includes(userId);
 
     const mockData = MOCK_USERS[userId] || { name: 'Foodie Buddy', bio: 'Bite Buddy member.' };
@@ -129,7 +130,33 @@ export default function UserProfileScreen() {
 
     const handleFollow = () => {
         if (!currentUser) return;
-        toggleFollow(userId);
+        if (isFollowing) {
+            // Already buddies — prompt to un-buddy
+            Alert.alert('Remove Buddy', `Are you sure you want to remove ${user.name} as a buddy?`, [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Remove', style: 'destructive', onPress: () => {
+                        toggleFollow(userId);
+                        showMessage({ message: 'Buddy Removed', type: 'info', icon: 'info' });
+                    }
+                }
+            ]);
+        } else if (hasRequested) {
+            // Cancel pending request
+            cancelBuddyRequest(userId);
+            showMessage({ message: 'Request Cancelled', description: 'Buddy request withdrawn.', type: 'info', icon: 'info' });
+        } else {
+            // Send new buddy request
+            sendBuddyRequest(userId);
+            addNotification({
+                userId: userId,
+                type: 'follow_request',
+                title: 'New Buddy Request',
+                body: `${currentUser.name} wants to be your food buddy!`,
+                data: { userId: currentUser.id }
+            });
+            showMessage({ message: 'Request Sent!', description: `Buddy request sent to ${user.name}.`, type: 'success', icon: 'success' });
+        }
     };
 
     const handleShare = async () => {
@@ -279,11 +306,23 @@ export default function UserProfileScreen() {
                         !isMe && (
                             <View style={styles.actionRow}>
                                 <TouchableOpacity
-                                    style={[styles.followBtn, isFollowing ? { backgroundColor: Colors.backgroundCard, borderColor: Colors.border } : { backgroundColor: Colors.primary, borderColor: Colors.primary }]}
+                                    style={[styles.followBtn,
+                                    isFollowing
+                                        ? { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }
+                                        : hasRequested
+                                            ? { backgroundColor: Colors.backgroundCard, borderColor: Colors.warning || '#F59E0B' }
+                                            : { backgroundColor: Colors.primary, borderColor: Colors.primary }
+                                    ]}
                                     onPress={handleFollow}
                                 >
-                                    <Text style={[styles.followBtnText, isFollowing ? { color: Colors.textPrimary } : { color: '#FFF' }]}>
-                                        {isFollowing ? 'Buddy ✓' : 'Add Buddy'}
+                                    <Text style={[styles.followBtnText,
+                                    isFollowing
+                                        ? { color: Colors.textPrimary }
+                                        : hasRequested
+                                            ? { color: Colors.warning || '#F59E0B' }
+                                            : { color: '#FFF' }
+                                    ]}>
+                                        {isFollowing ? 'Buddy ✓' : hasRequested ? 'Requested ⏳' : 'Add Buddy'}
                                     </Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
@@ -370,6 +409,67 @@ export default function UserProfileScreen() {
                                     </View>
                                 ))}
                             </View>
+                        </View>
+                    )}
+
+                    {/* Dining Plans */}
+                    {userPosts.length > 0 && (
+                        <View style={{ marginTop: 20 }}>
+                            <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Dining Plans</Text>
+                            {[...userPosts]
+                                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                .map((post: DiningPost) => {
+                                    const isCurrent = post.status === 'open' && new Date(post.dateTime) > new Date();
+                                    return (
+                                        <TouchableOpacity
+                                            key={post.id}
+                                            style={[styles.postCard, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}
+                                            onPress={() => navigation.navigate('PostDetail', { postId: post.id })}
+                                            activeOpacity={0.75}
+                                        >
+                                            {post.imageURL && (
+                                                <Image source={{ uri: post.imageURL }} style={styles.postImage} />
+                                            )}
+                                            <View style={styles.postInfo}>
+                                                <View style={styles.postTopRow}>
+                                                    <Text style={[styles.postTitle, { color: Colors.textPrimary }]} numberOfLines={1}>
+                                                        {post.title}
+                                                    </Text>
+                                                    <View style={[styles.postTag, { backgroundColor: isCurrent ? '#22C55E18' : Colors.border + '60' }]}>
+                                                        <View style={[styles.postTagDot, { backgroundColor: isCurrent ? '#22C55E' : Colors.textMuted }]} />
+                                                        <Text style={[styles.postTagText, { color: isCurrent ? '#22C55E' : Colors.textMuted }]}>
+                                                            {isCurrent ? 'Current' : 'Previous'}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                                <Text style={[styles.postMeta, { color: Colors.textMuted }]} numberOfLines={1}>
+                                                    {post.cuisineTypes.join(', ')}
+                                                </Text>
+                                                <View style={styles.postBottomRow}>
+                                                    <View style={styles.postMetaItem}>
+                                                        <Ionicons name="calendar-outline" size={13} color={Colors.textMuted} />
+                                                        <Text style={[styles.postMetaText, { color: Colors.textMuted }]}>
+                                                            {new Date(post.dateTime).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                                        </Text>
+                                                    </View>
+                                                    <View style={styles.postMetaItem}>
+                                                        <Ionicons name="people-outline" size={13} color={Colors.textMuted} />
+                                                        <Text style={[styles.postMetaText, { color: Colors.textMuted }]}>
+                                                            {post.currentParticipants}/{post.maxGroupSize}
+                                                        </Text>
+                                                    </View>
+                                                    <View style={styles.postMetaItem}>
+                                                        <Ionicons name="location-outline" size={13} color={Colors.textMuted} />
+                                                        <Text style={[styles.postMetaText, { color: Colors.textMuted }]} numberOfLines={1}>
+                                                            {post.area}, {post.city}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                            </View>
+                                        </TouchableOpacity>
+                                    );
+                                })
+                            }
                         </View>
                     )}
 
@@ -524,4 +624,17 @@ const styles = StyleSheet.create({
     chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     chip: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1 },
     chipTxt: { fontSize: 12, fontWeight: '700' },
+    // ── Post Card Styles ──
+    postCard: { flexDirection: 'row', borderRadius: 16, borderWidth: 1, overflow: 'hidden', marginBottom: 12 },
+    postImage: { width: 90, height: 90, backgroundColor: '#E5E7EB' },
+    postInfo: { flex: 1, padding: 12, justifyContent: 'center', gap: 4 },
+    postTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+    postTitle: { fontSize: 15, fontWeight: '800', flex: 1 },
+    postTag: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+    postTagDot: { width: 6, height: 6, borderRadius: 3 },
+    postTagText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.3 },
+    postMeta: { fontSize: 12, fontWeight: '600' },
+    postBottomRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 2 },
+    postMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+    postMetaText: { fontSize: 11, fontWeight: '600' },
 });

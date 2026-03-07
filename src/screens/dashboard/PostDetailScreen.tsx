@@ -538,27 +538,17 @@ export default function PostDetailScreen() {
                                     )}
                                 </TouchableOpacity>
                             ))}
+                            {/* HIDDEN_FEATURE: Invite Friends - host invite action removed, all spots show as "Spot Available" */}
                             {Array.from({ length: Math.max(0, post.maxGroupSize - participants.length) }).map((_, i) => (
-                                isHost ? (
-                                    <TouchableOpacity
-                                        key={`empty-${i}`}
-                                        style={[styles.participantItem, styles.emptySpot, { borderColor: Colors.primary, backgroundColor: Colors.primary + '08' }]}
-                                        onPress={() => setInviteModalVisible(true)}
-                                    >
-                                        <Ionicons name="person-add-outline" size={20} color={Colors.primary} />
-                                        <Text style={{ color: Colors.primary, fontWeight: '700' }}>Invite People</Text>
-                                    </TouchableOpacity>
-                                ) : (
-                                    <View key={`empty-${i}`} style={[styles.participantItem, styles.emptySpot, { borderColor: Colors.border }]}>
-                                        <Ionicons name="add" size={20} color={Colors.textMuted} />
-                                        <Text style={{ color: Colors.textMuted, fontWeight: '600' }}>Spot Available</Text>
-                                    </View>
-                                )
+                                <View key={`empty-${i}`} style={[styles.participantItem, styles.emptySpot, { borderColor: Colors.border }]}>
+                                    <Ionicons name="add" size={20} color={Colors.textMuted} />
+                                    <Text style={{ color: Colors.textMuted, fontWeight: '600' }}>Spot Available</Text>
+                                </View>
                             ))}
                         </View>
                     </View>
 
-                    {/* Pending Invites Section */}
+                    {/* HIDDEN_FEATURE: Invite Friends - pending invites section
                     {postInvites.filter(i => i.status === 'pending').length > 0 && (
                         <View style={styles.section}>
                             <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Invited</Text>
@@ -577,141 +567,58 @@ export default function PostDetailScreen() {
                             </View>
                         </View>
                     )}
+                    */}
                 </View>
 
                 <View style={{ height: 120 }} />
-            </ScrollView>
+            </ScrollView >
 
             {/* Bottom CTA */}
-            <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20), borderTopColor: Colors.border, backgroundColor: Colors.background }]}>
-                {isJoined ? (
-                    isHost ? (
-                        <TouchableOpacity
-                            style={[styles.mainBtn, { backgroundColor: Colors.error }]}
-                            onPress={handleDelete}
-                        >
-                            <Text style={styles.mainBtnText}>Cancel Dining Plan</Text>
-                        </TouchableOpacity>
+            < View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20), borderTopColor: Colors.border, backgroundColor: Colors.background }]} >
+                {
+                    isJoined ? (
+                        isHost ? (
+                            <TouchableOpacity
+                                style={[styles.mainBtn, { backgroundColor: Colors.error }]}
+                                onPress={handleDelete}
+                            >
+                                <Text style={styles.mainBtnText}>Cancel Dining Plan</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity
+                                style={[styles.mainBtn, { backgroundColor: Colors.error }]}
+                                onPress={handleLeave}
+                            >
+                                <Text style={styles.mainBtnText}>Leave Dining Plan</Text>
+                            </TouchableOpacity>
+                        )
                     ) : (
                         <TouchableOpacity
-                            style={[styles.mainBtn, { backgroundColor: Colors.error }]}
-                            onPress={handleLeave}
+                            style={[
+                                styles.mainBtn,
+                                { backgroundColor: hasPendingRequest ? Colors.warning : hasRejectedRequest ? Colors.error : Colors.primary },
+                                (spotsLeft <= 0 && !hasPendingRequest && !hasRejectedRequest) && { backgroundColor: Colors.textMuted }
+                            ]}
+                            disabled={hasPendingRequest || hasRejectedRequest || (spotsLeft <= 0)}
+                            onPress={handleJoin}
                         >
-                            <Text style={styles.mainBtnText}>Leave Dining Plan</Text>
+                            <Text style={styles.mainBtnText}>
+                                {spotsLeft <= 0 ? 'Full' : hasPendingRequest ? 'Request Pending...' : hasRejectedRequest ? 'Request Rejected' : 'Request to Join'}
+                            </Text>
                         </TouchableOpacity>
                     )
-                ) : (
-                    <TouchableOpacity
-                        style={[
-                            styles.mainBtn,
-                            { backgroundColor: hasPendingRequest ? Colors.warning : hasRejectedRequest ? Colors.error : Colors.primary },
-                            (spotsLeft <= 0 && !hasPendingRequest && !hasRejectedRequest) && { backgroundColor: Colors.textMuted }
-                        ]}
-                        disabled={hasPendingRequest || hasRejectedRequest || (spotsLeft <= 0)}
-                        onPress={handleJoin}
-                    >
-                        <Text style={styles.mainBtnText}>
-                            {spotsLeft <= 0 ? 'Full' : hasPendingRequest ? 'Request Pending...' : hasRejectedRequest ? 'Request Rejected' : 'Request to Join'}
-                        </Text>
-                    </TouchableOpacity>
-                )}
-            </View>
+                }
+            </View >
 
-            {/* User Selection Modal (Invite Feature) */}
+            {/* HIDDEN_FEATURE: Invite Friends - invite modal removed
             <Modal
                 visible={inviteModalVisible}
                 animationType="slide"
                 transparent={true}
                 onRequestClose={() => setInviteModalVisible(false)}
             >
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-                    <View style={styles.modalOverlay}>
-                        <View style={[styles.modalContent, { backgroundColor: Colors.background }]}>
-                            <View style={styles.dragIndicator} />
-                            <View style={[styles.modalHeader, { borderBottomColor: Colors.border }]}>
-                                <Text style={[styles.modalTitle, { color: Colors.textPrimary }]}>Invite People</Text>
-                                <TouchableOpacity onPress={() => setInviteModalVisible(false)} style={styles.closeBtn}>
-                                    <Ionicons name="close" size={24} color={Colors.textPrimary} />
-                                </TouchableOpacity>
-                            </View>
-
-                            <View style={styles.searchContainer}>
-                                <Ionicons name="search" size={20} color={Colors.textMuted} />
-                                <TextInput
-                                    style={[styles.searchInput, { color: Colors.textPrimary }]}
-                                    placeholder="Search by name or username..."
-                                    placeholderTextColor={Colors.textMuted}
-                                    value={inviteSearchQuery}
-                                    onChangeText={setInviteSearchQuery}
-                                />
-                            </View>
-
-                            <ScrollView style={styles.userList} contentContainerStyle={{ padding: 20, gap: 12 }} keyboardShouldPersistTaps="handled">
-                                {Object.values(TEST_USERS)
-                                    .map(t => t.user)
-                                    .filter(u => u.id !== user?.id)
-                                    .filter(u => !participants.some(p => p.id === u.id))
-                                    .filter(u => u.name.toLowerCase().includes(inviteSearchQuery.toLowerCase()) || u.id.toLowerCase().includes(inviteSearchQuery.toLowerCase()))
-                                    .map(u => {
-                                        const isSelected = selectedUserIds.has(u.id);
-                                        const isAlreadyInvited = postInvites.some(i => i.inviteeId === u.id && i.status !== 'rejected');
-
-                                        return (
-                                            <TouchableOpacity
-                                                key={u.id}
-                                                style={[styles.userItem, {
-                                                    backgroundColor: isSelected ? Colors.primary + '08' : Colors.backgroundElevated,
-                                                    borderColor: isSelected ? Colors.primary : Colors.border,
-                                                    opacity: isAlreadyInvited ? 0.6 : 1
-                                                }]}
-                                                onPress={() => {
-                                                    if (isAlreadyInvited) return;
-                                                    const next = new Set(selectedUserIds);
-                                                    if (isSelected) next.delete(u.id);
-                                                    else next.add(u.id);
-                                                    setSelectedUserIds(next);
-                                                }}
-                                                disabled={isAlreadyInvited}
-                                            >
-                                                <Image source={{ uri: u.photoURL || 'https://via.placeholder.com/100' }} style={styles.userItemAvatar} />
-                                                <View style={{ flex: 1 }}>
-                                                    <Text style={[styles.userItemName, { color: Colors.textPrimary }]}>{u.name}</Text>
-                                                    <Text style={{ color: Colors.textMuted, fontSize: 13 }}>@{u.id}</Text>
-                                                </View>
-
-                                                {isAlreadyInvited ? (
-                                                    <View style={[styles.invitedBadge, { backgroundColor: Colors.backgroundCard }]}>
-                                                        <Text style={{ color: Colors.textMuted, fontSize: 12, fontWeight: '700' }}>Invited</Text>
-                                                    </View>
-                                                ) : (
-                                                    <View style={[
-                                                        styles.checkbox,
-                                                        {
-                                                            borderColor: isSelected ? Colors.primary : Colors.textMuted,
-                                                            backgroundColor: isSelected ? Colors.primary : 'transparent'
-                                                        }
-                                                    ]}>
-                                                        {isSelected && <Ionicons name="checkmark" size={14} color="#FFF" />}
-                                                    </View>
-                                                )}
-                                            </TouchableOpacity>
-                                        );
-                                    })}
-                            </ScrollView>
-
-                            <View style={[styles.modalFooter, { paddingBottom: Math.max(insets.bottom, 20), borderTopColor: Colors.border, backgroundColor: Colors.background }]}>
-                                <TouchableOpacity
-                                    style={[styles.mainBtn, { flex: 1, backgroundColor: selectedUserIds.size > 0 ? Colors.primary : Colors.textMuted }]}
-                                    disabled={selectedUserIds.size === 0}
-                                    onPress={handleSendInvites}
-                                >
-                                    <Text style={styles.mainBtnText}>Send {selectedUserIds.size > 0 ? selectedUserIds.size : ''} Invite{selectedUserIds.size !== 1 ? 's' : ''}</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </View>
-                </KeyboardAvoidingView>
             </Modal>
+            */}
 
             <CustomAlert
                 visible={alertConfig.visible}
@@ -723,7 +630,7 @@ export default function PostDetailScreen() {
                 confirmText={alertConfig.confirmText}
                 cancelText={alertConfig.cancelText}
             />
-        </View>
+        </View >
     );
 }
 

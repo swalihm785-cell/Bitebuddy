@@ -42,8 +42,8 @@ export default function NotificationsScreen() {
     const { currentTheme, isDarkMode } = useThemeStore();
     const { Colors, FontSize, FontWeight, Spacing } = currentTheme;
     const { notifications, markAsRead, markAllAsRead, addNotification } = useNotificationStore();
+    const { acceptFollowRequest, rejectFollowRequest, updateUser, user } = useAuthStore();
     const { posts } = usePostStore();
-    const { user } = useAuthStore();
 
     const [popupNotif, setPopupNotif] = React.useState<typeof notifications[0] | null>(null);
     const [fallbackAlert, setFallbackAlert] = React.useState(false);
@@ -219,11 +219,66 @@ export default function NotificationsScreen() {
                         </View>
 
                         <View style={styles.popupFooter}>
-                            {getActionBtnText(popupNotif.type) && (
-                                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: Colors.primary }]} onPress={() => handleAction(popupNotif)}>
-                                    <Text style={styles.actionBtnText}>{getActionBtnText(popupNotif.type)}</Text>
-                                    <Ionicons name="arrow-forward" size={16} color="#FFF" />
-                                </TouchableOpacity>
+                            {popupNotif.type === 'follow_request' && popupNotif.data?.userId ? (
+                                <>
+                                    <TouchableOpacity
+                                        style={[styles.actionBtn, { backgroundColor: '#22C55E' }]}
+                                        onPress={() => {
+                                            const requesterId = popupNotif.data?.userId;
+                                            if (!requesterId || !user) return;
+                                            // Add requester to followRequests so acceptFollowRequest can process it
+                                            if (!user.followRequests.includes(requesterId)) {
+                                                updateUser({ followRequests: [...user.followRequests, requesterId] });
+                                            }
+                                            // Short delay to let state update
+                                            setTimeout(() => {
+                                                acceptFollowRequest(requesterId);
+                                                // Send acceptance notification back to requester
+                                                addNotification({
+                                                    userId: requesterId,
+                                                    type: 'follow_accepted',
+                                                    title: 'Buddy Request Accepted! 🎉',
+                                                    body: `${user.name} accepted your buddy request. You are now food buddies!`,
+                                                    data: { userId: user.id }
+                                                });
+                                                markAsRead(popupNotif.id);
+                                                setPopupNotif(null);
+                                            }, 50);
+                                        }}
+                                    >
+                                        <Ionicons name="checkmark-circle" size={18} color="#FFF" />
+                                        <Text style={styles.actionBtnText}>Accept</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.actionBtn, { backgroundColor: Colors.error || '#EF4444' }]}
+                                        onPress={() => {
+                                            const requesterId = popupNotif.data?.userId;
+                                            if (!requesterId || !user) return;
+                                            // Add to followRequests first if not present, then reject
+                                            if (!user.followRequests.includes(requesterId)) {
+                                                updateUser({ followRequests: [...user.followRequests, requesterId] });
+                                            }
+                                            setTimeout(() => {
+                                                rejectFollowRequest(requesterId);
+                                                // No notification sent for decline
+                                                markAsRead(popupNotif.id);
+                                                setPopupNotif(null);
+                                            }, 50);
+                                        }}
+                                    >
+                                        <Ionicons name="close-circle" size={18} color="#FFF" />
+                                        <Text style={styles.actionBtnText}>Decline</Text>
+                                    </TouchableOpacity>
+                                </>
+                            ) : (
+                                <>
+                                    {getActionBtnText(popupNotif.type) && (
+                                        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: Colors.primary }]} onPress={() => handleAction(popupNotif)}>
+                                            <Text style={styles.actionBtnText}>{getActionBtnText(popupNotif.type)}</Text>
+                                            <Ionicons name="arrow-forward" size={16} color="#FFF" />
+                                        </TouchableOpacity>
+                                    )}
+                                </>
                             )}
                             <TouchableOpacity style={[styles.closeBtn, { borderColor: Colors.border }]} onPress={() => setPopupNotif(null)}>
                                 <Text style={[styles.closeBtnText, { color: Colors.textMuted }]}>Dismiss</Text>

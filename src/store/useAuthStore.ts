@@ -16,6 +16,8 @@ interface AuthState {
     setOnboardingComplete: () => void;
     setProfileComplete: () => void;
     toggleFollow: (userId: string) => void;
+    sendBuddyRequest: (userId: string) => void;
+    cancelBuddyRequest: (userId: string) => void;
     acceptFollowRequest: (userId: string) => void;
     rejectFollowRequest: (userId: string) => void;
     upgradePlan: () => void;
@@ -50,29 +52,70 @@ export const useAuthStore = create<AuthState>()(
 
             toggleFollow: (userId) => set((state) => {
                 if (!state.user) return state;
-                const isFollowing = state.user.following.includes(userId);
-                const updatedFollowing = isFollowing
-                    ? state.user.following.filter(id => id !== userId)
-                    : [...state.user.following, userId];
+                const following = state.user.following || [];
+                const followers = state.user.followers || [];
+                const isFollowing = following.includes(userId);
+                if (!isFollowing) return state; // Use sendBuddyRequest for adding
+                const updatedFollowing = following.filter(id => id !== userId);
+                const updatedFollowers = followers.filter(id => id !== userId);
                 return {
                     user: {
                         ...state.user,
                         following: updatedFollowing,
-                        followingCount: updatedFollowing.length
+                        followingCount: updatedFollowing.length,
+                        followers: updatedFollowers,
+                        followersCount: updatedFollowers.length,
+                    }
+                };
+            }),
+
+            sendBuddyRequest: (userId) => set((state) => {
+                if (!state.user) return state;
+                const sent = state.user.sentBuddyRequests || [];
+                const following = state.user.following || [];
+                if (sent.includes(userId)) return state;
+                if (following.includes(userId)) return state;
+                return {
+                    user: {
+                        ...state.user,
+                        sentBuddyRequests: [...sent, userId]
+                    }
+                };
+            }),
+
+            cancelBuddyRequest: (userId) => set((state) => {
+                if (!state.user) return state;
+                return {
+                    user: {
+                        ...state.user,
+                        sentBuddyRequests: (state.user.sentBuddyRequests || []).filter(id => id !== userId)
                     }
                 };
             }),
 
             acceptFollowRequest: (userId) => set((state) => {
                 if (!state.user) return state;
-                const updatedFollowers = [...state.user.followers, userId];
-                const updatedRequests = state.user.followRequests.filter(id => id !== userId);
+                const followers = state.user.followers || [];
+                const following = state.user.following || [];
+                const followRequests = state.user.followRequests || [];
+                const sentBuddyRequests = state.user.sentBuddyRequests || [];
+                const updatedFollowers = followers.includes(userId)
+                    ? followers
+                    : [...followers, userId];
+                const updatedFollowing = following.includes(userId)
+                    ? following
+                    : [...following, userId];
+                const updatedRequests = followRequests.filter(id => id !== userId);
+                const updatedSent = sentBuddyRequests.filter(id => id !== userId);
                 return {
                     user: {
                         ...state.user,
                         followers: updatedFollowers,
                         followersCount: updatedFollowers.length,
-                        followRequests: updatedRequests
+                        following: updatedFollowing,
+                        followingCount: updatedFollowing.length,
+                        followRequests: updatedRequests,
+                        sentBuddyRequests: updatedSent,
                     }
                 };
             }),
@@ -82,7 +125,7 @@ export const useAuthStore = create<AuthState>()(
                 return {
                     user: {
                         ...state.user,
-                        followRequests: state.user.followRequests.filter(id => id !== userId)
+                        followRequests: (state.user.followRequests || []).filter(id => id !== userId)
                     }
                 };
             }),
@@ -119,8 +162,8 @@ export const useAuthStore = create<AuthState>()(
                 if (!state.user) return state;
                 const blocked = state.user.blockedUsers || [];
                 if (blocked.includes(userId)) return state;
-                const newFollowing = state.user.following.filter(id => id !== userId);
-                const newFollowers = state.user.followers.filter(id => id !== userId);
+                const newFollowing = (state.user.following || []).filter(id => id !== userId);
+                const newFollowers = (state.user.followers || []).filter(id => id !== userId);
                 return {
                     user: {
                         ...state.user,
