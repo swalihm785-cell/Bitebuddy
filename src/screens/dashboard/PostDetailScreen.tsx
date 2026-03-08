@@ -546,6 +546,20 @@ export default function PostDetailScreen() {
                                 </View>
                             ))}
                         </View>
+
+                        {/* Create Group Chat button — visible to joined participants */}
+                        {isJoined && participants.length >= 2 && (
+                            <TouchableOpacity
+                                style={[styles.createGroupBtn, { borderColor: Colors.primary + '40', backgroundColor: Colors.primary + '08' }]}
+                                onPress={handleCreateGroupChat}
+                                disabled={creatingGroup}
+                            >
+                                <Ionicons name="chatbubbles" size={20} color={Colors.primary} />
+                                <Text style={[styles.createGroupText, { color: Colors.primary }]}>
+                                    {creatingGroup ? 'Creating...' : 'Create Group Chat'}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
 
                     {/* HIDDEN_FEATURE: Invite Friends - pending invites section

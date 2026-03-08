@@ -38,6 +38,7 @@ import ManageSubscriptionScreen from './src/screens/settings/ManageSubscriptionS
 import FollowListScreen from './src/screens/profile/FollowListScreen';
 import BlockedUsersScreen from './src/screens/settings/BlockedUsersScreen';
 import ProfileScreen from './src/screens/profile/ProfileScreen';
+import CreateGroupChatScreen from './src/screens/messaging/CreateGroupChatScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -77,6 +78,7 @@ function RootNavigator() {
             options={{ presentation: 'modal' }}
           />
           <Stack.Screen name="ChatDetail" component={ChatDetailScreen} />
+          <Stack.Screen name="CreateGroupChat" component={CreateGroupChatScreen} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />
           <Stack.Screen name="EditPost" component={EditPostScreen} />
           <Stack.Screen name="UserProfile" component={UserProfileScreen} />

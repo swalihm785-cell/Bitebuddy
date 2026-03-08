@@ -229,6 +229,7 @@ export type RootStackParamList = {
     CreateReview: undefined;
     CreateMenu: undefined;
     Community: undefined;
+    CreateGroupChat: undefined;
 };
 
 export type MainTabParamList = {

@@ -242,12 +242,20 @@ export default function ChatListScreen() {
                         </TouchableOpacity>
                         <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>Messages</Text>
                     </View>
-                    <TouchableOpacity
-                        style={[styles.newChatBtn, { backgroundColor: Colors.primary + '15' }]}
-                        onPress={() => setNewChatVisible(true)}
-                    >
-                        <Ionicons name="chatbubble-ellipses-outline" size={22} color={Colors.primary} />
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <TouchableOpacity
+                            style={[styles.newChatBtn, { backgroundColor: Colors.primary + '15' }]}
+                            onPress={() => navigation.navigate('CreateGroupChat' as any)}
+                        >
+                            <Ionicons name="people-outline" size={22} color={Colors.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.newChatBtn, { backgroundColor: Colors.primary + '15' }]}
+                            onPress={() => setNewChatVisible(true)}
+                        >
+                            <Ionicons name="chatbubble-ellipses-outline" size={22} color={Colors.primary} />
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
 

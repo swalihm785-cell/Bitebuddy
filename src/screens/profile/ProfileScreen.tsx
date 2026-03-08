@@ -11,7 +11,6 @@ import { RootStackParamList } from '../../types';
 import { useAuthStore } from '../../store/useAuthStore';
 import { usePostStore } from '../../store/usePostStore';
 import { useThemeStore } from '../../store/useThemeStore';
-import { PostCard } from '../../components/common/PostCard';
 import { isCurrentlyPro } from '../../utils/authUtils';
 import { showMessage } from 'react-native-flash-message';
 
@@ -145,13 +144,60 @@ export default function ProfileScreen() {
 
                     {myPosts.length > 0 ? (
                         <View style={styles.postGrid}>
-                            {myPosts.map(post => (
-                                <PostCard
-                                    key={post.id}
-                                    post={post}
-                                    onPress={() => navigation.navigate('PostDetail', { postId: post.id })}
-                                />
-                            ))}
+                            {[...myPosts]
+                                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                .map(post => {
+                                    const isCurrent = post.status === 'open' && new Date(post.dateTime) > new Date();
+                                    return (
+                                        <TouchableOpacity
+                                            key={post.id}
+                                            style={[styles.postCard, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}
+                                            onPress={() => navigation.navigate('PostDetail', { postId: post.id })}
+                                            activeOpacity={0.75}
+                                        >
+                                            {post.imageURL && (
+                                                <Image source={{ uri: post.imageURL }} style={styles.postImage} />
+                                            )}
+                                            <View style={styles.postInfo}>
+                                                <View style={styles.postTopRow}>
+                                                    <Text style={[styles.postTitle, { color: Colors.textPrimary }]} numberOfLines={1}>
+                                                        {post.title}
+                                                    </Text>
+                                                    <View style={[styles.postTag, { backgroundColor: isCurrent ? '#22C55E18' : Colors.border + '60' }]}>
+                                                        <View style={[styles.postTagDot, { backgroundColor: isCurrent ? '#22C55E' : Colors.textMuted }]} />
+                                                        <Text style={[styles.postTagText, { color: isCurrent ? '#22C55E' : Colors.textMuted }]}>
+                                                            {isCurrent ? 'Current' : 'Previous'}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                                <Text style={[styles.postMeta, { color: Colors.textMuted }]} numberOfLines={1}>
+                                                    {post.cuisineTypes.join(', ')}
+                                                </Text>
+                                                <View style={styles.postBottomRow}>
+                                                    <View style={styles.postMetaItem}>
+                                                        <Ionicons name="calendar-outline" size={13} color={Colors.textMuted} />
+                                                        <Text style={[styles.postMetaText, { color: Colors.textMuted }]}>
+                                                            {new Date(post.dateTime).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                                        </Text>
+                                                    </View>
+                                                    <View style={styles.postMetaItem}>
+                                                        <Ionicons name="people-outline" size={13} color={Colors.textMuted} />
+                                                        <Text style={[styles.postMetaText, { color: Colors.textMuted }]}>
+                                                            {post.currentParticipants}/{post.maxGroupSize}
+                                                        </Text>
+                                                    </View>
+                                                    <View style={styles.postMetaItem}>
+                                                        <Ionicons name="location-outline" size={13} color={Colors.textMuted} />
+                                                        <Text style={[styles.postMetaText, { color: Colors.textMuted }]} numberOfLines={1}>
+                                                            {post.area}, {post.city}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                            </View>
+                                        </TouchableOpacity>
+                                    );
+                                })
+                            }
                         </View>
                     ) : (
                         <View style={styles.emptyState}>
@@ -319,8 +365,21 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     postGrid: {
-        gap: 15,
+        gap: 12,
     },
+    // ── Post Card Styles (matching UserProfileScreen) ──
+    postCard: { flexDirection: 'row' as const, borderRadius: 16, borderWidth: 1, overflow: 'hidden' as const },
+    postImage: { width: 90, height: 90, backgroundColor: '#E5E7EB' },
+    postInfo: { flex: 1, padding: 12, justifyContent: 'center' as const, gap: 4 },
+    postTopRow: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, gap: 8 },
+    postTitle: { fontSize: 15, fontWeight: '800' as const, flex: 1 },
+    postTag: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 5, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+    postTagDot: { width: 6, height: 6, borderRadius: 3 },
+    postTagText: { fontSize: 10, fontWeight: '800' as const, letterSpacing: 0.3 },
+    postMeta: { fontSize: 12, fontWeight: '600' as const },
+    postBottomRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12, marginTop: 2 },
+    postMetaItem: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 3 },
+    postMetaText: { fontSize: 11, fontWeight: '600' as const },
     emptyState: {
         alignItems: 'center',
         paddingVertical: 40,
