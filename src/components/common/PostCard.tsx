@@ -40,6 +40,34 @@ const getTimeLabel = (post: DiningPost) => {
     return { label: `📅 ${date.toLocaleDateString([], { month: 'short', day: 'numeric' })}`, urgent: false };
 };
 
+// Returns a human-friendly relative time string: "1m ago", "2 hr ago", "3 days ago"
+const getRelativeTimeAgo = (post: DiningPost): string => {
+    // Use createdAt if available, otherwise fall back to dateTime
+    const rawDate = (post as any).createdAt ?? post.dateTime;
+    const date = rawDate instanceof Date ? rawDate : new Date(rawDate);
+    if (isNaN(date.getTime())) return '';
+
+    const diffMs = Date.now() - date.getTime();
+    if (diffMs < 0) return 'just now';
+
+    const diffSec = Math.floor(diffMs / 1000);
+    if (diffSec < 60) return `${diffSec}s ago`;
+
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr} hr ago`;
+
+    const diffDays = Math.floor(diffHr / 24);
+    if (diffDays === 1) return '1 day ago';
+    if (diffDays < 7) return `${diffDays} days ago`;
+
+    const diffWeeks = Math.floor(diffDays / 7);
+    if (diffWeeks === 1) return '1 week ago';
+    return `${diffWeeks} weeks ago`;
+};
+
 // Resolve host name from hostId
 const getHostInfo = (hostId: string) => {
     const testUser = Object.values(TEST_USERS).find(u => u.user.id === hostId);
@@ -53,6 +81,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
     const { Colors } = currentTheme;
 
     const timeInfo = getTimeLabel(post);
+    const relativeTimeAgo = getRelativeTimeAgo(post);
     const participantsCount = post.participants?.length || 0;
     const spotsLeft = post.maxGroupSize - participantsCount;
     const hostInfo = getHostInfo(post.hostId);
@@ -61,8 +90,15 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
     const postDate = post.dateTime instanceof Date ? post.dateTime : new Date(post.dateTime);
     const isInactive = post.status !== 'open' || postDate.getTime() < Date.now();
 
-    const cardBg = isDarkMode ? '#1E1E2E' : '#FFFFFF';
-    const cardBorder = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+    const cardBg = '#1d1b22';
+    const cardBorder = 'rgba(73,69,79,0.1)';
+    const textColor = '#FFFFFF';
+    const textMuted = '#938f99';
+
+    // Format Meet At Time
+    const postDateObj = post.dateTime instanceof Date ? post.dateTime : new Date(post.dateTime);
+    const meetTimeStr = !isNaN(postDateObj.getTime()) ? postDateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'TBD';
+    const meetDateStr = !isNaN(postDateObj.getTime()) ? postDateObj.toLocaleDateString([], { day: 'numeric', month: 'short' }).toUpperCase() : '';
 
     return (
         <TouchableOpacity
@@ -70,261 +106,203 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
             onPress={onPress}
             style={[
                 styles.card,
-                {
-                    backgroundColor: cardBg,
-                    borderColor: cardBorder,
-                    shadowColor: isDarkMode ? '#000' : '#64748B',
-                }
+                { backgroundColor: cardBg, borderColor: cardBorder }
             ]}
         >
-            {/* Banner Image */}
-            <View style={styles.cardBanner}>
-                <Image source={{ uri: cuisineImage }} style={styles.bannerImage} />
-                <LinearGradient
-                    colors={['rgba(0,0,0,0.55)', 'transparent', 'rgba(0,0,0,0.45)']}
-                    style={StyleSheet.absoluteFill}
-                />
-
-                <View style={styles.topBadges}>
-                    <View style={styles.topBadgesLeft}>
-                        <View style={[styles.timeBadge, { backgroundColor: timeInfo.urgent ? '#EF4444' : 'rgba(0,0,0,0.55)' }]}>
-                            <Text style={styles.timeBadgeText}>{timeInfo.label}</Text>
+            <View style={styles.cardInner}>
+                {/* Top Row: Host & Date/Time */}
+                <View style={styles.topRow}>
+                    <View style={styles.hostInfo}>
+                        <Image source={{ uri: hostInfo.photoURL }} style={styles.hostAvatar} />
+                        <Text style={[styles.hostName, { color: textColor }]}>
+                            {hostInfo.name}
+                        </Text>
+                    </View>
+                    <View style={styles.dateInfo}>
+                        <Text style={[styles.dateText, { color: textMuted }]}>{meetDateStr}</Text>
+                        <View style={styles.meetAtChip}>
+                            <Ionicons name="time" size={12} color="#000" style={{ marginRight: 4 }} />
+                            <Text style={styles.meetAtText}>Meet at: {meetTimeStr}</Text>
                         </View>
-                        {hostInfo.isPro && (
-                            <View style={styles.proBadge}>
-                                <Ionicons name="star" size={9} color="#FFF" />
-                                <Text style={styles.proBadgeText}>PRO</Text>
-                            </View>
-                        )}
                     </View>
-
-                    <TouchableOpacity
-                        style={styles.shareCircle}
-                        onPress={(e) => {
-                            e.stopPropagation();
-                            handleDiningPlanShare(post);
-                        }}
-                    >
-                        <Ionicons name="share-social" size={16} color="#FFF" />
-                    </TouchableOpacity>
-                </View>
-
-                <View style={styles.bannerBottom}>
-                    <View style={styles.budgetBadge}>
-                        <Text style={styles.budgetText}>₹{BUDGET_LABELS[post.budgetRange]}</Text>
-                    </View>
-                </View>
-            </View>
-
-            {/* Card Body */}
-            <View style={styles.cardBody}>
-                {/* Host Row */}
-                <View style={styles.hostRow}>
-                    <Image source={{ uri: hostInfo.photoURL }} style={styles.hostAvatar} />
-                    <Text style={[styles.hostName, { color: Colors.textMuted }]}>
-                        Hosted by <Text style={{ fontWeight: '700', color: Colors.textSecondary }}>{hostInfo.name}</Text>
-                    </Text>
                 </View>
 
                 {/* Title */}
-                <Text style={[styles.cardTitle, { color: Colors.textPrimary }]} numberOfLines={1}>
-                    {post.title}
-                </Text>
-
-                {/* Meta */}
-                <View style={styles.metaContainer}>
-                    <View style={styles.metaRow}>
-                        <View style={[styles.metaIconWrap, { backgroundColor: Colors.primary + '12' }]}>
-                            <Ionicons name="location" size={12} color={Colors.primary} />
-                        </View>
-                        <Text style={[styles.metaText, { color: Colors.textSecondary }]} numberOfLines={1}>
-                            {post.restaurantName ? `${post.restaurantName} · ` : ''}{post.area}
-                        </Text>
-                    </View>
-                    <View style={styles.metaRow}>
-                        <View style={[styles.metaIconWrap, { backgroundColor: Colors.secondary + '12' }]}>
-                            <Ionicons name="restaurant" size={12} color={Colors.secondary} />
-                        </View>
-                        <Text style={[styles.metaText, { color: Colors.textSecondary }]} numberOfLines={1}>
-                            {post.cuisineTypes.join(', ')}
-                        </Text>
-                    </View>
+                <View style={styles.titleRow}>
+                    <Ionicons name="restaurant" size={16} color="#ffb534" style={{ marginRight: 8 }} />
+                    <Text style={[styles.cardTitle, { color: textColor }]} numberOfLines={1}>
+                        {post.title}
+                    </Text>
                 </View>
 
-                {/* Divider */}
-                <View style={[styles.divider, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]} />
+                {/* Location */}
+                <View style={styles.locationRow}>
+                    <Ionicons name="location-outline" size={14} color={textMuted} style={{ marginRight: 8 }} />
+                    <Text style={[styles.locationText, { color: textMuted }]} numberOfLines={1}>
+                        {post.restaurantName ? `${post.restaurantName} • ` : ''}{post.area}
+                    </Text>
+                </View>
 
-                {/* Footer */}
-                <View style={styles.cardFooter}>
-                    <View style={styles.footerLeft}>
-                        <View style={styles.avatarStack}>
-                            {Array.from({ length: Math.min(participantsCount, 3) }).map((_, i) => (
-                                <View key={i} style={[styles.avatarMini, { left: i * 14, borderColor: cardBg, backgroundColor: isDarkMode ? '#2A2A3A' : '#F1F5F9' }]}>
-                                    <Text style={{ fontSize: 9 }}>👤</Text>
-                                </View>
-                            ))}
-                        </View>
-                        <Text style={[styles.spotsInfo, { color: Colors.textMuted, marginLeft: Math.min(participantsCount, 3) * 14 + 8 }]}>
+                {/* Footer: Joined Progress & Join Button */}
+                <View style={styles.footerRow}>
+                    <View style={styles.progressSection}>
+                        <Text style={[styles.joinedText, { color: textColor }]}>
                             {participantsCount}/{post.maxGroupSize} joined
                         </Text>
-                    </View>
-
-                    <View style={[
-                        styles.spotsBadge,
-                        { backgroundColor: spotsLeft === 0 ? '#FEE2E2' : '#DCFCE7' }
-                    ]}>
-                        <Text style={[
-                            styles.spotsBadgeText,
-                            { color: spotsLeft === 0 ? '#DC2626' : '#16A34A' }
-                        ]}>
-                            {spotsLeft === 0 ? 'Full' : `${spotsLeft} spots left`}
+                        <View style={styles.progressBarBg}>
+                            <View style={[styles.progressBarFill, { width: `${Math.min((participantsCount / post.maxGroupSize) * 100, 100)}%` }]} />
+                        </View>
+                        <Text style={[styles.timeAgoText, { color: textMuted }]}>
+                            {relativeTimeAgo || timeInfo.label}
                         </Text>
                     </View>
+
+                    {isInactive ? (
+                        <View style={styles.closedBtn}>
+                            <Text style={styles.closedBtnText}>CLOSED</Text>
+                        </View>
+                    ) : (
+                        <TouchableOpacity style={styles.joinBtn} onPress={onPress}>
+                            <Text style={styles.joinBtnText}>JOIN NOW</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             </View>
-
-            {/* Grey overlay for inactive/closed posts */}
-            {isInactive && (
-                <View style={styles.inactiveOverlay}>
-                    <View style={styles.closedBadge}>
-                        <Ionicons name="lock-closed" size={14} color="#FFF" />
-                        <Text style={styles.closedBadgeText}>Closed</Text>
-                    </View>
-                </View>
-            )}
         </TouchableOpacity>
     );
 };
 
 const styles = StyleSheet.create({
     card: {
-        borderRadius: 20,
-        overflow: 'hidden',
+        borderRadius: 8,
         borderWidth: 1,
         marginBottom: 16,
-        ...Platform.select({
-            ios: {
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.08,
-                shadowRadius: 16,
-            },
-            android: {
-                elevation: 4,
-            },
-        }),
     },
-    cardBanner: { height: 170, position: 'relative' },
-    bannerImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-    topBadges: {
-        position: 'absolute',
-        top: 12,
-        left: 12,
-        right: 12,
+    cardInner: {
+        padding: 16,
+    },
+    topRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        marginBottom: 12,
     },
-    topBadgesLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-    },
-    shareCircle: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: 'rgba(0,0,0,0.4)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    timeBadge: {
-        paddingVertical: 5,
-        paddingHorizontal: 10,
-        borderRadius: 10,
-    },
-    timeBadgeText: { fontSize: 11, fontWeight: '800', color: '#FFF' },
-    proBadge: {
-        paddingVertical: 3,
-        paddingHorizontal: 7,
-        borderRadius: 6,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 3,
-        backgroundColor: '#F59E0B',
-    },
-    proBadgeText: { fontSize: 9, fontWeight: '900', color: '#FFF' },
-    bannerBottom: {
-        position: 'absolute',
-        bottom: 12,
-        left: 12,
-    },
-    budgetBadge: {
-        paddingVertical: 4,
-        paddingHorizontal: 10,
-        borderRadius: 8,
-        backgroundColor: 'rgba(255,255,255,0.92)',
-    },
-    budgetText: { fontSize: 12, fontWeight: '800', color: '#1E293B' },
-    cardBody: { padding: 18 },
-    hostRow: {
+    hostInfo: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        marginBottom: 8,
     },
     hostAvatar: {
-        width: 22,
-        height: 22,
-        borderRadius: 11,
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        borderWidth: 1,
+        borderColor: '#FFF',
     },
-    hostName: { fontSize: 12, fontWeight: '500' },
-    cardTitle: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3, marginBottom: 10 },
-    metaContainer: { gap: 6, marginBottom: 14 },
-    metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    metaIconWrap: {
-        width: 22,
-        height: 22,
-        borderRadius: 6,
-        justifyContent: 'center',
-        alignItems: 'center',
+    hostName: {
+        fontSize: 14,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
-    metaText: { fontSize: 13, fontWeight: '500', flex: 1 },
-    divider: { height: 1, marginBottom: 14 },
-    cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    footerLeft: { flexDirection: 'row', alignItems: 'center', position: 'relative' },
-    avatarStack: { flexDirection: 'row', height: 22, position: 'relative' },
-    avatarMini: {
-        width: 22,
-        height: 22,
-        borderRadius: 11,
-        position: 'absolute',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 2,
-    },
-    spotsInfo: { fontSize: 12, fontWeight: '600' },
-    spotsBadge: {
-        paddingVertical: 4,
-        paddingHorizontal: 10,
-        borderRadius: 8,
-    },
-    spotsBadgeText: { fontSize: 11, fontWeight: '700' },
-    // Inactive overlay
-    inactiveOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(120,120,120,0.45)',
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    closedBadge: {
+    dateInfo: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 12,
+        gap: 12,
     },
-    closedBadgeText: { fontSize: 14, fontWeight: '800', color: '#FFF', letterSpacing: 0.5 },
+    dateText: {
+        fontSize: 10,
+        fontWeight: '700',
+    },
+    meetAtChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#ffb534',
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 4,
+    },
+    meetAtText: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: '#000',
+    },
+    titleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    cardTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        flex: 1,
+    },
+    locationRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginLeft: 2,
+        marginBottom: 16,
+    },
+    locationText: {
+        fontSize: 13,
+        fontWeight: '400',
+        flex: 1,
+    },
+    footerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-end',
+    },
+    progressSection: {
+        flex: 1,
+    },
+    joinedText: {
+        fontSize: 12,
+        fontWeight: '700',
+        marginBottom: 6,
+    },
+    progressBarBg: {
+        height: 6,
+        backgroundColor: '#332f3c',
+        borderRadius: 3,
+        width: 100,
+        marginBottom: 6,
+        overflow: 'hidden',
+    },
+    progressBarFill: {
+        height: '100%',
+        backgroundColor: '#ffb534',
+        borderRadius: 3,
+    },
+    timeAgoText: {
+        fontSize: 10,
+        fontWeight: '400',
+    },
+    joinBtn: {
+        borderWidth: 1,
+        borderColor: '#ffb534',
+        borderRadius: 6,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+    },
+    joinBtnText: {
+        color: '#FFF',
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 1.2,
+    },
+    closedBtn: {
+        borderWidth: 1,
+        borderColor: '#761200',
+        borderRadius: 6,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        opacity: 0.5,
+    },
+    closedBtnText: {
+        color: 'red',
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 1.2,
+    },
 });

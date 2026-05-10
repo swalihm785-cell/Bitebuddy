@@ -5,7 +5,48 @@ import { RootStackParamList } from './src/types';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Appearance, Platform } from 'react-native';
+import { Appearance, Platform, Text, TextInput, StyleSheet } from 'react-native';
+import { useFonts } from 'expo-font';
+import { SF_Pro_Text_Regular, SF_Pro_Text_Medium, SF_Pro_Text_Bold, SF_Pro_Text_Light } from 'sfpro-expo';
+
+// Set global font family to SF Pro and fix Android fontWeight issue
+const applyGlobalFont = () => {
+  const patchComponent = (Component: any) => {
+    const oldRender = Component.render;
+    if (oldRender) {
+      Component.render = function (...args: any[]) {
+        const origin = oldRender.call(this, ...args);
+        let fontFamily = 'SF-Pro';
+        const style = StyleSheet.flatten(origin.props.style) || {};
+        
+        if (style.fontWeight) {
+          const weight = style.fontWeight.toString();
+          if (['bold', '600', '700', '800', '900'].includes(weight)) {
+            fontFamily = 'SF-Pro-Bold';
+          } else if (weight === '500') {
+            fontFamily = 'SF-Pro-Medium';
+          } else if (['100', '200', '300'].includes(weight)) {
+            fontFamily = 'SF-Pro-Light';
+          }
+          if (Platform.OS === 'android') {
+            delete style.fontWeight;
+          }
+        }
+        
+        style.fontFamily = style.fontFamily || fontFamily;
+
+        return React.cloneElement(origin, {
+          style: style,
+        });
+      };
+    }
+  };
+
+  patchComponent(Text);
+  patchComponent(TextInput);
+};
+
+applyGlobalFont();
 import * as NavigationBar from 'expo-navigation-bar';
 import FlashMessage from 'react-native-flash-message';
 import { useAuthStore } from './src/store/useAuthStore';
@@ -122,6 +163,13 @@ function RootNavigator() {
 
 export default function App() {
   const { isDarkMode, hasSetInitialTheme, setInitialTheme } = useThemeStore();
+  
+  const [fontsLoaded] = useFonts({
+    'SF-Pro': SF_Pro_Text_Regular,
+    'SF-Pro-Medium': SF_Pro_Text_Medium,
+    'SF-Pro-Bold': SF_Pro_Text_Bold,
+    'SF-Pro-Light': SF_Pro_Text_Light,
+  });
 
   React.useEffect(() => {
     if (!hasSetInitialTheme) {
@@ -134,6 +182,8 @@ export default function App() {
       NavigationBar.setButtonStyleAsync(isDarkMode ? 'light' : 'dark');
     }
   }, [isDarkMode, hasSetInitialTheme]);
+
+  if (!fontsLoaded) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    FlatList, TextInput, Dimensions, RefreshControl, Modal,
+    FlatList, SectionList, TextInput, Dimensions, RefreshControl, Modal,
     Platform, Image, Animated, Switch, KeyboardAvoidingView, Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +16,8 @@ import { usePostStore } from '../../store/usePostStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useNotificationStore } from '../../store/useNotificationStore';
 import { PostCard } from '../../components/common/PostCard';
+import FudioLogo from '../../components/FudioLogo';
+import FilterIcon from '../../components/FilterIcon';
 import MapView, { Marker, Circle } from 'react-native-maps';
 import * as Location from 'expo-location';
 
@@ -72,6 +74,75 @@ function getDistanceKM(lat1: number, lon1: number, lat2: number, lon2: number) {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
 }
+
+const PROMO_DATA = [
+    {
+        id: 'promo_1',
+        title: 'fudio',
+        desc: 'Fudio is a platform that brings together strangers for one great dining at a time.',
+        btnText: 'JOIN NOW',
+        image: require('../../../assets/promo_banner.jpg')
+    },
+    {
+        id: 'promo_2',
+        title: 'fudio pro',
+        desc: 'Unlock premium features, find matched dining partners faster and get verified.',
+        btnText: 'UPGRADE',
+        image: require('../../../assets/promo_banner.jpg')
+    },
+    {
+        id: 'promo_3',
+        title: 'fudio events',
+        desc: 'Join exclusive culinary events and private dining experiences curated for you.',
+        btnText: 'EXPLORE',
+        image: require('../../../assets/promo_banner.jpg')
+    }
+];
+
+const PromoSlider = ({ navigation, s }: { navigation: any; s: any }) => {
+    const [activeIndex, setActiveIndex] = useState(0);
+
+    const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+        if (viewableItems.length > 0) {
+            setActiveIndex(viewableItems[0].index || 0);
+        }
+    }).current;
+    
+    const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
+
+    return (
+        <View style={{ marginBottom: 20 }}>
+            <FlatList
+                data={PROMO_DATA}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item.id}
+                onViewableItemsChanged={onViewableItemsChanged}
+                viewabilityConfig={viewabilityConfig}
+                renderItem={({ item }) => (
+                    <View style={{ width: SCREEN_WIDTH }}>
+                        <View style={[s.promoBanner, { marginBottom: 0 }]}>
+                            <View style={s.promoContent}>
+                                <Text style={s.promoLogoText}>{item.title}</Text>
+                                <Text style={s.promoText}>{item.desc}</Text>
+                                <TouchableOpacity style={s.promoBtn} onPress={() => navigation.navigate('Create' as any)}>
+                                    <Text style={s.promoBtnText}>{item.btnText}</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <Image source={item.image} style={s.promoImage} />
+                        </View>
+                    </View>
+                )}
+            />
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-start', position: 'absolute', bottom: 16, left: 38, right: 0 }}>
+                {PROMO_DATA.map((_, i) => (
+                    <View key={i} style={{ width: i === activeIndex ? 20 : 6, height: 6, borderRadius: 3, backgroundColor: i === activeIndex ? '#ffb534' : 'rgba(0,0,0,0.2)', marginRight: 6 }} />
+                ))}
+            </View>
+        </View>
+    );
+};
 
 export default function DashboardScreen() {
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
@@ -475,242 +546,178 @@ export default function DashboardScreen() {
     const translateY = slideAnim.interpolate({ inputRange: [0, 1], outputRange: [800, 0] });
 
     return (
-        <View style={[s.safe, { backgroundColor: Colors.background }]}>
+        <View style={[s.safe, { backgroundColor: '#111014' }]}>
             <SafeAreaView edges={['top']} style={{ flex: 1 }}>
                 {/* ─── SHARED TOP SECTION ─── */}
-                <View style={{ backgroundColor: Platform.OS === 'ios' ? 'transparent' : (isDarkMode ? Colors.background : '#FFFFFF'), borderBottomWidth: 1, borderBottomColor: cardBorder }}>
+                <View style={{ backgroundColor: '#111014', borderBottomWidth: 0 }}>
                     {Platform.OS === 'ios' && (
                         <BlurView
                             intensity={80}
-                            tint={isDarkMode ? 'dark' : 'light'}
+                            tint={'dark'}
                             style={StyleSheet.absoluteFill}
                         />
                     )}
-                    {/* Header: Greeting + Notifications */}
-                    <View style={s.header}>
-                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                            <TouchableOpacity
-                                onPress={() => navigation.navigate('Profile')}
-                                activeOpacity={0.7}
-                                style={{
-                                    width: 48,
-                                    height: 48,
-                                    borderRadius: 24,
-                                    borderWidth: 2,
-                                    borderColor: Colors.primary,
-                                    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : '#F1F5F9',
-                                    padding: 2,
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    overflow: 'hidden',
-                                }}
-                            >
-                                <Ionicons name="person" size={24} color={isDarkMode ? 'rgba(255,255,255,0.3)' : '#94A3B8'} />
-                                {user?.photoURL && (
-                                    <Image
-                                        source={{ uri: user.photoURL }}
-                                        style={{ position: 'absolute', width: 44, height: 44, borderRadius: 22 }}
-                                    />
-                                )}
-                            </TouchableOpacity>
-                            <View style={{ justifyContent: 'center' }}>
-                                <Text style={[s.greeting, { color: Colors.textPrimary }]}>Hi, {user?.name?.split(' ')[0] || 'Foodie'} 👋</Text>
-                                <Text style={[s.headerSub, { color: Colors.textMuted }]}>
-                                    {view === 'list' ? 'Find your next meal companion' : 'Explore nearby plans'}
-                                </Text>
-                            </View>
-                        </View>
-                        <View style={{ flexDirection: 'row', gap: 8 }}>
-                            {/* HIDDEN_FEATURE: Promotions and Offers
-                            <TouchableOpacity
-                                style={[s.notifBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : '#F1F5F9', borderColor: cardBorder }]}
-                                onPress={() => navigation.navigate('Offers' as any)}
-                                activeOpacity={0.7}
-                            >
-                                <Ionicons name="ticket-outline" size={20} color={isDarkMode ? '#FFF' : '#334155'} />
-                            </TouchableOpacity>
-                            */}
-                            <TouchableOpacity
-                                style={[s.notifBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : '#F1F5F9', borderColor: cardBorder }]}
-                                onPress={() => navigation.navigate('Notifications')}
-                                activeOpacity={0.7}
-                            >
-                                <Ionicons name="notifications" size={20} color={isDarkMode ? '#FFF' : '#334155'} />
-                                {unreadCount > 0 && (
-                                    <View style={s.notifBadge}>
-                                        <Text style={s.notifBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-                                    </View>
-                                )}
-                            </TouchableOpacity>
-                        </View>
+                    
+                    {/* Top Sticky Logo */}
+                    <View style={s.topStickyBar}>
+                        <FudioLogo width={74} height={26} />
                     </View>
-
-                    {/* Search Bar + Filter Button (Matches List Tab exactly) */}
-                    <View style={s.searchRow}>
-                        <View style={[s.searchBar, { backgroundColor: inputBg, borderColor: cardBorder }]}>
-                            <Ionicons name="search-outline" size={18} color={Colors.textMuted} />
-                            <TextInput
-                                style={[s.searchInput, { color: Colors.textPrimary }]}
-                                placeholder={view === 'list' ? "Search restaurants, cuisines..." : "Search places on map..."}
-                                placeholderTextColor={Colors.textMuted}
-                                value={view === 'list' ? search : mapSearch}
-                                onChangeText={view === 'list' ? setSearch : fetchMapSuggestions}
-                            />
-                            {(view === 'list' ? search : mapSearch).length > 0 && (
-                                <TouchableOpacity onPress={() => view === 'list' ? setSearch('') : (setMapSearch(''), setMapSuggestions([]), setShowMapSuggestions(false))}>
-                                    <Ionicons name="close-circle" size={18} color={Colors.textMuted} />
-                                </TouchableOpacity>
-                            )}
-                        </View>
-                        <TouchableOpacity
-                            style={[s.filterBtn, {
-                                backgroundColor: activeFilterCount > 0 ? Colors.primary : (isDarkMode ? 'rgba(255,255,255,0.08)' : '#F1F5F9'),
-                                borderColor: activeFilterCount > 0 ? Colors.primary : cardBorder,
-                            }]}
-                            onPress={openFilters}
-                            activeOpacity={0.7}
-                        >
-                            <Ionicons name="options-outline" size={20} color={activeFilterCount > 0 ? '#FFF' : (isDarkMode ? '#FFF' : '#334155')} />
-                            {activeFilterCount > 0 && (
-                                <View style={s.filterCount}>
-                                    <Text style={s.filterCountText}>{activeFilterCount}</Text>
-                                </View>
-                            )}
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* HIDDEN_FEATURE: Map search suggestions
-                    {view === 'map' && showMapSuggestions && mapSuggestions.length > 0 && (
-                        <View style={[s.mapSuggestInHeader, { backgroundColor: isDarkMode ? '#1E1E2E' : '#FFF', borderTopWidth: 1, borderTopColor: cardBorder }]}>
-                            {mapSuggestions.map((sg: any, i: number) => (
-                                <TouchableOpacity
-                                    key={sg.place_id || i}
-                                    style={[s.mapSuggestItem, i < mapSuggestions.length - 1 && { borderBottomWidth: 1, borderBottomColor: cardBorder }]}
-                                    onPress={() => selectMapPlace(sg.place_id, sg.description)}
-                                >
-                                    <Ionicons name="location-outline" size={16} color={Colors.primary} />
-                                    <Text style={{ color: Colors.textPrimary, fontSize: 14, flex: 1 }} numberOfLines={1}>{sg.description}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    )}
-                    */}
-
-                    {/* HIDDEN_FEATURE: Map view toggle
-                    <View style={[s.viewToggle, { backgroundColor: chipBg }]}>
-                        {(['list', 'map'] as const).map(v => (
-                            <TouchableOpacity key={v} style={[s.toggleBtn, view === v && { backgroundColor: Colors.primary }]} onPress={() => setView(v)}>
-                                <Ionicons name={v === 'list' ? 'list-outline' : 'map-outline'} size={16} color={view === v ? '#FFF' : Colors.textMuted} />
-                                <Text style={[s.toggleText, { color: view === v ? '#FFF' : Colors.textMuted }]}>{v === 'list' ? 'List' : 'Map'}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                    */}
-
-                    {/* HIDDEN_FEATURE: Map range selector
-                    {view === 'map' && (
-                        <View style={s.headerRangeSection}>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                                <Text style={[s.headerRangeLabel, { color: Colors.textSecondary, marginBottom: 0 }]}>Distance Range:</Text>
-                                {mapRange > 0 && (
-                                    <TouchableOpacity onPress={() => handlePredefinedRange(0)}>
-                                        <Text style={{ color: Colors.error, fontSize: 11, fontWeight: '700' }}>Clear Range</Text>
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
-                                <View style={[s.rangeChipInline, { paddingHorizontal: 0, width: 80, backgroundColor: inputBg }]}>
-                                    <TextInput
-                                        style={[s.rangeTextInline, { textAlign: 'center', width: '100%' }]}
-                                        placeholder="Custom"
-                                        placeholderTextColor={Colors.textMuted}
-                                        keyboardType="numeric"
-                                        value={customRangeVal}
-                                        onChangeText={handleCustomRange}
-                                    />
-                                </View>
-                                {RANGE_OPTIONS.map(opt => (
-                                    <TouchableOpacity
-                                        key={opt.value}
-                                        style={[s.rangeChipInline, mapRange === opt.value && { backgroundColor: Colors.primary, borderColor: Colors.primary }]}
-                                        onPress={() => handlePredefinedRange(opt.value)}
-                                    >
-                                        <Text style={[s.rangeTextInline, mapRange === opt.value && { color: '#FFF' }]}>{opt.label}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-                        </View>
-                    )}
-                    */}
-
-                    {/* Cuisine chips */}
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cuisineRow}>
-                        <TouchableOpacity
-                            style={[s.cuisineChip, { borderColor: cardBorder, backgroundColor: chipBg }, !selectedCuisine && { backgroundColor: Colors.primary, borderColor: Colors.primary }]}
-                            onPress={() => setSelectedCuisine(null)}
-                        >
-                            <Text style={[s.cuisineChipText, { color: !selectedCuisine ? '#FFF' : Colors.textSecondary }]}>All</Text>
-                        </TouchableOpacity>
-                        {CUISINE_TYPES.map(c => (
-                            <TouchableOpacity
-                                key={c}
-                                style={[s.cuisineChip, { borderColor: cardBorder, backgroundColor: chipBg }, selectedCuisine === c && { backgroundColor: Colors.primary, borderColor: Colors.primary }]}
-                                onPress={() => setSelectedCuisine(selectedCuisine === c ? null : c)}
-                            >
-                                <Text style={[s.cuisineChipText, { color: selectedCuisine === c ? '#FFF' : Colors.textSecondary }]}>{c}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
                 </View>
 
                 {/* ─── CONTENT AREA ─── */}
                 <View style={{ flex: 1 }}>
-                    {/* HIDDEN_FEATURE: Map Section - view toggle and map branch removed, only list view shown */}
-                    <>
-                        {activeFilterCount > 0 && (
-                            <View style={s.activeRow}>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 6, paddingTop: 12 }}>
-                                    <TouchableOpacity style={[s.activeBadge, { backgroundColor: Colors.error + '15' }]} onPress={clearAllAndApply}>
-                                        <Ionicons name="close-circle" size={14} color={Colors.error} />
-                                        <Text style={[s.activeBadgeText, { color: Colors.error }]}>Clear All</Text>
-                                    </TouchableOpacity>
-                                    {appliedFilters.budget !== 'any' && (
-                                        <View style={[s.activeBadge, { backgroundColor: Colors.primary + '15' }]}>
-                                            <Text style={[s.activeBadgeText, { color: Colors.primary }]}>💰 {appliedFilters.budget}</Text>
-                                        </View>
-                                    )}
-                                    {appliedFilters.timing !== 'any' && (
-                                        <View style={[s.activeBadge, { backgroundColor: Colors.primary + '15' }]}>
-                                            <Text style={[s.activeBadgeText, { color: Colors.primary }]}>🕐 {appliedFilters.timing}</Text>
-                                        </View>
-                                    )}
-                                </ScrollView>
-                            </View>
-                        )}
-
-                        {/* Section Header */}
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginVertical: 12 }}>
-                            <Text style={{ fontSize: 16, fontWeight: '800', color: Colors.textPrimary }}>
-                                {search ? 'Search Results' : 'Nearby Dining Plans'}
-                            </Text>
-                        </View>
-
-                        <FlatList
-                            data={filtered}
-                            keyExtractor={item => item.id}
-                            renderItem={({ item }) => <PostCard post={item} onPress={() => navigation.navigate('PostDetail', { postId: item.id })} />}
-                            contentContainerStyle={s.list}
-                            showsVerticalScrollIndicator={false}
-                            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
-                            ListEmptyComponent={
-                                <View style={s.empty}>
-                                    <Text style={{ fontSize: 48 }}>🍽️</Text>
-                                    <Text style={[s.emptyTitle, { color: Colors.textPrimary }]}>No dining plans found</Text>
-                                    <Text style={{ color: Colors.textMuted, fontSize: 14 }}>Try adjusting your filters</Text>
+                    <SectionList
+                        sections={[
+                            { type: 'MAIN', data: ['PROMO_DATA', ...filtered] }
+                        ]}
+                        keyExtractor={(item, index) => item === 'PROMO_DATA' ? 'promo' : (item as any).id || String(index)}
+                        showsVerticalScrollIndicator={false}
+                        stickySectionHeadersEnabled={true}
+                        contentContainerStyle={s.list}
+                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+                        ListHeaderComponent={
+                            <View style={s.header}>
+                                <View style={{ flex: 1, justifyContent: 'center' }}>
+                                    <Text style={[s.greeting, { color: '#FFFFFF' }]}>Hi, {user?.name?.split(' ')[0] || 'Foodie'}</Text>
+                                    <Text style={[s.headerSub, { color: '#938f99' }]}>
+                                        {view === 'list' ? 'Find your next meal companion' : 'Explore nearby plans'}
+                                    </Text>
                                 </View>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                    <TouchableOpacity
+                                        style={[s.notifBtn, { backgroundColor: 'transparent', borderColor: 'transparent', width: 32, height: 32 }]}
+                                        onPress={() => navigation.navigate('Notifications')}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Ionicons name="notifications-outline" size={24} color={'#FFFFFF'} />
+                                        {unreadCount > 0 && (
+                                            <View style={s.notifBadge}>
+                                                <Text style={s.notifBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                                            </View>
+                                        )}
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        onPress={() => navigation.navigate('Profile')}
+                                        activeOpacity={0.7}
+                                        style={{
+                                            width: 32, height: 32, borderRadius: 16, borderWidth: 1,
+                                            borderColor: 'rgba(34,197,94,0.2)', backgroundColor: '#1d1b22',
+                                            justifyContent: 'center', alignItems: 'center', overflow: 'hidden',
+                                        }}
+                                    >
+                                        <Ionicons name="person" size={16} color={'rgba(255,255,255,0.3)'} />
+                                        {user?.photoURL && (
+                                            <Image source={{ uri: user.photoURL }} style={{ position: 'absolute', width: 32, height: 32, borderRadius: 16 }} />
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        }
+                        renderSectionHeader={({ section }) => {
+                            return (
+                                <View style={{ backgroundColor: '#111014' }}>
+                                    {/* Small top spacer so search bar doesn't flush against logo */}
+                                    <View style={{ height: 10 }} />
+
+                                    {/* Search Bar + Filter Button */}
+                                    <View style={s.searchRow}>
+                                        <View style={[s.searchBar, { backgroundColor: '#1d1b22', borderColor: 'rgba(73,69,79,0.2)' }]}>
+                                            <Ionicons name="search-outline" size={18} color="rgba(147,143,153,0.5)" />
+                                            <TextInput
+                                                style={[s.searchInput, { color: '#FFF' }]}
+                                                placeholder={view === 'list' ? "Search dining experiences..." : "Search places on map..."}
+                                                placeholderTextColor="rgba(147,143,153,0.5)"
+                                                value={view === 'list' ? search : mapSearch}
+                                                onChangeText={view === 'list' ? setSearch : fetchMapSuggestions}
+                                            />
+                                            {(view === 'list' ? search : mapSearch).length > 0 && (
+                                                <TouchableOpacity onPress={() => view === 'list' ? setSearch('') : (setMapSearch(''), setMapSuggestions([]), setShowMapSuggestions(false))}>
+                                                    <Ionicons name="close-circle" size={18} color="rgba(147,143,153,0.5)" />
+                                                </TouchableOpacity>
+                                            )}
+                                        </View>
+                                        <TouchableOpacity
+                                            style={[s.filterBtn, { backgroundColor: '#1d1b22', borderColor: 'rgba(73,69,79,0.2)' }]}
+                                            onPress={openFilters}
+                                            activeOpacity={0.7}
+                                        >
+                                            <FilterIcon width={24} height={24} />
+                                            {activeFilterCount > 0 && (
+                                                <View style={s.filterCount}>
+                                                    <Text style={s.filterCountText}>{activeFilterCount}</Text>
+                                                </View>
+                                            )}
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    {/* Cuisine chips */}
+                                    <View style={{ marginBottom: 12 }}>
+                                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cuisineRow}>
+                                            <TouchableOpacity
+                                                style={[s.cuisineChip, { borderColor: !selectedCuisine ? '#ffb534' : 'rgba(73,69,79,0.1)', backgroundColor: !selectedCuisine ? '#ffb534' : '#1d1b22' }]}
+                                                onPress={() => setSelectedCuisine(null)}
+                                            >
+                                                <Text style={[s.cuisineChipText, { color: !selectedCuisine ? '#000' : '#938f99' }]}>All</Text>
+                                            </TouchableOpacity>
+                                            {CUISINE_TYPES.map(c => (
+                                                <TouchableOpacity
+                                                    key={c}
+                                                    style={[s.cuisineChip, { borderColor: selectedCuisine === c ? '#ffb534' : 'rgba(73,69,79,0.1)', backgroundColor: selectedCuisine === c ? '#ffb534' : '#1d1b22' }]}
+                                                    onPress={() => setSelectedCuisine(selectedCuisine === c ? null : c)}
+                                                >
+                                                    <Text style={[s.cuisineChipText, { color: selectedCuisine === c ? '#000' : '#938f99' }]}>{c}</Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </ScrollView>
+                                    </View>
+
+                                    {activeFilterCount > 0 && (
+                                        <View style={s.activeRow}>
+                                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 19, gap: 6, paddingTop: 12 }}>
+                                                <TouchableOpacity style={[s.activeBadge, { backgroundColor: Colors.error + '15' }]} onPress={clearAllAndApply}>
+                                                    <Ionicons name="close-circle" size={14} color={Colors.error} />
+                                                    <Text style={[s.activeBadgeText, { color: Colors.error }]}>Clear All</Text>
+                                                </TouchableOpacity>
+                                                {appliedFilters.budget !== 'any' && (
+                                                    <View style={[s.activeBadge, { backgroundColor: Colors.primary + '15' }]}>
+                                                        <Text style={[s.activeBadgeText, { color: Colors.primary }]}>💰 {appliedFilters.budget}</Text>
+                                                    </View>
+                                                )}
+                                                {appliedFilters.timing !== 'any' && (
+                                                    <View style={[s.activeBadge, { backgroundColor: Colors.primary + '15' }]}>
+                                                        <Text style={[s.activeBadgeText, { color: Colors.primary }]}>🕐 {appliedFilters.timing}</Text>
+                                                    </View>
+                                                )}
+                                            </ScrollView>
+                                        </View>
+                                    )}
+                                </View>
+                            );
+                        }}
+                        renderItem={({ item, section }) => {
+                            if (item === 'PROMO_DATA') {
+                                return (
+                                    <View>
+                                        <PromoSlider navigation={navigation} s={s} />
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 19, marginVertical: 16 }}>
+                                            <Text style={{ fontSize: 18, fontWeight: '600', color: '#FFF' }}>
+                                                {search ? 'Search Results' : 'Nearby Dining Plans'}
+                                            </Text>
+                                        </View>
+
+                                        {filtered.length === 0 && (
+                                            <View style={s.empty}>
+                                                <Text style={{ fontSize: 48 }}>🍽️</Text>
+                                                <Text style={[s.emptyTitle, { color: Colors.textPrimary }]}>No dining plans found</Text>
+                                                <Text style={{ color: Colors.textMuted, fontSize: 14 }}>Try adjusting your filters</Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                );
                             }
-                        />
-                    </>
+                            return <View style={{ marginHorizontal: 19 }}><PostCard post={item as any} onPress={() => navigation.navigate('PostDetail', { postId: (item as any).id })} /></View>;
+                        }}
+                    />
                 </View>
             </SafeAreaView>
 
@@ -855,30 +862,85 @@ export default function DashboardScreen() {
 // ─── Styles ───────────────────────────────────────────────────────
 const styles = StyleSheet.create({
     safe: { flex: 1 },
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 14 },
-    greeting: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
-    headerSub: { fontSize: 13, marginTop: 3, fontWeight: '500' },
+    // Sticky Top Bar
+    topStickyBar: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#1d1b22',
+        paddingVertical: 16,
+    },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 19, paddingTop: 24, paddingBottom: 8 },
+    greeting: { fontSize: 30, fontWeight: '600', letterSpacing: -0.5, marginBottom: 4 },
+    headerSub: { fontSize: 16, fontWeight: '400' },
     notifBtn: { position: 'relative', width: 44, height: 44, borderRadius: 14, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
-    notifBadge: { position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: '#FFF' },
+    notifBadge: { position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: '#111014' },
     notifBadgeText: { fontSize: 10, fontWeight: '800', color: '#FFF' },
-    searchRow: { flexDirection: 'row', gap: 10, marginHorizontal: 20, marginBottom: 14 },
-    searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 14, paddingHorizontal: 14, height: 48, borderWidth: 1 },
-    searchInput: { flex: 1, fontSize: 15, fontWeight: '500' },
-    filterBtn: { position: 'relative', width: 48, height: 48, borderRadius: 14, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
+    searchRow: { flexDirection: 'row', gap: 10, marginHorizontal: 19, marginBottom: 8 },
+    searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 8, paddingHorizontal: 16, height: 50, borderWidth: 1 },
+    searchInput: { flex: 1, fontSize: 14, fontWeight: '400' },
+    filterBtn: { position: 'relative', width: 51, height: 50, borderRadius: 8, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
     filterCount: { position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3 },
     filterCountText: { fontSize: 9, fontWeight: '800', color: '#FFF' },
     viewToggle: { flexDirection: 'row', marginHorizontal: 20, marginBottom: 14, borderRadius: 12, padding: 4 },
     toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8, borderRadius: 10 },
     toggleText: { fontSize: 13, fontWeight: '600' },
-    cuisineRow: { paddingHorizontal: 20, paddingBottom: 14 },
-    cuisineChip: { height: 36, justifyContent: 'center', paddingHorizontal: 16, borderRadius: 18, borderWidth: 1, marginRight: 8 },
-    cuisineChipText: { fontSize: 13, fontWeight: '600' },
+    cuisineRow: { paddingHorizontal: 19, paddingBottom: 0 },
+    cuisineChip: { height: 34, justifyContent: 'center', paddingHorizontal: 21, borderRadius: 9999, borderWidth: 1, marginRight: 9 },
+    cuisineChipText: { fontSize: 12, fontWeight: '400' },
     activeRow: { marginBottom: 10 },
     activeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 5, paddingHorizontal: 10, borderRadius: 8 },
     activeBadgeText: { fontSize: 12, fontWeight: '700' },
-    list: { paddingHorizontal: 20, paddingBottom: 100 },
+    list: { paddingHorizontal: 0, paddingBottom: 100 },
     empty: { alignItems: 'center', paddingTop: 80, gap: 8 },
     emptyTitle: { fontSize: 18, fontWeight: '700' },
+    
+    // Promo Banner
+    promoBanner: {
+        marginHorizontal: 19,
+        marginBottom: 20,
+        backgroundColor: '#fff6f1',
+        borderRadius: 6,
+        height: 203,
+        flexDirection: 'row',
+        overflow: 'hidden',
+    },
+    promoContent: {
+        flex: 1,
+        paddingLeft: 18,
+        paddingVertical: 18,
+        justifyContent: 'center',
+    },
+    promoLogoText: {
+        fontSize: 24,
+        fontWeight: '900',
+        color: '#000',
+        marginBottom: 8,
+    },
+    promoText: {
+        fontSize: 11,
+        color: '#000',
+        lineHeight: 15,
+        marginBottom: 16,
+        maxWidth: 160,
+    },
+    promoBtn: {
+        backgroundColor: '#ffb534',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 6,
+        alignSelf: 'flex-start',
+    },
+    promoBtnText: {
+        color: '#000',
+        fontSize: 12,
+        fontWeight: '800',
+        letterSpacing: 1.2,
+    },
+    promoImage: {
+        width: 140,
+        height: '100%',
+        resizeMode: 'cover',
+    },
 
     // Unified Map Components
     mapSuggestInHeader: { maxHeight: 200, elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8 },
