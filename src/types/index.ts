@@ -89,7 +89,7 @@ export interface DiningPost {
     budgetMax?: number;
     participants: Participant[];
     visibility: 'public' | 'friends' | 'verified';
-    status: 'open' | 'full' | 'expired' | 'cancelled';
+    status: 'open' | 'full' | 'expired' | 'cancelled' | 'closed';
     description?: string;
     imageURL?: string;
     autoApprove: boolean;

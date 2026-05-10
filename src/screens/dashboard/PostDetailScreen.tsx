@@ -514,6 +514,43 @@ export default function PostDetailScreen() {
                         )}
                     </View>
 
+                    {/* Menu / Dishes */}
+                    {((post.foodItems && post.foodItems.length > 0) || (post.selectedFoodOptions && post.selectedFoodOptions.length > 0)) && (
+                        <View style={styles.section}>
+                            <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Menu & Dishes</Text>
+                            
+                            {post.foodItems && post.foodItems.length > 0 && (
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: (post.selectedFoodOptions && post.selectedFoodOptions.length > 0) ? 16 : 0 }}>
+                                    {post.foodItems.map((item, index) => (
+                                        <View key={`fi-${index}`} style={[styles.cuisineBadge, { backgroundColor: Colors.primary + '15', borderWidth: 1, borderColor: Colors.primary + '30', paddingVertical: 8, paddingHorizontal: 14 }]}>
+                                            <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: '700' }}>{item}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+
+                            {post.selectedFoodOptions && post.selectedFoodOptions.length > 0 && (
+                                <View style={{ gap: 12 }}>
+                                    {post.selectedFoodOptions.map((food, idx) => (
+                                        <View key={`fo-${idx}`} style={{ flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 16, backgroundColor: Colors.backgroundCard, borderWidth: 1, borderColor: Colors.border, gap: 12 }}>
+                                            {food.imageUrl ? (
+                                                <Image source={{ uri: food.imageUrl }} style={{ width: 48, height: 48, borderRadius: 12 }} />
+                                            ) : (
+                                                <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: Colors.backgroundElevated, justifyContent: 'center', alignItems: 'center' }}>
+                                                    <Ionicons name="restaurant-outline" size={20} color={Colors.textMuted} />
+                                                </View>
+                                            )}
+                                            <View style={{ flex: 1 }}>
+                                                <Text style={{ fontSize: 16, fontWeight: '700', color: Colors.textPrimary }}>{food.name}</Text>
+                                                <Text style={{ fontSize: 13, color: Colors.textMuted, marginTop: 2 }}>{food.priceRange || 'Price Varies'}</Text>
+                                            </View>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                    )}
+
                     {/* Participants List */}
                     <View style={styles.section}>
                         <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Meeting With</Text>

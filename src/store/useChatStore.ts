@@ -6,7 +6,7 @@ import { TEST_USERS } from '../data/testUsers';
 import { Platform } from 'react-native';
 import { Notification as NotificationType } from '../types';
 
-export const API_URL = 'http://10.63.126.204:5001';
+export const API_URL = 'http://192.168.29.245:5002';
 
 export type ChatStatus = 'pending' | 'accepted' | 'blocked' | 'deleted';
 export type MessageType = 'text' | 'image' | 'video' | 'contact';
