@@ -307,12 +307,11 @@ export default function EditPostScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: Colors.background }]}>
-            <SafeAreaView edges={['top']} style={[styles.customHeader, { borderBottomColor: Colors.border }]}>
-                <TouchableOpacity onPress={() => safeGoBack()} style={styles.backBtn}>
-                    <Ionicons name="close-outline" size={28} color={Colors.textPrimary} />
+            <SafeAreaView edges={['top']} style={[styles.customHeader, { borderBottomColor: Colors.border, justifyContent: 'flex-start' }]}>
+                <TouchableOpacity onPress={() => safeGoBack()} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Ionicons name="arrow-back" size={24} color={'#ffb534'} />
+                    <Text style={{ fontSize: 14, fontWeight: '500', color: '#FFFFFF' }}>Edit Dining Plan</Text>
                 </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>Edit Dining Plan</Text>
-                <View style={{ width: 44 }} />
             </SafeAreaView>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -337,7 +336,10 @@ export default function EditPostScreen() {
                             value={isUrgent}
                             onValueChange={(val) => {
                                 setIsUrgent(val);
-                                if (val) setIsImmediate(true);
+                                if (val) {
+                                    setIsImmediate(false);
+                                    setDateTime(new Date(Date.now() + 30 * 60 * 1000));
+                                }
                             }}
                             trackColor={{ false: '#767577', true: Colors.error }}
                             thumbColor={Platform.OS === 'ios' ? '#FFF' : isUrgent ? Colors.error : '#f4f3f4'}
@@ -440,7 +442,7 @@ export default function EditPostScreen() {
                                             <View style={styles.foodInfo}>
                                                 <Text numberOfLines={2} style={[styles.foodName, { color: Colors.textPrimary }]}>{item.name}</Text>
                                                 {item.priceRange ? (
-                                                    <View style={[styles.priceBadge, { backgroundColor: Colors.primary + '15' }]}>
+                                                    <View style={styles.priceBadge}>
                                                         <Text style={[styles.priceText, { color: Colors.primary }]}>{item.priceRange}</Text>
                                                     </View>
                                                 ) : null}
@@ -703,6 +705,7 @@ export default function EditPostScreen() {
                 onSave={(date) => {
                     setDateTime(date);
                     setIsImmediate(false);
+                    setIsUrgent(false);
                 }}
             />
 
@@ -720,7 +723,7 @@ export default function EditPostScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    customHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1 },
+    customHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 12, borderBottomWidth: 1 },
     headerTitle: { fontSize: 18, fontWeight: '800' },
     backBtn: { padding: 4 },
     scrollContent: { padding: 16, paddingBottom: 120 },
@@ -746,7 +749,7 @@ const styles = StyleSheet.create({
     freeBtnContainer: { padding: 16, borderRadius: 16, borderWidth: 1.5, marginBottom: 16 },
     freeSubtext: { fontSize: 11, fontWeight: '600', marginTop: 4, marginLeft: 28 },
     budgetGroupLabel: { fontSize: 12, fontWeight: '700', marginBottom: 10, textTransform: 'uppercase' },
-    budgetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    budgetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
     budgetChip: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, minWidth: '30%', alignItems: 'center' },
     budgetText: { fontSize: 13, fontWeight: '700' },
     // Others
@@ -762,15 +765,15 @@ const styles = StyleSheet.create({
     switchTitle: { fontSize: 15, fontWeight: '800' },
     switchSub: { fontSize: 12, marginTop: 2 },
     // Food carousel
-    foodCard: { width: 140, borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
-    searchRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, borderRadius: 14, borderWidth: 1, height: 46, gap: 8, marginBottom: 14 },
+    foodCard: { width: 120, borderRadius: 8, borderWidth: 1, overflow: 'hidden' },
+    searchRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, borderRadius: 6, borderWidth: 1, height: 46, gap: 8, marginBottom: 14 },
     searchInput: { flex: 1, fontSize: 14, height: 46 },
     foodCheckmark: { position: 'absolute', top: 8, right: 8, zIndex: 10, width: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center' },
-    foodImage: { width: 140, height: 110, resizeMode: 'cover' },
-    foodInfo: { padding: 10, gap: 6 },
-    foodName: { fontSize: 13, fontWeight: '700', lineHeight: 17 },
-    priceBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-    priceText: { fontSize: 11, fontWeight: '800' },
+    foodImage: { width: 120, height: 85, resizeMode: 'cover' },
+    foodInfo: { padding: 8, gap: 2 },
+    foodName: { fontSize: 12, fontWeight: '600', lineHeight: 16 },
+    priceBadge: { alignSelf: 'flex-start', marginTop: 2 },
+    priceText: { fontSize: 11, fontWeight: '500' },
     customFoodRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     addFoodBtn: { width: 54, height: 54, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
     selectedFoodsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

@@ -13,6 +13,7 @@ import { useHostReputationStore } from '../../store/useHostReputationStore';
 import { usePostStore } from '../../store/usePostStore';
 import { RootStackParamList, HostMilestone, HostTier } from '../../types';
 import { TastePointsBadge } from '../../components/dining/TastePointsBadge';
+import BrandBar from '../../components/common/BrandBar';
 
 const { width } = Dimensions.get('window');
 
@@ -28,13 +29,6 @@ const TIER_ICONS: Record<HostTier, string> = {
     'Chef': '👨‍🍳',
     'Star Chef': '⭐',
     'Elite Culinary Host': '🏆',
-};
-
-const TIER_THRESHOLDS: Record<HostTier, number> = {
-    'Sous Chef': 100,
-    'Chef': 500,
-    'Star Chef': 1000,
-    'Elite Culinary Host': Infinity,
 };
 
 function nextMilestonePoints(total: number): number {
@@ -89,60 +83,49 @@ export default function HostRewardsScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: Colors.background }]}>
-            {/* Header */}
-            <LinearGradient
-                colors={[...gradientColors, Colors.background]}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={[styles.heroGradient, { paddingTop: Math.max(insets.top, 20) }]}
-            >
-                <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    style={styles.backBtn}
-                >
-                    <Ionicons name="chevron-back" size={24} color="#FFF" />
+            <BrandBar />
+            {/* Sticky Header */}
+            <View style={styles.headerRow}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Ionicons name="arrow-back" size={24} color={'#ffb534'} />
+                    <Text style={{ fontSize: 14, fontWeight: '500', color: '#FFFFFF' }}>Reputation Details</Text>
                 </TouchableOpacity>
-
-                <View style={styles.heroContent}>
-                    <Text style={{ fontSize: 64, textAlign: 'center' }}>{tierIcon}</Text>
-                    <Text style={styles.tierName}>{rep.tier}</Text>
-                    <TastePointsBadge points={rep.totalTastePoints} tier={rep.tier} size="lg" />
-                    <Text style={styles.reviewCount}>{rep.totalReviews} reviews · ★ {rep.averageRating.toFixed(1)}</Text>
-                </View>
-            </LinearGradient>
+            </View>
 
             <ScrollView
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
+                contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 40 }}
             >
+                {/* Hero Card */}
+                <Animated.View style={[styles.heroCard, { backgroundColor: Colors.backgroundElevated, borderColor: gradientColors[0] + '40', opacity: fadeAnim }]}>
+                    <Text style={{ fontSize: 64, textAlign: 'center', marginBottom: 10 }}>{tierIcon}</Text>
+                    <Text style={[styles.tierName, { color: gradientColors[0] }]}>{rep.tier}</Text>
+                    <TastePointsBadge points={rep.totalTastePoints} tier={rep.tier} size="lg" />
+                    <Text style={[styles.reviewCount, { color: Colors.textMuted }]}>{rep.totalReviews} reviews · ★ {rep.averageRating.toFixed(1)}</Text>
+                </Animated.View>
+
                 {/* Progress Bar */}
                 {rep.tier !== 'Elite Culinary Host' && (
-                    <View style={[styles.card, { backgroundColor: Colors.backgroundElevated, borderColor: Colors.border }]}>
+                    <View style={[styles.card, { backgroundColor: '#1D1B22', borderColor: 'transparent' }]}>
                         <View style={styles.progressHeader}>
                             <Text style={[styles.progressLabel, { color: Colors.textPrimary }]}>Progress to Next Tier</Text>
                             <Text style={[styles.progressValue, { color: Colors.primary }]}>
                                 {rep.totalTastePoints} / {nextMilestone} pts
                             </Text>
                         </View>
-                        <View style={[styles.progressTrack, { backgroundColor: Colors.backgroundCard }]}>
+                        <View style={[styles.progressTrack, { backgroundColor: '#353534' }]}>
                             <Animated.View
                                 style={[
                                     styles.progressFill,
                                     {
+                                        backgroundColor: gradientColors[0],
                                         width: progressAnim.interpolate({
                                             inputRange: [0, 1],
                                             outputRange: ['0%', '100%'],
                                         }),
                                     },
                                 ]}
-                            >
-                                <LinearGradient
-                                    colors={gradientColors}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={StyleSheet.absoluteFill}
-                                />
-                            </Animated.View>
+                            />
                         </View>
                         <Text style={[styles.progressSub, { color: Colors.textMuted }]}>
                             {nextMilestone - rep.totalTastePoints} more points to next milestone
@@ -152,7 +135,7 @@ export default function HostRewardsScreen() {
 
                 {/* Milestones */}
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Milestones</Text>
+                    <Text style={[styles.sectionTitle, { color: '#FFFFFF' }]}>Milestones</Text>
                     <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
@@ -172,10 +155,10 @@ export default function HostRewardsScreen() {
                 {/* Earned Badges */}
                 {rep.earnedBadges.length > 0 && (
                     <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Earned Badges</Text>
+                        <Text style={[styles.sectionTitle, { color: '#FFFFFF' }]}>Earned Badges</Text>
                         <View style={styles.badgeGrid}>
                             {rep.earnedBadges.map((badge, i) => (
-                                <View key={i} style={[styles.badgeChip, { backgroundColor: Colors.primary + '18', borderColor: Colors.primary + '40' }]}>
+                                <View key={i} style={[styles.badgeChip, { backgroundColor: '#1D1B22' }]}>
                                     <Text style={{ fontSize: 18 }}>🏅</Text>
                                     <Text style={[styles.badgeText, { color: Colors.primary }]}>{badge}</Text>
                                 </View>
@@ -187,12 +170,12 @@ export default function HostRewardsScreen() {
                 {/* Recent Awards */}
                 {rep.recentAwards.length > 0 && (
                     <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Recent Awards</Text>
+                        <Text style={[styles.sectionTitle, { color: '#FFFFFF' }]}>Recent Awards</Text>
                         <View style={{ gap: 10 }}>
                             {rep.recentAwards.slice(0, 5).map((award, i) => (
                                 <View
                                     key={i}
-                                    style={[styles.awardRow, { backgroundColor: Colors.backgroundElevated, borderColor: Colors.border }]}
+                                    style={[styles.awardRow, { backgroundColor: '#1D1B22' }]}
                                 >
                                     <Text style={{ fontSize: 22 }}>👨‍🍳</Text>
                                     <View style={{ flex: 1 }}>
@@ -215,12 +198,12 @@ export default function HostRewardsScreen() {
                 {/* Hosted Dining */}
                 {hostedPosts.length > 0 && (
                     <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Hosted Dining Events</Text>
+                        <Text style={[styles.sectionTitle, { color: '#FFFFFF' }]}>Hosted Dining Events</Text>
                         <View style={{ gap: 10 }}>
                             {hostedPosts.map((p) => (
                                 <TouchableOpacity
                                     key={p.id}
-                                    style={[styles.hostedPost, { backgroundColor: Colors.backgroundElevated, borderColor: Colors.border }]}
+                                    style={[styles.hostedPost, { backgroundColor: '#1D1B22' }]}
                                     onPress={() => navigation.navigate('PostDetail', { postId: p.id })}
                                 >
                                     <View style={styles.hostedPostLeft}>
@@ -240,12 +223,8 @@ export default function HostRewardsScreen() {
 
                 {/* Future rewards teaser */}
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Future Rewards</Text>
-                    <View style={[styles.futureCard, { borderColor: Colors.border }]}>
-                        <LinearGradient
-                            colors={[Colors.backgroundElevated, Colors.backgroundCard]}
-                            style={StyleSheet.absoluteFill}
-                        />
+                    <Text style={[styles.sectionTitle, { color: '#FFFFFF' }]}>Future Rewards</Text>
+                    <View style={[styles.futureCard, { backgroundColor: '#1D1B22' }]}>
                         <View style={styles.futureContent}>
                             <Text style={{ fontSize: 32 }}>🎖️</Text>
                             <View style={{ flex: 1 }}>
@@ -256,7 +235,7 @@ export default function HostRewardsScreen() {
                                     Coming soon — exclusive for top hosts
                                 </Text>
                             </View>
-                            <View style={[styles.lockedBadge, { backgroundColor: Colors.backgroundCard }]}>
+                            <View style={[styles.lockedBadge, { backgroundColor: '#353534' }]}>
                                 <Ionicons name="lock-closed" size={14} color={Colors.textMuted} />
                             </View>
                         </View>
@@ -275,6 +254,7 @@ function MilestoneCard({
     milestone: HostMilestone;
     Colors: any;
     gradientColors: [string, string];
+    key?: React.Key;
 }) {
     const scale = useRef(new Animated.Value(0.8)).current;
     const fade = useRef(new Animated.Value(0)).current;
@@ -292,8 +272,8 @@ function MilestoneCard({
                 style={[
                     styles.milestoneCard,
                     {
-                        backgroundColor: milestone.unlocked ? Colors.backgroundElevated : Colors.backgroundCard,
-                        borderColor: milestone.unlocked ? gradientColors[0] + '60' : Colors.border,
+                        backgroundColor: milestone.unlocked ? '#1D1B22' : 'transparent',
+                        borderColor: milestone.unlocked ? gradientColors[0] + '60' : '#353534',
                         opacity: milestone.unlocked ? 1 : 0.5,
                     },
                 ]}
@@ -309,7 +289,7 @@ function MilestoneCard({
                 </Text>
                 <View style={[
                     styles.milestonePtsBadge,
-                    { backgroundColor: milestone.unlocked ? gradientColors[0] + '20' : Colors.border + '40' },
+                    { backgroundColor: milestone.unlocked ? gradientColors[0] + '20' : '#353534' },
                 ]}>
                     <Text style={[styles.milestonePts, { color: milestone.unlocked ? gradientColors[0] : Colors.textMuted }]}>
                         {milestone.points} pts
@@ -331,35 +311,31 @@ function MilestoneCard({
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    heroGradient: {
-        paddingBottom: 40,
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 12,
+        paddingTop: 18,
+        paddingBottom: 14,
+    },
+    heroCard: {
+        alignItems: 'center',
+        paddingVertical: 30,
         paddingHorizontal: 20,
-    },
-    backBtn: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: 'rgba(0,0,0,0.25)',
-        justifyContent: 'center',
-        alignItems: 'center',
+        borderRadius: 16,
+        borderWidth: 1,
         marginBottom: 20,
-    },
-    heroContent: {
-        alignItems: 'center',
-        gap: 12,
+        marginTop: 10,
     },
     tierName: {
         fontSize: 26,
         fontWeight: '900',
-        color: '#FFF',
-        textShadowColor: 'rgba(0,0,0,0.3)',
-        textShadowOffset: { width: 0, height: 2 },
-        textShadowRadius: 4,
+        marginBottom: 10,
     },
-    reviewCount: { color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: '600' },
-    scrollContent: { padding: 20, gap: 0 },
+    reviewCount: { fontSize: 13, fontWeight: '600', marginTop: 12 },
     card: {
-        borderRadius: 24,
+        borderRadius: 16,
         borderWidth: 1,
         padding: 20,
         marginBottom: 20,
@@ -368,13 +344,13 @@ const styles = StyleSheet.create({
     progressLabel: { fontSize: 16, fontWeight: '800' },
     progressValue: { fontSize: 14, fontWeight: '700' },
     progressTrack: { height: 14, borderRadius: 7, overflow: 'hidden', marginBottom: 8 },
-    progressFill: { height: '100%', borderRadius: 7, overflow: 'hidden' },
+    progressFill: { height: '100%', borderRadius: 7 },
     progressSub: { fontSize: 12, fontWeight: '500' },
     section: { marginBottom: 28 },
-    sectionTitle: { fontSize: 20, fontWeight: '900', marginBottom: 14 },
+    sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 14 },
     milestoneCard: {
         width: 160,
-        borderRadius: 20,
+        borderRadius: 16,
         borderWidth: 1.5,
         padding: 16,
         alignItems: 'center',
@@ -407,7 +383,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 20,
-        borderWidth: 1,
     },
     badgeText: { fontSize: 13, fontWeight: '700' },
     awardRow: {
@@ -416,7 +391,6 @@ const styles = StyleSheet.create({
         gap: 12,
         padding: 14,
         borderRadius: 16,
-        borderWidth: 1,
     },
     awardBadge: {
         paddingHorizontal: 10,
@@ -428,12 +402,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 14,
         borderRadius: 16,
-        borderWidth: 1,
     },
     hostedPostLeft: { flex: 1 },
     futureCard: {
-        borderRadius: 20,
-        borderWidth: 1,
+        borderRadius: 16,
         overflow: 'hidden',
     },
     futureContent: {

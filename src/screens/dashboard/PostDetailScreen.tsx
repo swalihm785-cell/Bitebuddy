@@ -21,7 +21,7 @@ import { isCurrentlyPro } from '../../utils/authUtils';
 import { TEST_USERS } from '../../data/testUsers';
 import { handleDiningPlanShare } from '../../utils/diningPlanShareUtils';
 import { ClosedDiningReviews } from '../../components/dining/ClosedDiningReviews';
-import FudioLogo from '../../components/FudioLogo';
+import BrandBar from '../../components/common/BrandBar';
 
 // Map post.extras values to display labels (without emoji, uppercase per design)
 const EXTRA_LABELS: Record<string, string> = {
@@ -345,10 +345,8 @@ export default function PostDetailScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: '#000000' }]}>
-            {/* fudio brand bar — same as listing/dashboard */}
-            <View style={[styles.brandBar, { paddingTop: Platform.OS === 'ios' ? 24 : Math.max(insets.top, 16), backgroundColor: '#1D1B22' }]}>
-                <FudioLogo width={74} height={26} />
-            </View>
+            {/* Shared brand bar — matches listing/dashboard top padding */}
+            <BrandBar />
 
             {/* Header row (back, share, menu) */}
             <View style={styles.headerRow}>
@@ -358,7 +356,7 @@ export default function PostDetailScreen() {
                 </TouchableOpacity>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                     <TouchableOpacity onPress={() => handleDiningPlanShare(post)} style={styles.iconBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Ionicons name="share-social-outline" size={20} color={'#FFFFFF'} />
+                        <Ionicons name="share-outline" size={20} color={'#FFFFFF'} />
                     </TouchableOpacity>
                     {isHost && !isCompleted && (
                         <TouchableOpacity onPress={() => navigation.navigate('EditPost' as any, { postId: post.id })} style={styles.iconBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -371,7 +369,7 @@ export default function PostDetailScreen() {
                 </View>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: ctaConfig ? 110 : 40 }}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
                 <View style={styles.body}>
                     {/* Title + location */}
                     <Text style={styles.title}>{post.title}</Text>
@@ -657,12 +655,6 @@ export default function PostDetailScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
 
-    // Brand bar
-    brandBar: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingBottom: 8,
-    },
 
     // Header
     headerRow: {

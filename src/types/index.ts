@@ -263,6 +263,7 @@ export type RootStackParamList = {
     EditPost: { postId: string };
     UserProfile: { userId: string };
     Settings: undefined;
+    ProfileSettings: undefined;
     Notifications: undefined;
     Plan: undefined;
     ManageSubscription: undefined;

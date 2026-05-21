@@ -672,15 +672,13 @@ export default function DashboardScreen() {
                                         </Text>
                                     </View>
                                     {/* Right icons: Notification + Chat */}
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                                         <TouchableOpacity
                                             style={[s.notifBtn, { backgroundColor: 'transparent', borderColor: 'transparent', width: 32, height: 32 }]}
                                             onPress={() => navigation.navigate('Notifications')}
                                             activeOpacity={0.7}
                                         >
-                                            <Svg width={16} height={20} viewBox="0 0 16 20" fill="none">
-                                                <Path d="M0 17V15H2V8C2 6.61667 2.41667 5.3875 3.25 4.3125C4.08333 3.2375 5.16667 2.53333 6.5 2.2V1.5C6.5 1.08333 6.64583 0.729167 6.9375 0.4375C7.22917 0.145833 7.58333 0 8 0C8.41667 0 8.77083 0.145833 9.0625 0.4375C9.35417 0.729167 9.5 1.08333 9.5 1.5V2.2C10.8333 2.53333 11.9167 3.2375 12.75 4.3125C13.5833 5.3875 14 6.61667 14 8V15H16V17H0ZM8 20C7.45 20 6.97917 19.8042 6.5875 19.4125C6.19583 19.0208 6 18.55 6 18H10C10 18.55 9.80417 19.0208 9.4125 19.4125C9.02083 19.8042 8.55 20 8 20ZM4 15H12V8C12 6.9 11.6083 5.95833 10.825 5.175C10.0417 4.39167 9.1 4 8 4C6.9 4 5.95833 4.39167 5.175 5.175C4.39167 5.95833 4 6.9 4 8V15Z" fill="#938F99" />
-                                            </Svg>
+                                            <Ionicons name="notifications-outline" size={24} color="#938F99" />
                                             {unreadCount > 0 && (
                                                 <View style={s.notifBadge}>
                                                     <Text style={s.notifBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
@@ -692,9 +690,7 @@ export default function DashboardScreen() {
                                             onPress={() => navigation.navigate('ChatList')}
                                             activeOpacity={0.7}
                                         >
-                                            <Svg width={16} height={20} viewBox="0 0 24 24" fill="none">
-                                                <Path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 11H7V9h2v2zm4 0h-2V9h2v2zm4 0h-2V9h2v2z" fill="#938F99" />
-                                            </Svg>
+                                            <Ionicons name="chatbubbles-outline" size={24} color="#938F99" />
                                             {totalUnreadChats > 0 && (
                                                 <View style={s.notifBadge}>
                                                     <Text style={s.notifBadgeText}>{totalUnreadChats > 9 ? '9+' : totalUnreadChats}</Text>
@@ -830,6 +826,7 @@ export default function DashboardScreen() {
             {filterVisible && (
                 <Modal 
                     visible={filterVisible} 
+                    statusBarTranslucent
                     transparent 
                     animationType="none" 
                     onShow={() => {
@@ -1024,7 +1021,7 @@ export default function DashboardScreen() {
 
                         </ScrollView>
 
-                        <View style={[s.filterFooter, { paddingBottom: bottomInset + 16 }]}>
+                        <View style={[s.filterFooter, { paddingBottom: bottomInset + 16 + 50 }]}>
                             <TouchableOpacity style={[s.applyBtnNew, { backgroundColor: Colors.primary, height: 48, borderRadius: 6, flex: 1 }]} onPress={applyFilters} activeOpacity={0.85}>
                                 <Text style={[s.applyTextNew, { letterSpacing: 1.2 }]}>APPLY FILTERS</Text>
                             </TouchableOpacity>
@@ -1068,7 +1065,7 @@ const styles = StyleSheet.create({
     activeRow: { marginBottom: 10 },
     activeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 5, paddingHorizontal: 10, borderRadius: 8 },
     activeBadgeText: { fontSize: 12, fontWeight: '700' },
-    list: { paddingHorizontal: 0, paddingBottom: 112 },
+    list: { paddingHorizontal: 0, paddingBottom: 80 },
     empty: { alignItems: 'center', paddingTop: 80, gap: 8 },
     emptyTitle: { fontSize: 18, fontWeight: '700' },
     
@@ -1172,14 +1169,14 @@ const styles = StyleSheet.create({
 
     // Filter panel
     backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.7)' },
-    filterPanel: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '90%', borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' },
+    filterPanel: { position: 'absolute', bottom: -50, left: 0, right: 0, height: '92%', borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' },
     handleWrap: { alignItems: 'center', paddingTop: 8, paddingBottom: 2 },
     handle: { width: 44, height: 5, borderRadius: 3 },
-    filterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 2 },
+    filterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12 },
     filterTitle: { fontSize: 22, fontWeight: '800' },
     sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-    sectionTitle: { fontSize: 18, fontWeight: '700' },
-    filterCard: { paddingVertical: 2 },
+    sectionTitle: { fontSize: 15, fontWeight: '700' },
+    filterCard: { paddingVertical: 7 },
     searchInputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#131313', borderRadius: 12, borderWidth: 1, borderColor: '#2C2C2E', marginBottom: 16 },
     newFilterInput: { flex: 1, height: 48, color: '#FFF', fontSize: 15, paddingHorizontal: 12 },
     rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

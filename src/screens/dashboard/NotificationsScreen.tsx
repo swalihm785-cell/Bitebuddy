@@ -122,11 +122,11 @@ export default function NotificationsScreen() {
             <BrandBar />
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: Colors.border }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
-                </TouchableOpacity>
-                <View style={styles.headerCenter}>
-                    <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>Notifications</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 10 }}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                        <Ionicons name="arrow-back" size={24} color={'#ffb534'} />
+                        <Text style={{ fontSize: 14, fontWeight: '500', color: '#FFFFFF' }}>Notifications</Text>
+                    </TouchableOpacity>
                     {unreadCount > 0 && (
                         <View style={[styles.countBadge, { backgroundColor: Colors.primary }]}>
                             <Text style={styles.countText}>{unreadCount}</Text>
@@ -173,7 +173,7 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
     safeArea: { flex: 1 },
     header: {
-        flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20,
+        flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12,
         paddingVertical: 14, borderBottomWidth: 1, gap: 12
     },
     backBtn: { padding: 4 },
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     countBadge: { width: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center' },
     countText: { color: '#FFF', fontSize: 11, fontWeight: '900' },
     markAll: { fontSize: 13, fontWeight: '700' },
-    list: { padding: 16, paddingBottom: 40 },
+    list: { paddingHorizontal: 12, paddingVertical: 16, paddingBottom: 40 },
     notifItem: {
         flexDirection: 'row', alignItems: 'flex-start', gap: 12,
         padding: 14, borderRadius: 18, marginBottom: 10, borderWidth: 1,

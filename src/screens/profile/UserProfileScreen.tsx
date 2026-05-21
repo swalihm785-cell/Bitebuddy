@@ -288,9 +288,10 @@ export default function UserProfileScreen() {
         <View style={[styles.container, { backgroundColor: Colors.background }]}>
             <BrandBar />
             <ScrollView showsVerticalScrollIndicator={false}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10 }}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.backgroundCard, justifyContent: 'center', alignItems: 'center' }}>
-                        <Ionicons name="chevron-back" size={20} color={Colors.textPrimary} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 12, paddingTop: 10, paddingBottom: 10 }}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                        <Ionicons name="arrow-back" size={24} color={'#ffb534'} />
+                        <Text style={{ fontSize: 14, fontWeight: '500', color: '#FFFFFF' }}>User Profile</Text>
                     </TouchableOpacity>
                     {!isMe && (
                         <TouchableOpacity style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.backgroundCard, justifyContent: 'center', alignItems: 'center' }} onPress={() => setMenuVisible(true)}>
@@ -411,20 +412,6 @@ export default function UserProfileScreen() {
                             <DetailItem icon="restaurant-outline" label="Fav Cuisine" value={user.favoriteCuisines.join(', ')} color={Colors.primary} textColor={Colors.textPrimary} mutedColor={Colors.textMuted} />
                         )}
                     </View>
-
-                    {/* Cuisine Interests */}
-                    {user.cuisineInterests && user.cuisineInterests.length > 0 && (
-                        <View style={{ marginTop: 20 }}>
-                            <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Cuisine Interests</Text>
-                            <View style={styles.chipRow}>
-                                {user.cuisineInterests.map(c => (
-                                    <View key={c} style={[styles.chip, { backgroundColor: Colors.primary + '15', borderColor: Colors.primary + '30' }]}>
-                                        <Text style={[styles.chipTxt, { color: Colors.primary }]}>{c}</Text>
-                                    </View>
-                                ))}
-                            </View>
-                        </View>
-                    )}
 
                     {/* Personality / Vibe */}
                     {user.personalityTags && user.personalityTags.length > 0 && (
@@ -557,12 +544,12 @@ export default function UserProfileScreen() {
                 <View style={{ height: 60 }} />
             </ScrollView >
 
-            <Modal visible={menuVisible} transparent animationType="slide">
+            <Modal visible={menuVisible} transparent animationType="slide" statusBarTranslucent>
                 <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setMenuVisible(false)}>
                     <View style={[styles.menuContainer, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
                         <View style={[styles.modalHandle, { backgroundColor: Colors.border }]} />
                         <TouchableOpacity style={styles.menuItem} onPress={handleShare}>
-                            <Ionicons name="share-social-outline" size={20} color={Colors.textPrimary} />
+                            <Ionicons name="share-outline" size={20} color={Colors.textPrimary} />
                             <Text style={[styles.menuText, { color: Colors.textPrimary }]}>Share Profile</Text>
                         </TouchableOpacity>
 
@@ -585,7 +572,7 @@ export default function UserProfileScreen() {
                 </TouchableOpacity>
             </Modal>
 
-            <Modal visible={reportModalVisible} transparent animationType="fade">
+            <Modal visible={reportModalVisible} transparent animationType="fade" statusBarTranslucent>
                 <View style={styles.reportOverlay}>
                     <View style={[styles.reportContainer, { backgroundColor: Colors.backgroundCard }]}>
                         <Text style={[styles.reportTitle, { color: Colors.textPrimary }]}>Report User</Text>
@@ -624,7 +611,7 @@ export default function UserProfileScreen() {
                 </View>
             </Modal>
 
-            <Modal visible={givePointsModalVisible} transparent animationType="fade">
+            <Modal visible={givePointsModalVisible} transparent animationType="fade" statusBarTranslucent>
                 <View style={styles.reportOverlay}>
                     <View style={[styles.reportContainer, { backgroundColor: Colors.backgroundCard }]}>
                         <Text style={[styles.reportTitle, { color: Colors.textPrimary }]}>Give Taste Points</Text>
@@ -689,24 +676,24 @@ const styles = StyleSheet.create({
     avatarImg: { width: '100%', height: '100%' },
     avatarPlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
     proBadgeLarge: { position: 'absolute', bottom: 5, right: 5, width: 32, height: 32, borderRadius: 16, borderWidth: 3, borderColor: '#FFF', justifyContent: 'center', alignItems: 'center' },
-    userInfo: { alignItems: 'center', paddingHorizontal: 20, paddingTop: 12 },
+    userInfo: { alignItems: 'center', paddingHorizontal: 12, paddingTop: 12 },
     nameContainer: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     userName: { fontSize: 24, fontWeight: '900' },
     badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
     pBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
     pBadgeText: { fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
     userHandle: { fontSize: 14, fontWeight: '600' },
-    bio: { fontSize: 12, fontWeight: '400', lineHeight: 18, textAlign: 'center', marginTop: 8, paddingHorizontal: 20 },
-    actionRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20 },
+    bio: { fontSize: 12, fontWeight: '400', lineHeight: 18, textAlign: 'center', marginTop: 8, paddingHorizontal: 12 },
+    actionRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 12 },
     followBtn: { flex: 4, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
     followBtnText: { fontWeight: '700', fontSize: 15 },
     msgBtn: { flex: 1, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-    statsRow: { flexDirection: 'row', marginHorizontal: 20, borderRadius: 20, padding: 20, borderWidth: 1, alignItems: 'center' },
+    statsRow: { flexDirection: 'row', marginHorizontal: 12, borderRadius: 20, padding: 20, borderWidth: 1, alignItems: 'center' },
     statItem: { flex: 1, alignItems: 'center' },
     statValue: { fontSize: 20, fontWeight: '900' },
     statLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginTop: 4 },
     vDivider: { width: 1, height: 30 },
-    content: { padding: 20 },
+    content: { paddingHorizontal: 12, paddingVertical: 20 },
     sectionTitle: { fontSize: 14, fontWeight: '600', letterSpacing: 0.6, marginBottom: 16 },
     detailsGrid: { padding: 16, borderRadius: 24, borderWidth: 1, gap: 16 },
     detailRow: { flexDirection: 'row', alignItems: 'center' },

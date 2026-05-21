@@ -83,7 +83,7 @@ export const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, onLike, is
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.actionBtn}>
-                    <Ionicons name="share-social-outline" size={20} color={Colors.textSecondary} />
+                    <Ionicons name="share-outline" size={20} color={Colors.textSecondary} />
                 </TouchableOpacity>
             </View>
         </View>

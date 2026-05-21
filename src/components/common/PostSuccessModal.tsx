@@ -63,7 +63,7 @@ export const PostSuccessModal: React.FC<PostSuccessModalProps> = ({
                                 style={[styles.actionBtn, { backgroundColor: Colors.primary }]}
                                 onPress={() => handleDiningPlanShare(post)}
                             >
-                                <Ionicons name="share-social" size={18} color="#FFF" />
+                                <Ionicons name="share-outline" size={18} color="#FFF" />
                                 <Text style={styles.actionBtnText}>Share</Text>
                             </TouchableOpacity>
 

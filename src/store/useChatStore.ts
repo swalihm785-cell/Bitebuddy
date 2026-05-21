@@ -5,8 +5,18 @@ import { io, Socket } from 'socket.io-client';
 import { TEST_USERS } from '../data/testUsers';
 import { Platform } from 'react-native';
 import { Notification as NotificationType } from '../types';
+import Constants from 'expo-constants';
 
-export const API_URL = 'http://192.168.29.36:5002';
+const getDevServerIp = () => {
+    const hostUri = Constants.expoConfig?.hostUri || '';
+    if (hostUri) {
+        return hostUri.split(':')[0];
+    }
+    return '192.168.29.249'; // Fallback to current local IP of the dev machine
+};
+
+export const API_URL = `http://${getDevServerIp()}:5002`;
+console.log(`[useChatStore] Configured API_URL: ${API_URL}`);
 
 export type ChatStatus = 'pending' | 'accepted' | 'blocked' | 'deleted';
 export type MessageType = 'text' | 'image' | 'video' | 'contact';

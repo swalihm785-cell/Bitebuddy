@@ -17,8 +17,7 @@ export default function SettingsScreen() {
 
     const [pushNotifs, setPushNotifs] = useState(true);
     const [locationEnabled, setLocationEnabled] = useState(true);
-    const [showDeleteAlert, setShowDeleteAlert] = useState(false);
-    const [showLogoutAlert, setShowLogoutAlert] = useState(false);
+        const [showLogoutAlert, setShowLogoutAlert] = useState(false);
 
     const SettingRow = ({ icon, title, subtitle, right, onPress }: any) => (
         <TouchableOpacity style={styles.row} onPress={onPress} disabled={!onPress}>
@@ -95,7 +94,7 @@ export default function SettingsScreen() {
 
                 <Text style={[styles.sectionHeader, { color: Colors.textMuted }]}>Account</Text>
                 <View style={[styles.card, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
-                    <SettingRow icon="person-outline" title="Edit Profile" onPress={() => navigation.navigate('EditProfile')} right={<Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />} />
+                    <SettingRow icon="person-outline" title="Profile Settings" onPress={() => navigation.navigate('ProfileSettings')} right={<Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />} />
                     {/* HIDDEN_FEATURE: Tiered Plans - Subscription row
                     <View style={[styles.rowDivider, { backgroundColor: Colors.border }]} />
                     <SettingRow
@@ -140,10 +139,6 @@ export default function SettingsScreen() {
                     <Text style={[styles.logoutText, { color: Colors.error }]}>Sign Out</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={() => setShowDeleteAlert(true)} style={styles.deleteBtn}>
-                    <Text style={[styles.deleteText, { color: Colors.textMuted }]}>Delete Account</Text>
-                </TouchableOpacity>
-
                 <View style={{ height: 40 }} />
             </ScrollView>
 
@@ -155,16 +150,6 @@ export default function SettingsScreen() {
                 onClose={() => setShowLogoutAlert(false)}
                 type="warning"
                 confirmText="Sign Out"
-            />
-
-            <CustomAlert
-                visible={showDeleteAlert}
-                title="Delete Account"
-                message="This will permanently delete your data. This action is irreversible."
-                onConfirm={() => setShowDeleteAlert(false)}
-                onClose={() => setShowDeleteAlert(false)}
-                type="error"
-                confirmText="Delete"
             />
         </View>
     );

@@ -148,7 +148,7 @@ export default function ChatListScreen() {
     // ── Regular chat row ──────────────────────────────────────────────
     const renderChatItem = ({ item: chat }: { item: any }) => (
         <TouchableOpacity
-            style={[styles.chatItem, { paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md }]}
+            style={[styles.chatItem, { paddingHorizontal: 12, paddingVertical: Spacing.md }]}
             onPress={() => handleOpenChat(chat)}
             activeOpacity={0.75}
         >
@@ -219,21 +219,15 @@ export default function ChatListScreen() {
                     <BlurView intensity={80} tint={isDarkMode ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
                 )}
                 <View style={[styles.header, { borderBottomWidth: 0, paddingHorizontal: 12, paddingVertical: 14 }]}>
-                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
                         <TouchableOpacity
-                            style={{
-                                width: 38,
-                                height: 38,
-                                borderRadius: 19,
-                                backgroundColor: Colors.backgroundCard,
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                            }}
+                            style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
                             onPress={() => navigation.goBack()}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
-                            <Ionicons name="chevron-back" size={22} color={Colors.textPrimary} />
+                            <Ionicons name="arrow-back" size={24} color={'#ffb534'} />
+                            <Text style={{ fontSize: 14, fontWeight: '500', color: '#FFFFFF' }}>Messages</Text>
                         </TouchableOpacity>
-                        <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>Messages</Text>
                     </View>
                     <View style={{ flexDirection: 'row', gap: 8 }}>
                         <TouchableOpacity
@@ -285,7 +279,7 @@ export default function ChatListScreen() {
             />
 
             {/* New chat modal */}
-            <Modal visible={newChatVisible} animationType="slide" onRequestClose={() => setNewChatVisible(false)}>
+            <Modal visible={newChatVisible} animationType="slide" onRequestClose={() => setNewChatVisible(false)} statusBarTranslucent>
                 <SafeAreaView style={[styles.modalContainer, { backgroundColor: Colors.background }]}>
                     {/* Modal Header */}
                     <View style={[styles.modalHeader, { borderBottomColor: Colors.border }]}>
@@ -314,7 +308,7 @@ export default function ChatListScreen() {
                     <FlatList
                         data={searchResults}
                         keyExtractor={u => u.id}
-                        contentContainerStyle={{ padding: 16, gap: 12 }}
+                        contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
                         ListEmptyComponent={
                             <View style={{ alignItems: 'center', paddingTop: 60, gap: 8 }}>
                                 <Text style={{ fontSize: 36 }}>🔍</Text>
@@ -386,10 +380,10 @@ const styles = StyleSheet.create({
 
     // New chat modal
     modalContainer: { flex: 1 },
-    modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1 },
+    modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 16, borderBottomWidth: 1 },
     modalTitle: { fontSize: 17, fontWeight: '800' },
-    searchBar: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginTop: 16, marginBottom: 8, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, borderWidth: 1 },
-    messageBar: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginBottom: 16, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, borderWidth: 1 },
+    searchBar: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 12, marginTop: 16, marginBottom: 8, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, borderWidth: 1 },
+    messageBar: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 12, marginBottom: 16, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, borderWidth: 1 },
     searchInput: { flex: 1, fontSize: 15 },
     userRow: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 18, borderWidth: 1 },
     userAvatar: { width: 48, height: 48, borderRadius: 24 },

@@ -24,7 +24,7 @@ const MediaPickerSheet = ({ visible, onClose, onCamera, onGallery, Colors }: {
     onCamera: () => void; onGallery: () => void;
     Colors: any;
 }) => (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
         <TouchableOpacity style={pickerStyles.overlay} activeOpacity={1} onPress={onClose}>
             <View style={[pickerStyles.sheet, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
                 <View style={[pickerStyles.handle, { backgroundColor: Colors.border }]} />
@@ -130,7 +130,7 @@ function SnapViewer({
     const progressWidth = progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
 
     return (
-        <Modal visible={visible} statusBarTranslucent animationType="fade" onRequestClose={onClose}>
+        <Modal visible={visible} animationType="fade" onRequestClose={onClose} statusBarTranslucent>
             <StatusBar hidden />
             <View style={sv.container}>
                 <FlatList

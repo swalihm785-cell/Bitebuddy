@@ -554,7 +554,7 @@ export default function ChatDetailScreen() {
             )}
 
             {/* Media Menu Modal */}
-            <Modal visible={showMediaMenu} transparent animationType="slide" onRequestClose={() => setShowMediaMenu(false)}>
+            <Modal visible={showMediaMenu} transparent animationType="slide" onRequestClose={() => setShowMediaMenu(false)} statusBarTranslucent>
                 <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setShowMediaMenu(false)}>
                     <View style={[styles.bottomSheet, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
                         <View style={[styles.handle, { backgroundColor: Colors.border }]} />
@@ -586,7 +586,7 @@ export default function ChatDetailScreen() {
             </Modal>
 
             {/* Contact Share Modal */}
-            <Modal visible={showContactMenu} transparent animationType="slide" onRequestClose={() => setShowContactMenu(false)}>
+            <Modal visible={showContactMenu} transparent animationType="slide" onRequestClose={() => setShowContactMenu(false)} statusBarTranslucent>
                 <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setShowContactMenu(false)}>
                     <View style={[styles.bottomSheet, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
                         <View style={[styles.handle, { backgroundColor: Colors.border }]} />
@@ -627,7 +627,7 @@ export default function ChatDetailScreen() {
             />
 
             {/* Header Menu Modal */}
-            <Modal visible={showMenuPopup} transparent animationType="fade" onRequestClose={() => setShowMenuPopup(false)}>
+            <Modal visible={showMenuPopup} transparent animationType="fade" onRequestClose={() => setShowMenuPopup(false)} statusBarTranslucent>
                 <TouchableOpacity style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.3)' }]} activeOpacity={1} onPress={() => setShowMenuPopup(false)}>
                     <View style={[styles.menuPopup, { backgroundColor: Colors.backgroundElevated, borderColor: Colors.border }]}>
                         {isGroup ? (
@@ -724,7 +724,7 @@ export default function ChatDetailScreen() {
             </Modal>
 
             {/* Participants Modal */}
-            <Modal visible={showParticipantsModal} transparent animationType="slide" onRequestClose={() => setShowParticipantsModal(false)}>
+            <Modal visible={showParticipantsModal} transparent animationType="slide" onRequestClose={() => setShowParticipantsModal(false)} statusBarTranslucent>
                 <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setShowParticipantsModal(false)}>
                     <View style={[styles.bottomSheet, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border, height: '70%' }]}>
                         <View style={[styles.handle, { backgroundColor: Colors.border }]} />
@@ -776,7 +776,7 @@ export default function ChatDetailScreen() {
             </Modal>
 
             {/* Report Modal */}
-            <Modal visible={showReportModal} transparent animationType="fade" onRequestClose={() => setShowReportModal(false)}>
+            <Modal visible={showReportModal} transparent animationType="fade" onRequestClose={() => setShowReportModal(false)} statusBarTranslucent>
                 <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 20 }]}>
                     <View style={[styles.reportContainer, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
                         <Text style={[styles.reportTitle, { color: Colors.textPrimary }]}>Report User</Text>
@@ -817,7 +817,7 @@ export default function ChatDetailScreen() {
             {/* Media Preview Modal */}
             {
                 previewUri && (
-                    <Modal visible animationType="slide" onRequestClose={() => setPreviewUri(null)}>
+                    <Modal visible animationType="slide" onRequestClose={() => setPreviewUri(null)} statusBarTranslucent>
                         <View style={[styles.previewContainer, { backgroundColor: '#000' }]}>
                             <SafeAreaView style={{ flex: 1 }}>
                                 <View style={styles.previewHeader}>
@@ -862,13 +862,13 @@ export default function ChatDetailScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12, borderBottomWidth: 1 },
+    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 12, gap: 12, borderBottomWidth: 1 },
     backBtn: { padding: 4 },
     headerAvatar: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
     headerName: { fontSize: 16, fontWeight: '700' },
     headerStatus: { fontSize: 11, marginTop: 1 },
     moreBtn: { padding: 4 },
-    messageList: { paddingHorizontal: 16, paddingVertical: 12 },
+    messageList: { paddingHorizontal: 12, paddingVertical: 12, paddingBottom: 40 },
     messageRow: { marginBottom: 12, flexDirection: 'row' },
     myRow: { justifyContent: 'flex-end' },
     otherRow: { justifyContent: 'flex-start' },
@@ -907,7 +907,7 @@ const styles = StyleSheet.create({
     mediaImage: { width: 200, height: 200, borderRadius: 12 },
     videoThumb: { width: 200, height: 140, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
     contactCard: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 4, paddingVertical: 2 },
-    inputArea: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 16, paddingVertical: 12, gap: 10, borderTopWidth: 1 },
+    inputArea: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingVertical: 12, gap: 10, borderTopWidth: 1 },
     attachBtn: { padding: 4, alignSelf: 'center', marginBottom: 4 },
     input: { flex: 1, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 12, maxHeight: 120, fontSize: 16 },
     sendBtn: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', alignSelf: 'center', marginLeft: 4 },

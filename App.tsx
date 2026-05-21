@@ -77,6 +77,7 @@ import NotificationsScreen from './src/screens/dashboard/NotificationsScreen';
 import SettingsScreen from './src/screens/settings/SettingsScreen';
 import PlanScreen from './src/screens/profile/PlanScreen';
 import ManageSubscriptionScreen from './src/screens/settings/ManageSubscriptionScreen';
+import ProfileSettingsScreen from './src/screens/settings/ProfileSettingsScreen';
 import FollowListScreen from './src/screens/profile/FollowListScreen';
 import BlockedUsersScreen from './src/screens/settings/BlockedUsersScreen';
 import ProfileScreen from './src/screens/profile/ProfileScreen';
@@ -131,6 +132,7 @@ function RootNavigator() {
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="ProfileSettings" component={ProfileSettingsScreen} />
           <Stack.Screen name="Plan" component={PlanScreen} />
           <Stack.Screen name="ManageSubscription" component={ManageSubscriptionScreen} />
           <Stack.Screen name="FollowList" component={FollowListScreen} />

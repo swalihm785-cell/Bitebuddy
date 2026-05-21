@@ -42,21 +42,22 @@ export default function ProfileScreen() {
     return (
         <View style={[styles.container, { backgroundColor: Colors.background }]}>
             <BrandBar />
+            
+            {/* Header Actions (Sticky) */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 12, paddingTop: 10, paddingBottom: 10 }}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+                    <Text style={{ color: Colors.textPrimary, fontSize: 16, fontWeight: '700' }}>Profile</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.backgroundCard, justifyContent: 'center', alignItems: 'center' }}>
+                    <Ionicons name="settings-outline" size={20} color={Colors.textPrimary} />
+                </TouchableOpacity>
+            </View>
+
             <ScrollView
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+                contentContainerStyle={{ paddingBottom: 40 }}
             >
-                {/* Header Actions */}
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10 }}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Ionicons name="arrow-back" size={24} color={Colors.primary} />
-                        <Text style={{ color: Colors.textPrimary, fontSize: 16, fontWeight: '700' }}>Profile</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.backgroundCard, justifyContent: 'center', alignItems: 'center' }}>
-                        <Ionicons name="settings-outline" size={20} color={Colors.textPrimary} />
-                    </TouchableOpacity>
-                </View>
-
                 {/* Profile Info Card */}
                 <View style={[styles.profileCard, { backgroundColor: Colors.background, marginTop: 10 }]}>
                     <View style={[styles.avatarContainer, { marginTop: 0 }]}>
@@ -138,7 +139,7 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Stats Row */}
-                <View style={[styles.statsRow, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border, marginTop: 10, marginHorizontal: 20 }]}>
+                <View style={[styles.statsRow, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border, marginTop: 10, marginHorizontal: 12 }]}>
                     <StatCard value={myPosts.length} label="Plans" />
                     <View style={{ width: 1, height: 30, backgroundColor: Colors.border }} />
                     <StatCard 
@@ -163,20 +164,6 @@ export default function ProfileScreen() {
                             <DetailItem icon="restaurant-outline" label="Fav Cuisine" value={user.cuisineInterests.join(', ')} color={Colors.primary} textColor={Colors.textPrimary} mutedColor={Colors.textMuted} />
                         )}
                     </View>
-
-                    {/* Cuisine Interests */}
-                    {user?.cuisineInterests && user.cuisineInterests.length > 0 && (
-                        <View style={{ marginTop: 20 }}>
-                            <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Cuisine Interests</Text>
-                            <View style={styles.chipRow}>
-                                {user.cuisineInterests.map(c => (
-                                    <View key={c} style={[styles.chip, { backgroundColor: Colors.primary + '15', borderColor: Colors.primary + '30' }]}>
-                                        <Text style={[styles.chipTxt, { color: Colors.primary }]}>{c}</Text>
-                                    </View>
-                                ))}
-                            </View>
-                        </View>
-                    )}
 
                     {/* Personality / Vibe */}
                     {user?.personalityTags && user.personalityTags.length > 0 && (
@@ -221,9 +208,9 @@ export default function ProfileScreen() {
                         </TouchableOpacity>
                     </View>
                 </View>
-
+                
                 {/* Dining Plans Section */}
-                <View style={styles.contentSection}>
+                <View style={{ marginTop: 20 }}>
                     <View style={styles.sectionHeader}>
                         <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>My Dining Plans</Text>
                     </View>
@@ -337,7 +324,7 @@ const styles = StyleSheet.create({
     },
     hero: {
         height: 180,
-        paddingHorizontal: 20,
+        paddingHorizontal: 12,
     },
     topActions: {
         flexDirection: 'row',
@@ -402,7 +389,7 @@ const styles = StyleSheet.create({
         lineHeight: 18,
         textAlign: 'center',
         marginTop: 8,
-        paddingHorizontal: 20,
+        paddingHorizontal: 12,
     },
     actionRow: {
         flexDirection: 'row',
@@ -458,7 +445,8 @@ const styles = StyleSheet.create({
         marginTop: 2
     },
     contentSection: {
-        padding: 20,
+        paddingHorizontal: 12,
+        paddingVertical: 20,
     },
     sectionHeader: {
         marginBottom: 15,
@@ -495,7 +483,7 @@ const styles = StyleSheet.create({
     },
     createBtn: {
         marginTop: 20,
-        paddingHorizontal: 20,
+        paddingHorizontal: 12,
         paddingVertical: 10,
         borderRadius: 20,
         borderWidth: 1,

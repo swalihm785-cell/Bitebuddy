@@ -502,14 +502,11 @@ export default function CreatePostScreen() {
 
             {/* Header row */}
             <View style={styles.headerRow}>
-                <TouchableOpacity onPress={() => safeGoBack()} style={styles.headerBackBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.primary} />
-                    <Text style={[styles.headerBackText, { color: Colors.textPrimary }]}>Back</Text>
+                <TouchableOpacity onPress={() => safeGoBack()} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Ionicons name="arrow-back" size={24} color={'#ffb534'} />
+                    <Text style={{ fontSize: 14, fontWeight: '500', color: '#FFFFFF' }}>Create Dining Plan</Text>
                 </TouchableOpacity>
             </View>
-
-            {/* Title */}
-            <Text style={[styles.pageTitle, { color: Colors.textPrimary }]}>Create Dining Plan</Text>
 
             <ScrollView
                 showsVerticalScrollIndicator={false}
@@ -684,7 +681,7 @@ export default function CreatePostScreen() {
                                                             <View style={styles.foodInfo}>
                                                                 <Text numberOfLines={2} style={[styles.foodName, { color: Colors.textPrimary }]}>{item.name}</Text>
                                                                 {item.priceRange ? (
-                                                                    <View style={[styles.priceBadge, { backgroundColor: Colors.primary + '15' }]}>
+                                                                    <View style={styles.priceBadge}>
                                                                         <Text style={[styles.priceText, { color: Colors.primary }]}>{item.priceRange}</Text>
                                                                     </View>
                                                                 ) : null}
@@ -928,7 +925,13 @@ export default function CreatePostScreen() {
                         </View>
                         <Switch
                             value={isUrgent}
-                            onValueChange={(val) => { setIsUrgent(val); if (val) setIsImmediate(true); }}
+                            onValueChange={(val) => {
+                                setIsUrgent(val);
+                                if (val) {
+                                    setIsImmediate(false);
+                                    setDateTime(new Date(Date.now() + 30 * 60 * 1000));
+                                }
+                            }}
                             trackColor={{ false: '#767577', true: Colors.error }}
                             thumbColor={Platform.OS === 'ios' ? '#FFF' : isUrgent ? Colors.error : '#f4f3f4'}
                         />
@@ -970,7 +973,7 @@ export default function CreatePostScreen() {
                     </TouchableOpacity>
 
                     {/* Paid budget options */}
-                    <Text style={[styles.budgetGroupLabel, { color: Colors.textMuted }]}>Or Set A Budget Per Person</Text>
+                    <Text style={[styles.budgetGroupLabel, { color: Colors.textMuted, marginBottom: 4 }]}>Or Set A Budget Per Person</Text>
                     <View style={[styles.budgetGrid, { gap: 6, marginTop: -6 }]}>
                         {PAID_BUDGET_OPTIONS.map((opt) => {
                             const isSelected = selectedBudget === opt.value;
@@ -1208,6 +1211,7 @@ export default function CreatePostScreen() {
                 onSave={(date) => {
                     setDateTime(date);
                     setIsImmediate(false);
+                    setIsUrgent(false);
                 }}
             />
 
@@ -1234,10 +1238,10 @@ export default function CreatePostScreen() {
             />
 
             {/* Interactive FULL SCREEN MAP Modal */}
-            <Modal visible={mapModalVisible} animationType="slide" transparent>
+            <Modal visible={mapModalVisible} animationType="slide" transparent statusBarTranslucent>
                 <View style={[styles.mapModalContainer, { backgroundColor: Colors.background }]}>
                     <View style={[styles.mapModalHeader, { borderBottomColor: Colors.border, backgroundColor: Colors.background }]}>
-                        <SafeAreaView edges={['top']} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingHorizontal: 20, paddingBottom: 12 }}>
+                        <SafeAreaView edges={['top']} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingHorizontal: 12, paddingBottom: 12 }}>
                             <TouchableOpacity onPress={() => setMapModalVisible(false)} style={styles.modalCloseBtn}>
                                 <Ionicons name="close" size={24} color={Colors.textPrimary} />
                             </TouchableOpacity>
@@ -1356,7 +1360,7 @@ const styles = StyleSheet.create({
     freeBtnContainer: { padding: 16, borderRadius: 6, borderWidth: 1.5, marginBottom: 16 },
     freeSubtext: { fontSize: 13, fontWeight: '600', marginTop: 4, marginLeft: 28 },
     budgetGroupLabel: { fontSize: 13, fontWeight: '600', marginBottom: 0, marginTop: -5, textTransform: 'capitalize' },
-    budgetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+    budgetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
     budgetChip: { paddingVertical: 12, paddingHorizontal: 8, borderRadius: 4, borderWidth: 1, borderColor: 'rgba(0,0,0,0)', width: '31.5%', alignItems: 'center', backgroundColor: '#0E0E0E' },
     budgetText: { color: '#FFF', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif', fontSize: 12, fontWeight: '600', lineHeight: 17 },
     // Others
@@ -1391,15 +1395,15 @@ const styles = StyleSheet.create({
     switchTitle: { fontSize: 16, fontWeight: '800' },
     switchSub: { fontSize: 14, marginTop: 2 },
     // Food carousel
-    foodCard: { width: 140, borderRadius: 6, borderWidth: 1, overflow: 'hidden' },
+    foodCard: { width: 120, borderRadius: 8, borderWidth: 1, overflow: 'hidden' },
     searchRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, borderRadius: 6, borderWidth: 1, height: 46, gap: 8, marginBottom: 14, backgroundColor: '#1D1B22' },
     searchInput: { flex: 1, fontSize: 15, height: 46 },
     foodCheckmark: { position: 'absolute', top: 8, right: 8, zIndex: 10, width: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center' },
-    foodImage: { width: 140, height: 110, resizeMode: 'cover' },
-    foodInfo: { padding: 10, gap: 6 },
-    foodName: { fontSize: 15, fontWeight: '700', lineHeight: 19 },
-    priceBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-    priceText: { fontSize: 13, fontWeight: '800' },
+    foodImage: { width: 120, height: 85, resizeMode: 'cover' },
+    foodInfo: { padding: 8, gap: 2 },
+    foodName: { fontSize: 12, fontWeight: '600', lineHeight: 16 },
+    priceBadge: { alignSelf: 'flex-start', marginTop: 2 },
+    priceText: { fontSize: 11, fontWeight: '500' },
     customFoodRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0E0E0E', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 4, gap: 3 },
     addFoodBtn: { width: 40, height: 40, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
     selectedFoodsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
