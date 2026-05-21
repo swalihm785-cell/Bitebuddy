@@ -198,7 +198,7 @@ export default function DashboardScreen() {
         });
     }, [posts, user]);
 
-    const isPro = user?.plan === 'pro';
+    const isPro = true;
     const unreadCount = notifications.filter(n => !n.isRead && n.userId === user?.id).length;
     const s = styles;
 

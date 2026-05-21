@@ -30,6 +30,7 @@ interface ChatMessage {
     contactData?: { label: string; value: string };
     type: MessageType;
     time: string;
+    status?: 'sent' | 'delivered' | 'read';
 }
 
 const INITIAL_MESSAGES: ChatMessage[] = [
@@ -71,7 +72,7 @@ export default function ChatDetailScreen() {
         }
     }, [chatId]);
 
-    const isPro = isCurrentlyPro(user);
+    const isPro = true;
 
     React.useEffect(() => {
         if (isGroup && !isPro) {
@@ -113,6 +114,7 @@ export default function ChatDetailScreen() {
             type: 'text',
             text: inputText.trim(),
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            status: 'sent',
         };
         sendMessageOut(chatId, newMsg);
         setInputText('');
@@ -205,6 +207,7 @@ export default function ChatDetailScreen() {
                 mediaUri: serverUrl,
                 mediaType: previewType,
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                status: 'sent',
             };
             sendMessageOut(chatId, newMsg);
             setPreviewUri(null);
@@ -224,6 +227,7 @@ export default function ChatDetailScreen() {
             type: 'contact',
             contactData: { label, value },
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            status: 'sent',
         };
         sendMessageOut(chatId, newMsg);
     };
@@ -287,6 +291,14 @@ export default function ChatDetailScreen() {
         { label: 'Phone', icon: 'call-outline', value: user?.phone || '' },
     ];
 
+        const getMessageTick = (status?: 'sent' | 'delivered' | 'read') => {
+        const s = status || 'read';
+        if (s === 'sent') return <Ionicons name="checkmark" size={16} color="rgba(255,255,255,0.7)" style={{ marginLeft: 4 }} />;
+        if (s === 'delivered') return <Ionicons name="checkmark-done" size={16} color="rgba(255,255,255,0.7)" style={{ marginLeft: 4 }} />;
+        if (s === 'read') return <Ionicons name="checkmark-done" size={16} color="#34B7F1" style={{ marginLeft: 4 }} />;
+        return null;
+    };
+
     const renderMessage = ({ item }: { item: ChatMessage }) => {
         const isMe = item.senderId === user?.id || item.senderId === 'me';
         const isSystem = item.senderId === 'system';
@@ -338,7 +350,7 @@ export default function ChatDetailScreen() {
                             })()}
                             <View style={styles.timeRow}>
                                 <Text style={[styles.msgTime, { color: isMe ? 'rgba(255,255,255,0.7)' : Colors.textMuted }]}>{item.time}</Text>
-                                {isMe && <Ionicons name="checkmark-done" size={14} color="rgba(255,255,255,0.9)" style={{ marginLeft: 4 }} />}
+                                {isMe && getMessageTick(item.status)}
                             </View>
                         </>
                     )}
@@ -347,7 +359,7 @@ export default function ChatDetailScreen() {
                             <Image source={{ uri: item.mediaUri }} style={styles.mediaImage} />
                             <View style={styles.timeRow}>
                                 <Text style={[styles.msgTime, { color: isMe ? 'rgba(255,255,255,0.7)' : Colors.textMuted }]}>{item.time}</Text>
-                                {isMe && <Ionicons name="checkmark-done" size={14} color="rgba(255,255,255,0.9)" style={{ marginLeft: 4 }} />}
+                                {isMe && getMessageTick(item.status)}
                             </View>
                         </>
                     )}
@@ -359,7 +371,7 @@ export default function ChatDetailScreen() {
                             </View>
                             <View style={styles.timeRow}>
                                 <Text style={[styles.msgTime, { color: 'rgba(255,255,255,0.7)' }]}>{item.time}</Text>
-                                {isMe && <Ionicons name="checkmark-done" size={14} color="rgba(255,255,255,0.9)" style={{ marginLeft: 4 }} />}
+                                {isMe && getMessageTick(item.status)}
                             </View>
                         </>
                     )}
@@ -382,7 +394,7 @@ export default function ChatDetailScreen() {
                             </TouchableOpacity>
                             <View style={styles.timeRow}>
                                 <Text style={[styles.msgTime, { color: isMe ? 'rgba(255,255,255,0.7)' : Colors.textMuted }]}>{item.time}</Text>
-                                {isMe && <Ionicons name="checkmark-done" size={14} color="rgba(255,255,255,0.9)" style={{ marginLeft: 4 }} />}
+                                {isMe && getMessageTick(item.status)}
                             </View>
                         </>
                     )}

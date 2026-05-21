@@ -80,7 +80,7 @@ export default function PostDetailScreen() {
 
     const isHost = user?.id === post.hostId;
     const isJoined = post.participants.some(p => p.id === user?.id);
-    const isPro = isCurrentlyPro(user);
+    const isPro = true;
     const myRequest = joinRequests.find(r => r.postId === postId && r.requesterId === user?.id);
     const hasPendingRequest = myRequest?.status === 'pending';
     const hasRejectedRequest = myRequest?.status === 'rejected';

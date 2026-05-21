@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Image, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeStore } from '../../store/useThemeStore';
+import { useNavigation } from '@react-navigation/native';
 import { DiningReview } from '../../types';
 
 const { width } = Dimensions.get('window');
@@ -30,11 +31,19 @@ const POINTS_CONFIG: Record<number, { label: string; icon: string; color: string
 
 export function ReviewCard({ review, fullWidth }: ReviewCardProps) {
     const { currentTheme } = useThemeStore();
+    const navigation = useNavigation<any>();
     const { Colors } = currentTheme;
     const pts = POINTS_CONFIG[review.tastePointsAwarded] ?? POINTS_CONFIG[0];
+    
+    // Fallback to pravatar if no photo URL provided
+    const avatarUrl = review.reviewerPhotoURL || `https://i.pravatar.cc/150?u=${review.reviewerId}`;
 
     return (
-        <View style={[styles.card, fullWidth ? { width: '100%' } : null, { backgroundColor: Colors.backgroundElevated, borderColor: Colors.border }]}>
+        <TouchableOpacity 
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('UserProfile', { userId: review.reviewerId })}
+            style={[styles.card, fullWidth ? { width: '100%' } : null, { backgroundColor: Colors.backgroundElevated, borderColor: Colors.border }]}
+        >
             {/* Top gradient accent */}
             <LinearGradient
                 colors={['#FFB53420', '#FF8A1F08']}
@@ -46,11 +55,7 @@ export function ReviewCard({ review, fullWidth }: ReviewCardProps) {
             {/* Reviewer header */}
             <View style={styles.header}>
                 <View style={[styles.avatar, { backgroundColor: Colors.backgroundCard }]}>
-                    {review.reviewerPhotoURL ? (
-                        <Image source={{ uri: review.reviewerPhotoURL }} style={styles.avatarImg} />
-                    ) : (
-                        <Text style={{ fontSize: 22 }}>👤</Text>
-                    )}
+                    <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
                 </View>
                 <View style={{ flex: 1, gap: 2 }}>
                     <Text style={[styles.name, { color: Colors.textPrimary }]} numberOfLines={1}>
@@ -108,15 +113,13 @@ export function ReviewCard({ review, fullWidth }: ReviewCardProps) {
             )}
 
             {/* Taste points footer */}
-            {review.tastePointsAwarded > 0 && (
-                <View style={[styles.pointsRow, { backgroundColor: '#FFD16615', borderColor: '#FFD16640' }]}>
-                    <Text style={{ fontSize: 13 }}>🌟</Text>
-                    <Text style={[styles.pointsTxt, { color: '#D4A017' }]}>
-                        {review.tastePointsAwarded} Taste Points awarded to host
-                    </Text>
-                </View>
-            )}
-        </View>
+            <View style={[styles.pointsRow, { backgroundColor: '#FFD16615', borderColor: '#FFD16640' }]}>
+                <Text style={{ fontSize: 13 }}>🌟</Text>
+                <Text style={[styles.pointsTxt, { color: '#D4A017' }]}>
+                    {review.tastePointsAwarded || 0} Taste Points awarded to host
+                </Text>
+            </View>
+        </TouchableOpacity>
     );
 }
 

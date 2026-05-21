@@ -28,7 +28,7 @@ export default function ProfileScreen() {
     const insets = useSafeAreaInsets();
 
     const myPosts = posts.filter(p => p.hostId === user?.id);
-    const isPro = isCurrentlyPro(user);
+    const isPro = true;
     const { getReputation } = useHostReputationStore();
     const hostRep = getReputation(user?.id || '');
 
@@ -44,7 +44,7 @@ export default function ProfileScreen() {
             <BrandBar />
             
             {/* Header Actions (Sticky) */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 12, paddingTop: 10, paddingBottom: 10 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10 }}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                     <Ionicons name="arrow-back" size={24} color={Colors.primary} />
                     <Text style={{ color: Colors.textPrimary, fontSize: 16, fontWeight: '700' }}>Profile</Text>
@@ -139,7 +139,7 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Stats Row */}
-                <View style={[styles.statsRow, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border, marginTop: 10, marginHorizontal: 12 }]}>
+                <View style={[styles.statsRow, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border, marginTop: 10, marginHorizontal: 20 }]}>
                     <StatCard value={myPosts.length} label="Plans" />
                     <View style={{ width: 1, height: 30, backgroundColor: Colors.border }} />
                     <StatCard 
@@ -210,7 +210,7 @@ export default function ProfileScreen() {
                 </View>
                 
                 {/* Dining Plans Section */}
-                <View style={{ marginTop: 20 }}>
+                <View style={{ marginTop: 20, paddingHorizontal: 20 }}>
                     <View style={styles.sectionHeader}>
                         <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>My Dining Plans</Text>
                     </View>
@@ -285,26 +285,25 @@ export default function ProfileScreen() {
                         </View>
                     )}
                 </View>
+
+                {/* Private Information (Only visible to me) */}
+                <View style={{ marginTop: 30, paddingHorizontal: 20 }}>
+                    <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>
+                        Private Information <Text style={{ fontSize: 12, color: Colors.textMuted }}>(Only you can see this)</Text>
+                    </Text>
+                    <View style={[styles.detailsGrid, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
+                        {user?.email && <DetailItem icon="mail-outline" label="Email" value={user.email} color={Colors.warning} textColor={Colors.textPrimary} mutedColor={Colors.textMuted} />}
+                        {user?.phone && <DetailItem icon="call-outline" label="Phone" value={user.phone} color={Colors.warning} textColor={Colors.textPrimary} mutedColor={Colors.textMuted} />}
+                        {user?.instagramId && <DetailItem icon="logo-instagram" label="Instagram" value={`@${user.instagramId}`} color="#E4405F" textColor={Colors.textPrimary} mutedColor={Colors.textMuted} />}
+                        {user?.twitterId && <DetailItem icon="logo-twitter" label="Twitter / X" value={user.twitterId} color="#1DA1F2" textColor={Colors.textPrimary} mutedColor={Colors.textMuted} />}
+                        {user?.whatsappNumber && <DetailItem icon="logo-whatsapp" label="WhatsApp" value={user.whatsappNumber} color="#25D366" textColor={Colors.textPrimary} mutedColor={Colors.textMuted} />}
+                    </View>
+                </View>
+
+                <View style={{ height: 60 }} />
             </ScrollView>
 
-            {!isPro && (
-                <View style={[styles.proCard, { bottom: insets.bottom + 100 }]}>
-                    <View style={[styles.proBadge, { backgroundColor: Colors.primary }]}>
-                        <Ionicons name="star" size={12} color="#FFF" />
-                        <Text style={styles.proBadgeText}>PRO</Text>
-                    </View>
-                    <View style={styles.proInfo}>
-                        <Text style={[styles.proTitle, { color: Colors.textPrimary }]}>Unlock Pro Features</Text>
-                        <Text style={[styles.proDesc, { color: Colors.textMuted }]}>Advanced filters, insights & more!</Text>
-                    </View>
-                    <TouchableOpacity
-                        style={[styles.upgradeBtn, { backgroundColor: Colors.primary }]}
-                        onPress={() => navigation.navigate('Plan')}
-                    >
-                        <Text style={styles.upgradeBtnText}>Upgrade</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
+            
         </View>
     );
 }
@@ -324,7 +323,7 @@ const styles = StyleSheet.create({
     },
     hero: {
         height: 180,
-        paddingHorizontal: 12,
+        paddingHorizontal: 20,
     },
     topActions: {
         flexDirection: 'row',
@@ -389,7 +388,7 @@ const styles = StyleSheet.create({
         lineHeight: 18,
         textAlign: 'center',
         marginTop: 8,
-        paddingHorizontal: 12,
+        paddingHorizontal: 20,
     },
     actionRow: {
         flexDirection: 'row',
@@ -445,7 +444,7 @@ const styles = StyleSheet.create({
         marginTop: 2
     },
     contentSection: {
-        paddingHorizontal: 12,
+        paddingHorizontal: 20,
         paddingVertical: 20,
     },
     sectionHeader: {

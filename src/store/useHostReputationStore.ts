@@ -59,10 +59,33 @@ interface HostReputationState {
     updateRating: (hostId: string, newRating: number) => void;
 }
 
+const INITIAL_REPUTATIONS: Record<string, HostReputation> = {
+    'swalih': {
+        hostId: 'swalih',
+        totalTastePoints: 650,
+        tier: 'Star Chef',
+        earnedBadges: ['Featured Host', 'Dining Star', 'Premium Dining Creator'],
+        milestones: buildMilestones(650),
+        recentAwards: [],
+        averageRating: 4.8,
+        totalReviews: 12
+    },
+    'roshan': {
+        hostId: 'roshan',
+        totalTastePoints: 120,
+        tier: 'Chef',
+        earnedBadges: ['Featured Host'],
+        milestones: buildMilestones(120),
+        recentAwards: [],
+        averageRating: 4.5,
+        totalReviews: 3
+    }
+};
+
 export const useHostReputationStore = create<HostReputationState>()(
     persist(
         (set, get) => ({
-            reputations: {},
+            reputations: INITIAL_REPUTATIONS,
 
             getReputation: (hostId) => {
                 return get().reputations[hostId] ?? defaultReputation(hostId);
@@ -105,7 +128,7 @@ export const useHostReputationStore = create<HostReputationState>()(
             },
         }),
         {
-            name: 'bite-buddy-host-reputation',
+            name: 'bite-buddy-host-reputation-v8',
             storage: createJSONStorage(() => AsyncStorage),
         }
     )

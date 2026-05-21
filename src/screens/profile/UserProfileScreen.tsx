@@ -288,7 +288,7 @@ export default function UserProfileScreen() {
         <View style={[styles.container, { backgroundColor: Colors.background }]}>
             <BrandBar />
             <ScrollView showsVerticalScrollIndicator={false}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 12, paddingTop: 10, paddingBottom: 10 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10 }}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                         <Ionicons name="arrow-back" size={24} color={'#ffb534'} />
                         <Text style={{ fontSize: 14, fontWeight: '500', color: '#FFFFFF' }}>User Profile</Text>
@@ -331,65 +331,82 @@ export default function UserProfileScreen() {
                         </Text>
                     </View>
 
-                    {
-                        !isMe && (
-                            <View style={styles.actionRow}>
-                                <TouchableOpacity
-                                    style={[styles.followBtn,
-                                    isFollowing
-                                        ? { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }
-                                        : hasRequested
-                                            ? { backgroundColor: Colors.backgroundCard, borderColor: Colors.warning || '#F59E0B' }
-                                            : { backgroundColor: Colors.primary, borderColor: Colors.primary }
-                                    ]}
-                                    onPress={handleFollow}
-                                >
-                                    <Text style={[styles.followBtnText,
-                                    isFollowing
-                                        ? { color: Colors.textPrimary }
-                                        : hasRequested
-                                            ? { color: Colors.warning || '#F59E0B' }
-                                            : { color: '#FFF' }
-                                    ]}>
-                                        {isFollowing ? 'Buddy ✓' : hasRequested ? 'Requested ⏳' : 'Add Buddy'}
-                                    </Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.msgBtn, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}
-                                    onPress={async () => {
-                                        if (!currentUser) return;
-                                        const { findConversationByParticipantId, sendChatRequest } = useChatStore.getState();
-                                        const existing = findConversationByParticipantId(userId);
+                    {isMe ? (
+                        <View style={styles.actionRow}>
+                            <TouchableOpacity
+                                style={[styles.editBtn, { backgroundColor: Colors.primary }]}
+                                onPress={() => navigation.navigate('EditProfile')}
+                            >
+                                <Text style={styles.editBtnText}>Edit Profile</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.shareBtn, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}
+                                onPress={() => {
+                                    Share.share({
+                                        message: `👤 Check out my profile on Bite Buddy!\nhttps://bitebuddy.app/profile/${user?.id}`,
+                                    });
+                                }}
+                            >
+                                <Ionicons name="share-outline" size={20} color={Colors.textPrimary} />
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <View style={styles.actionRow}>
+                            <TouchableOpacity
+                                style={[styles.followBtn,
+                                isFollowing
+                                    ? { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }
+                                    : hasRequested
+                                        ? { backgroundColor: Colors.backgroundCard, borderColor: Colors.warning || '#F59E0B' }
+                                        : { backgroundColor: Colors.primary, borderColor: Colors.primary }
+                                ]}
+                                onPress={handleFollow}
+                            >
+                                <Text style={[styles.followBtnText,
+                                isFollowing
+                                    ? { color: Colors.textPrimary }
+                                    : hasRequested
+                                        ? { color: Colors.warning || '#F59E0B' }
+                                        : { color: '#FFF' }
+                                ]}>
+                                    {isFollowing ? 'Buddy ✓' : hasRequested ? 'Requested ⏳' : 'Add Buddy'}
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.msgBtn, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}
+                                onPress={async () => {
+                                    if (!currentUser) return;
+                                    const { findConversationByParticipantId, sendChatRequest } = useChatStore.getState();
+                                    const existing = findConversationByParticipantId(userId);
 
-                                        if (existing) {
+                                    if (existing) {
+                                        navigation.navigate('ChatDetail', {
+                                            chatId: existing.id,
+                                            chatName: user.name || 'User',
+                                            isGroup: false,
+                                            chatAvatar: user.photoURL
+                                        });
+                                    } else {
+                                        const newChatId = await sendChatRequest(
+                                            { id: currentUser.id, name: currentUser.name || 'User', avatar: currentUser.photoURL },
+                                            { id: userId, name: user.name || 'User', avatar: user.photoURL },
+                                            'Hi! Let\'s be buddies!'
+                                        );
+                                        if (newChatId) {
                                             navigation.navigate('ChatDetail', {
-                                                chatId: existing.id,
+                                                chatId: newChatId,
                                                 chatName: user.name || 'User',
                                                 isGroup: false,
                                                 chatAvatar: user.photoURL
                                             });
-                                        } else {
-                                            const newChatId = await sendChatRequest(
-                                                { id: currentUser.id, name: currentUser.name || 'User', avatar: currentUser.photoURL },
-                                                { id: userId, name: user.name || 'User', avatar: user.photoURL },
-                                                'Hi! Let\'s be buddies!'
-                                            );
-                                            if (newChatId) {
-                                                navigation.navigate('ChatDetail', {
-                                                    chatId: newChatId,
-                                                    chatName: user.name || 'User',
-                                                    isGroup: false,
-                                                    chatAvatar: user.photoURL
-                                                });
-                                            }
                                         }
-                                    }}
-                                >
-                                    <Ionicons name="chatbubble-outline" size={20} color={Colors.textPrimary} />
-                                </TouchableOpacity>
-                            </View>
-                        )
-                    }
+                                    }
+                                }}
+                            >
+                                <Ionicons name="chatbubble-outline" size={20} color={Colors.textPrimary} />
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     <View style={[styles.statsRow, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border, marginTop: 20 }]}>
                         <StatCard value={userPosts.length} label="Plans" />
@@ -684,11 +701,14 @@ const styles = StyleSheet.create({
     pBadgeText: { fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
     userHandle: { fontSize: 14, fontWeight: '600' },
     bio: { fontSize: 12, fontWeight: '400', lineHeight: 18, textAlign: 'center', marginTop: 8, paddingHorizontal: 12 },
-    actionRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 12 },
-    followBtn: { flex: 4, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+    actionRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginTop: 16 },
+    editBtn: { flex: 1, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+    editBtnText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+    shareBtn: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
+    followBtn: { flex: 1, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
     followBtnText: { fontWeight: '700', fontSize: 15 },
     msgBtn: { flex: 1, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-    statsRow: { flexDirection: 'row', marginHorizontal: 12, borderRadius: 20, padding: 20, borderWidth: 1, alignItems: 'center' },
+    statsRow: { flexDirection: 'row', marginHorizontal: 20, borderRadius: 20, padding: 20, borderWidth: 1, alignItems: 'center' },
     statItem: { flex: 1, alignItems: 'center' },
     statValue: { fontSize: 20, fontWeight: '900' },
     statLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginTop: 4 },

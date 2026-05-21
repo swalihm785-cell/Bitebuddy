@@ -269,7 +269,7 @@ export default function SnapScreen() {
     const [proAlertVisible, setProAlertVisible] = useState(false);
     const [mediaSheetVisible, setMediaSheetVisible] = useState(false);
 
-    const isPro = isCurrentlyPro(user);
+    const isPro = true;
 
     useEffect(() => { clearExpiredSnaps(); }, []);
 

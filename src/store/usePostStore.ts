@@ -22,30 +22,31 @@ interface PostState {
 // Date helpers relative to now
 const hoursFromNow = (h: number) => new Date(Date.now() + h * 3600000);
 const daysFromNow = (d: number) => new Date(Date.now() + d * 86400000);
+const daysAgo = (d: number) => new Date(Date.now() - d * 86400000);
 
 const SEED_POSTS: DiningPost[] = [
     {
-        id: 'plan_new_1',
+        id: 'plan_closed_1',
         hostId: 'swalih',
-        title: 'Exclusive Closed Dining Event 🍽️',
-        cuisineTypes: ['Continental', 'Exclusive'],
+        title: 'Epic Biryani Feast 🍛',
+        cuisineTypes: ['Indian', 'Mughlai'],
         area: 'Downtown',
         city: 'Kozhikode',
-        restaurantName: 'The Secret Table',
+        restaurantName: 'Paragon',
         location: { latitude: 11.2588, longitude: 75.7804 },
         minGroupSize: 2,
         maxGroupSize: 4,
         currentParticipants: 4,
-        dateTime: daysFromNow(2),
+        dateTime: daysAgo(2),
         isImmediate: false,
-        budgetRange: 'range3',
+        budgetRange: 'range2',
         visibility: 'public',
         status: 'closed',
-        description: 'This is a private, closed dining event.',
-        autoApprove: false,
-        expiresAt: daysFromNow(3),
-        createdAt: new Date(),
-        imageURL: 'https://images.unsplash.com/photo-1549488344-c6cbd5d4ea6e?auto=format&fit=crop&w=800&q=80',
+        description: 'This was an amazing Biryani run.',
+        autoApprove: true,
+        expiresAt: daysAgo(1),
+        createdAt: daysAgo(5),
+        imageURL: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=80',
         participants: [
             { id: 'swalih', name: 'Swalih', age: 24, gender: 'Male' },
             { id: 'roshan', name: 'Roshan', age: 26, gender: 'Male' },
@@ -54,140 +55,63 @@ const SEED_POSTS: DiningPost[] = [
         ]
     },
     {
-        id: 'plan_upcoming_1',
+        id: 'plan_closed_2',
         hostId: 'roshan',
-        title: 'Weekend Biryani Feast 🍛',
-        cuisineTypes: ['Indian', 'Malabar'],
+        title: 'Late Night Coffee & Dessert ☕',
+        cuisineTypes: ['Cafe', 'Dessert'],
         area: 'Marine Drive',
         city: 'Kochi',
-        restaurantName: 'Paragon',
+        restaurantName: 'Qissa Cafe',
         location: { latitude: 9.9760, longitude: 76.2770 },
         minGroupSize: 2,
-        maxGroupSize: 6,
-        currentParticipants: 1,
-        dateTime: daysFromNow(5),
+        maxGroupSize: 4,
+        currentParticipants: 2,
+        dateTime: daysAgo(1),
         isImmediate: false,
-        budgetRange: 'range2',
+        budgetRange: 'range1',
         visibility: 'public',
-        status: 'open',
-        description: 'Craving some authentic Malabar biryani this weekend. Who is in?',
+        status: 'closed',
+        description: 'Quiet coffee meetup.',
         autoApprove: true,
-        expiresAt: daysFromNow(6),
-        createdAt: new Date(),
-        imageURL: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=800&q=80',
-        participants: [{ id: 'roshan', name: 'Roshan', age: 26, gender: 'Male' }]
+        expiresAt: daysAgo(0.5),
+        createdAt: daysAgo(3),
+        imageURL: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=800&q=80',
+        participants: [
+            { id: 'roshan', name: 'Roshan', age: 26, gender: 'Male' },
+            { id: 'jane', name: 'Jane', age: 22, gender: 'Female' }
+        ]
     },
     {
-        id: 'plan_upcoming_2',
-        hostId: 'viknesh',
-        title: 'Sushi & Catch Up 🍣',
-        cuisineTypes: ['Japanese', 'Asian'],
+        id: 'plan_open_1',
+        hostId: 'swalih',
+        title: 'Sushi Weekend 🍣',
+        cuisineTypes: ['Japanese'],
         area: 'Panampilly Nagar',
         city: 'Kochi',
         restaurantName: 'Tokyo Cafe',
         location: { latitude: 9.9547, longitude: 76.2976 },
         minGroupSize: 2,
-        maxGroupSize: 4,
-        currentParticipants: 2,
-        dateTime: daysFromNow(7),
+        maxGroupSize: 6,
+        currentParticipants: 1,
+        dateTime: daysFromNow(4),
         isImmediate: false,
         budgetRange: 'range3',
         visibility: 'public',
         status: 'open',
-        description: 'It has been a while! Let us catch up over some amazing sushi rolls.',
+        description: 'Looking forward to some amazing Sushi rolls!',
         autoApprove: false,
-        expiresAt: daysFromNow(8),
+        expiresAt: daysFromNow(5),
         createdAt: new Date(),
         imageURL: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=800&q=80',
         participants: [
-            { id: 'viknesh', name: 'Viknesh', age: 23, gender: 'Male' },
-            { id: 'don', name: 'Don', age: 25, gender: 'Male' }
+            { id: 'swalih', name: 'Swalih', age: 24, gender: 'Male' }
         ]
-    },
-    {
-        id: 'plan_upcoming_3',
-        hostId: 'don',
-        title: 'Late Night Coffee Run ☕',
-        cuisineTypes: ['Cafe', 'Dessert'],
-        area: 'Fort Kochi',
-        city: 'Kochi',
-        restaurantName: 'Qissa Cafe',
-        location: { latitude: 9.9678, longitude: 76.2422 },
-        minGroupSize: 2,
-        maxGroupSize: 8,
-        currentParticipants: 1,
-        dateTime: daysFromNow(3),
-        isImmediate: false,
-        budgetRange: 'range1',
-        visibility: 'public',
-        status: 'open',
-        description: 'Working late? Let us grab some midnight coffee and cake.',
-        autoApprove: true,
-        expiresAt: daysFromNow(4),
-        createdAt: new Date(),
-        imageURL: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=800&q=80',
-        participants: [{ id: 'don', name: 'Don', age: 25, gender: 'Male' }]
-    },
-    {
-        id: 'plan_swalih_open_1',
-        hostId: 'swalih',
-        title: 'Authentic Malabar Fish Curry 🐟',
-        cuisineTypes: ['Seafood', 'Indian'],
-        area: 'Calicut Beach',
-        city: 'Kozhikode',
-        restaurantName: 'Bombay Hotel',
-        location: { latitude: 11.2588, longitude: 75.7804 },
-        minGroupSize: 2,
-        maxGroupSize: 5,
-        currentParticipants: 1,
-        dateTime: daysFromNow(4),
-        isImmediate: false,
-        budgetRange: 'range2',
-        visibility: 'public',
-        status: 'open',
-        description: 'Looking for 4 people to join me for the best spicy fish curry in town!',
-        foodItems: ['Ayala Curry', 'Fish Fry', 'Kappa (Tapioca)', 'Parotta'],
-        autoApprove: true,
-        expiresAt: daysFromNow(5),
-        createdAt: new Date(),
-        imageURL: 'https://images.unsplash.com/photo-1623595119708-26b1f7300075?auto=format&fit=crop&w=800&q=80',
-        participants: [{ id: 'swalih', name: 'Swalih', age: 24, gender: 'Male' }]
     }
 ];
 
-const SEED_JOIN_REQUESTS: JoinRequest[] = [
-    {
-        id: 'req_1',
-        postId: 'plan_kozhikode_1',
-        requesterId: 'roshan',
-        status: 'pending',
-        message: 'Would love to join for the Biryani!',
-        createdAt: new Date(),
-        requester: { id: 'roshan', name: 'Roshan', age: 26, gender: 'Male' } as any
-    },
-    {
-        id: 'req_2',
-        postId: 'plan_tvm_1',
-        requesterId: 'don',
-        status: 'rejected',
-        message: 'Hi, I will be in TVM that day.',
-        createdAt: new Date(),
-        requester: { id: 'don', name: 'Don', age: 25, gender: 'Male' } as any
-    }
-];
+const SEED_JOIN_REQUESTS: JoinRequest[] = [];
+const SEED_INVITES: Invite[] = [];
 
-const SEED_INVITES: Invite[] = [
-    {
-        id: 'inv_1',
-        postId: 'plan_kozhikode_1',
-        inviterId: 'swalih',
-        inviteeId: 'don',
-        inviteeName: 'Don',
-        status: 'pending',
-        note: 'Hey Don, join us for Biryani!',
-        createdAt: new Date()
-    }
-];
 
 
 export const usePostStore = create<PostState>()(
@@ -292,7 +216,7 @@ export const usePostStore = create<PostState>()(
             })),
         }),
         {
-            name: 'bite-buddy-posts-v7',  // Incremented to v7 to clear cache
+            name: 'bite-buddy-posts-v8',  // Incremented to v7 to clear cache
             storage: createJSONStorage(() => ({
                 getItem: async (name) => {
                     const str = await AsyncStorage.getItem(name);

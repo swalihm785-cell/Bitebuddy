@@ -27,7 +27,7 @@ export default function CreateGroupChatScreen() {
     const { user } = useAuthStore();
     const { createGroupChat } = useChatStore();
     const { addNotification } = useNotificationStore();
-    const isPro = isCurrentlyPro(user);
+    const isPro = true;
 
     const [groupName, setGroupName] = useState('');
     const [search, setSearch] = useState('');

@@ -50,7 +50,7 @@ export default function ChatListScreen() {
     const [search, setSearch] = useState('');
 
 
-    const isPro = isCurrentlyPro(user);
+    const isPro = true;
     // Filter chats: exclude blocked and deleted, separate pending requests, and restrict non-pro from viewing groups
     const myId = user?.id || '';
     const visibleChats = conversations.filter(c => c.ownerId === myId && c.status !== 'blocked' && c.status !== 'deleted' && (isPro || !c.isGroup));
