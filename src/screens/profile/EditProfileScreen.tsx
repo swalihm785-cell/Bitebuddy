@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TextInput, TouchableOpacity,
-    ScrollView, Alert, Image, Platform
+    ScrollView, Alert, Image,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { CustomAlert } from '../../components/common/CustomAlert';
+import FudioLogo from '../../components/FudioLogo';
 
 const CUISINE_TYPES = ['Italian', 'Japanese', 'Indian', 'Thai', 'American', 'Mexican', 'Vegan', 'Chinese', 'Mediterranean', 'Korean'];
 const DIETARY_OPTIONS = ['None', 'Vegetarian', 'Vegan', 'Halal', 'Kosher', 'Gluten-Free', 'Keto', 'Dairy-Free'];
@@ -20,6 +20,7 @@ const PERSONALITY_TAGS = ['Foodie', 'Adventurous', 'Punctual', 'Chatty', 'Chill'
 
 export default function EditProfileScreen() {
     const navigation = useNavigation();
+    const insets = useSafeAreaInsets();
     const { user, setUser } = useAuthStore();
     const { currentTheme } = useThemeStore();
     const { Colors } = currentTheme;
@@ -100,183 +101,193 @@ export default function EditProfileScreen() {
                 languagesSpoken: selectedLanguages,
             });
         }
-        setAlertConfig({ visible: true, title: 'Saved! 🎉', message: 'Your profile has been updated.', type: 'success' });
+        setAlertConfig({ visible: true, title: 'Saved!', message: 'Your profile has been updated.', type: 'success' });
     };
 
-    const Section = ({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) => (
-        <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-                <Ionicons name={icon as any} size={16} color={Colors.primary} />
-                <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>{title}</Text>
-            </View>
-            {children}
-        </View>
+    // ── Reusable bits ──
+    const SectionTitle = ({ children }: { children: React.ReactNode }) => (
+        <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>{children}</Text>
     );
 
-    const InputField = ({ label, value, onChangeText, placeholder, multiline = false, keyboardType = 'default', isPrivate = false }: any) => (
-        <View style={styles.inputGroup}>
-            <View style={styles.labelRow}>
-                <Text style={[styles.label, { color: Colors.textSecondary }]}>{label}</Text>
-                {isPrivate && (
-                    <View style={[styles.privateBadge, { backgroundColor: Colors.warning + '20', borderColor: Colors.warning }]}>
-                        <Ionicons name="lock-closed" size={9} color={Colors.warning} />
-                        <Text style={[styles.privateText, { color: Colors.warning }]}>Private</Text>
-                    </View>
-                )}
-            </View>
+    const FieldLabel = ({ children }: { children: React.ReactNode }) => (
+        <Text style={[styles.fieldLabel, { color: Colors.textMuted }]}>{children}</Text>
+    );
+
+    const FilledInput = (props: any) => (
+        <TextInput
+            {...props}
+            style={[styles.input, { backgroundColor: Colors.backgroundElevated, color: Colors.textPrimary }, props.multiline && styles.textArea, props.style]}
+            placeholderTextColor={Colors.textMuted}
+            textAlignVertical={props.multiline ? 'top' : 'center'}
+        />
+    );
+
+    const Chip = ({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) => (
+        <TouchableOpacity
+            onPress={onPress}
+            activeOpacity={0.85}
+            style={[
+                styles.chip,
+                { backgroundColor: Colors.backgroundElevated },
+                active && { backgroundColor: Colors.primary },
+            ]}
+        >
+            <Text style={[styles.chipText, { color: Colors.textPrimary }, active && { color: '#111014' }]}>{label}</Text>
+        </TouchableOpacity>
+    );
+
+    const LinkRow = ({ label, value, onChangeText, placeholder }: any) => (
+        <View style={styles.linkRow}>
+            <Text style={[styles.fieldLabel, { color: Colors.textMuted, width: 90 }]}>{label}</Text>
             <TextInput
-                style={[
-                    styles.input,
-                    { backgroundColor: Colors.backgroundCard, color: Colors.textPrimary, borderColor: Colors.border },
-                    multiline && styles.textArea
-                ]}
                 value={value}
                 onChangeText={onChangeText}
                 placeholder={placeholder}
                 placeholderTextColor={Colors.textMuted}
-                multiline={multiline}
-                numberOfLines={multiline ? 3 : 1}
-                keyboardType={keyboardType}
-                textAlignVertical={multiline ? 'top' : 'center'}
+                style={[styles.linkInput, { color: Colors.primary }]}
+                autoCapitalize="none"
             />
         </View>
     );
 
-    const ChipGroup = ({ items, selected, onToggle, color }: { items: string[], selected: string[], onToggle: (i: string) => void, color?: string }) => (
-        <View style={styles.chipWrap}>
-            {items.map(item => {
-                const isSelected = selected.includes(item);
-                const activeColor = color || Colors.primary;
-                return (
-                    <TouchableOpacity
-                        key={item}
-                        style={[
-                            styles.chip,
-                            { borderColor: Colors.border, backgroundColor: Colors.backgroundCard },
-                            isSelected && { backgroundColor: activeColor, borderColor: activeColor }
-                        ]}
-                        onPress={() => onToggle(item)}
-                    >
-                        <Text style={[styles.chipText, { color: Colors.textSecondary }, isSelected && { color: '#FFF' }]}>{item}</Text>
-                    </TouchableOpacity>
-                );
-            })}
-        </View>
-    );
-
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: Colors.background }]}>
+        <View style={[styles.container, { backgroundColor: Colors.background }]}>
+            {/* Top brand bar */}
+            <View style={[styles.brandBar, { paddingTop: Math.max(insets.top, 10), backgroundColor: Colors.backgroundElevated }]}>
+                <FudioLogo width={74} height={26} />
+            </View>
+
             {/* Header */}
-            <View style={[styles.header, { borderBottomColor: Colors.border }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+            <View style={styles.headerRow}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+                    <Text style={[styles.backText, { color: Colors.textPrimary }]}>Edit Profile</Text>
                 </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>Edit Profile</Text>
-                <TouchableOpacity onPress={handleSave} style={[styles.saveBtn, { backgroundColor: Colors.primary }]}>
-                    <Text style={styles.saveBtnText}>Save</Text>
+                <TouchableOpacity onPress={handleSave} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Text style={[styles.saveText, { color: Colors.primary }]}>Save</Text>
                 </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-
-                {/* Avatar - clean layout: image + corner badge + text below */}
+            <ScrollView
+                contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140 }}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+            >
+                {/* Avatar */}
                 <View style={styles.avatarSection}>
                     <TouchableOpacity onPress={pickImage} style={styles.avatarWrapper} activeOpacity={0.85}>
-                        <LinearGradient colors={['#FF6B35', '#FF3CAC']} style={styles.avatarRing}>
-                            <View style={styles.avatarInner}>
+                        <View style={[styles.avatarRing, { borderColor: Colors.primary }]}>
+                            <View style={[styles.avatarInner, { backgroundColor: Colors.backgroundElevated }]}>
                                 {photoURL ? (
                                     <Image source={{ uri: photoURL }} style={styles.avatarImage} />
                                 ) : (
-                                    <Text style={{ fontSize: 42 }}>👤</Text>
+                                    <Ionicons name="person" size={48} color={Colors.textMuted} />
                                 )}
                             </View>
-                        </LinearGradient>
-                        {/* Camera badge pinned to bottom-right corner */}
-                        <View style={[styles.cameraBadge, { backgroundColor: Colors.primary }]}>
-                            <Ionicons name="camera" size={13} color="#FFF" />
+                        </View>
+                        <View style={[styles.cameraBadge, { backgroundColor: Colors.primary, borderColor: Colors.background }]}>
+                            <Ionicons name="camera" size={14} color="#111014" />
                         </View>
                     </TouchableOpacity>
-                    <Text style={[styles.changePhotoLabel, { color: Colors.primary }]}>Change Photo</Text>
+                    <Text style={[styles.changePhotoLabel, { color: Colors.primary }]}>CHANGE PHOTO</Text>
                 </View>
 
                 {/* Basic Info */}
-                <Section title="Basic Info" icon="person-outline">
-                    <InputField label="Full Name *" value={name} onChangeText={setName} placeholder="Your full name" />
-                    <InputField label="Bio" value={bio} onChangeText={setBio} placeholder="Tell the world about yourself... (max 200 chars)" multiline />
+                <SectionTitle>Basic Info.</SectionTitle>
+                <View style={styles.fieldGroup}>
+                    <FieldLabel>FULL NAME</FieldLabel>
+                    <FilledInput value={name} onChangeText={setName} placeholder="Your full name" />
+                </View>
+                <View style={styles.fieldGroup}>
+                    <FieldLabel>BIO</FieldLabel>
+                    <FilledInput
+                        value={bio}
+                        onChangeText={setBio}
+                        placeholder="Tell the world about yourself..."
+                        multiline
+                        numberOfLines={3}
+                    />
                     <Text style={[styles.charCount, { color: bio.length > 180 ? Colors.error : Colors.textMuted }]}>{bio.length}/200</Text>
-                    <InputField label="Profession" value={profession} onChangeText={setProfession} placeholder="e.g. Software Engineer" />
-                    <InputField label="City" value={city} onChangeText={setCity} placeholder="e.g. Mumbai" />
-                </Section>
+                </View>
+                <View style={styles.fieldGroup}>
+                    <FieldLabel>PROFESSION</FieldLabel>
+                    <FilledInput value={profession} onChangeText={setProfession} placeholder="e.g. Software Engineer" />
+                </View>
+                <View style={styles.fieldGroup}>
+                    <FieldLabel>CITY</FieldLabel>
+                    <FilledInput value={city} onChangeText={setCity} placeholder="e.g. Calicut" />
+                </View>
 
-                {/* Contact (Private) */}
-                <Section title="Contact Information" icon="mail-outline">
-                    <InputField label="Email" value={email} onChangeText={setEmail} placeholder="your@email.com" keyboardType="email-address" isPrivate />
-                    <InputField label="Phone Number" value={phone} onChangeText={setPhone} placeholder="+91 9876543210" keyboardType="phone-pad" isPrivate />
-                    <InputField label="WhatsApp Number" value={whatsappNumber} onChangeText={setWhatsappNumber} placeholder="+91 9876543210" keyboardType="phone-pad" isPrivate />
-                    <InputField label="Instagram ID" value={instagramId} onChangeText={setInstagramId} placeholder="yourhandle" isPrivate />
-                    <InputField label="Twitter / X Handle" value={twitterId} onChangeText={setTwitterId} placeholder="@yourhandle" isPrivate />
-                    <InputField label="Facebook ID" value={facebookId} onChangeText={setFacebookId} placeholder="your.facebook.id" isPrivate />
-                </Section>
+                {/* Contact Info */}
+                <SectionTitle>Contact Info.</SectionTitle>
+                <View style={styles.fieldGroup}>
+                    <FieldLabel>EMAIL</FieldLabel>
+                    <FilledInput value={email} onChangeText={setEmail} placeholder="your@email.com" keyboardType="email-address" autoCapitalize="none" />
+                </View>
+                <View style={styles.fieldGroup}>
+                    <FieldLabel>PHONE</FieldLabel>
+                    <FilledInput value={phone} onChangeText={setPhone} placeholder="+91 9876543210" keyboardType="phone-pad" />
+                </View>
+                <View style={styles.fieldGroup}>
+                    <FieldLabel>WHATSAPP</FieldLabel>
+                    <FilledInput value={whatsappNumber} onChangeText={setWhatsappNumber} placeholder="+91 9876543210" keyboardType="phone-pad" />
+                </View>
+
+                {/* Links */}
+                <SectionTitle>Links</SectionTitle>
+                <View style={[styles.linksCard, { backgroundColor: Colors.backgroundElevated }]}>
+                    <LinkRow label="INSTAGRAM" value={instagramId} onChangeText={setInstagramId} placeholder="yourhandle" />
+                    <View style={[styles.divider, { backgroundColor: Colors.border }]} />
+                    <LinkRow label="FACEBOOK" value={facebookId} onChangeText={setFacebookId} placeholder="your.facebook.id" />
+                    <View style={[styles.divider, { backgroundColor: Colors.border }]} />
+                    <LinkRow label="TWITTER/X" value={twitterId} onChangeText={setTwitterId} placeholder="@yourhandle" />
+                </View>
 
                 {/* Cuisine Interests */}
-                <Section title="Cuisine Interests" icon="restaurant-outline">
-                    <ChipGroup items={CUISINE_TYPES} selected={selectedCuisines} onToggle={(c) => toggleItem(c, selectedCuisines, setSelectedCuisines)} />
-                </Section>
+                <SectionTitle>Cuisine Interests</SectionTitle>
+                <View style={styles.chipsRow}>
+                    {CUISINE_TYPES.map(c => (
+                        <Chip key={c} label={c} active={selectedCuisines.includes(c)} onPress={() => toggleItem(c, selectedCuisines, setSelectedCuisines)} />
+                    ))}
+                </View>
 
-                {/* Dietary */}
-                <Section title="Dietary Restrictions" icon="leaf-outline">
-                    <ChipGroup items={DIETARY_OPTIONS} selected={selectedDietary} onToggle={(d) => toggleItem(d, selectedDietary, setSelectedDietary)} color={Colors.success} />
-                </Section>
+                {/* Social Preference */}
+                <SectionTitle>Social Preference</SectionTitle>
+                <View style={styles.chipsRow}>
+                    {SOCIAL_PREFS.map(opt => (
+                        <Chip key={opt} label={opt} active={socialPref === opt} onPress={() => setSocialPref(opt)} />
+                    ))}
+                </View>
 
-                {/* Dietary Preference (single select) */}
-                <Section title="Dietary Preference" icon="nutrition-outline">
-                    <View style={styles.chipWrap}>
-                        {DIETARY_OPTIONS.map(opt => (
-                            <TouchableOpacity
-                                key={opt}
-                                style={[
-                                    styles.chip,
-                                    { borderColor: Colors.border, backgroundColor: Colors.backgroundCard },
-                                    dietaryPref === opt && { backgroundColor: Colors.secondary, borderColor: Colors.secondary }
-                                ]}
-                                onPress={() => setDietaryPref(opt)}
-                            >
-                                <Text style={[styles.chipText, { color: Colors.textSecondary }, dietaryPref === opt && { color: '#FFF' }]}>{opt}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </Section>
+                {/* Your Vibe */}
+                <SectionTitle>Your Vibe</SectionTitle>
+                <View style={styles.chipsRow}>
+                    {PERSONALITY_TAGS.map(t => (
+                        <Chip key={t} label={t} active={selectedTags.includes(t)} onPress={() => toggleItem(t, selectedTags, setSelectedTags)} />
+                    ))}
+                </View>
 
-                {/* Social Preference (single select) */}
-                <Section title="Social Preference" icon="people-outline">
-                    <View style={styles.chipWrap}>
-                        {SOCIAL_PREFS.map(opt => (
-                            <TouchableOpacity
-                                key={opt}
-                                style={[
-                                    styles.chip,
-                                    { borderColor: Colors.border, backgroundColor: Colors.backgroundCard },
-                                    socialPref === opt && { backgroundColor: Colors.primary, borderColor: Colors.primary }
-                                ]}
-                                onPress={() => setSocialPref(opt)}
-                            >
-                                <Text style={[styles.chipText, { color: Colors.textSecondary }, socialPref === opt && { color: '#FFF' }]}>{opt}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </Section>
+                {/* Dietary (kept — missing from Figma but used in app) */}
+                <SectionTitle>Dietary Restrictions</SectionTitle>
+                <View style={styles.chipsRow}>
+                    {DIETARY_OPTIONS.map(d => (
+                        <Chip key={d} label={d} active={selectedDietary.includes(d)} onPress={() => toggleItem(d, selectedDietary, setSelectedDietary)} />
+                    ))}
+                </View>
 
-                {/* Languages */}
-                <Section title="Languages Spoken" icon="language-outline">
-                    <ChipGroup items={LANGUAGE_OPTIONS} selected={selectedLanguages} onToggle={(l) => toggleItem(l, selectedLanguages, setSelectedLanguages)} color="#6C63FF" />
-                </Section>
+                <SectionTitle>Dietary Preference</SectionTitle>
+                <View style={styles.chipsRow}>
+                    {DIETARY_OPTIONS.map(d => (
+                        <Chip key={`pref-${d}`} label={d} active={dietaryPref === d} onPress={() => setDietaryPref(d)} />
+                    ))}
+                </View>
 
-                {/* Personality / Vibe */}
-                <Section title="Your Vibe" icon="sparkles-outline">
-                    <ChipGroup items={PERSONALITY_TAGS} selected={selectedTags} onToggle={(t) => toggleItem(t, selectedTags, setSelectedTags)} color={Colors.accent} />
-                </Section>
-
-                <View style={{ height: 40 }} />
+                <SectionTitle>Languages Spoken</SectionTitle>
+                <View style={styles.chipsRow}>
+                    {LANGUAGE_OPTIONS.map(l => (
+                        <Chip key={l} label={l} active={selectedLanguages.includes(l)} onPress={() => toggleItem(l, selectedLanguages, setSelectedLanguages)} />
+                    ))}
+                </View>
             </ScrollView>
 
             <CustomAlert
@@ -293,38 +304,69 @@ export default function EditProfileScreen() {
                     if (alertConfig.type === 'success') navigation.goBack();
                 }}
             />
-        </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1 },
-    backBtn: { padding: 4 },
-    headerTitle: { fontSize: 18, fontWeight: '700' },
-    saveBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
-    saveBtnText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
-    scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
-    // Avatar section - clean, no overlap
-    avatarSection: { alignItems: 'center', paddingVertical: 28, gap: 10 },
+
+    // Brand bar — identical to listing
+    brandBar: { alignItems: 'center', justifyContent: 'center', paddingBottom: 16 },
+
+    // Header
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingTop: 18,
+        paddingBottom: 4,
+    },
+    backBtn: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    backText: { fontSize: 17, fontWeight: '700' },
+    saveText: { fontSize: 16, fontWeight: '800' },
+
+    // Avatar
+    avatarSection: { alignItems: 'center', paddingVertical: 24, gap: 10 },
     avatarWrapper: { position: 'relative', width: 108, height: 108 },
-    avatarRing: { width: 108, height: 108, borderRadius: 54, padding: 3, justifyContent: 'center', alignItems: 'center' },
-    avatarInner: { width: 102, height: 102, borderRadius: 51, overflow: 'hidden', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.1)' },
-    avatarImage: { width: '100%', height: '100%', borderRadius: 51 },
-    cameraBadge: { position: 'absolute', bottom: 3, right: 3, width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 2.5, borderColor: '#FFF' },
-    changePhotoLabel: { fontSize: 13, fontWeight: '600', letterSpacing: 0.2 },
-    section: { marginBottom: 28 },
-    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-    sectionTitle: { fontSize: 16, fontWeight: '800' },
-    inputGroup: { marginBottom: 12 },
-    labelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-    label: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-    privateBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1 },
-    privateText: { fontSize: 9, fontWeight: '700' },
-    input: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, height: 50, fontSize: 15 },
+    avatarRing: { width: 108, height: 108, borderRadius: 54, borderWidth: 2.5, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+    avatarInner: { width: 100, height: 100, borderRadius: 50, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
+    avatarImage: { width: '100%', height: '100%', borderRadius: 50 },
+    cameraBadge: {
+        position: 'absolute', bottom: 2, right: 2,
+        width: 28, height: 28, borderRadius: 14,
+        justifyContent: 'center', alignItems: 'center',
+        borderWidth: 2.5,
+    },
+    changePhotoLabel: { fontSize: 12, fontWeight: '800', letterSpacing: 1.2 },
+
+    // Sections
+    sectionTitle: { fontSize: 14, fontWeight: '600', letterSpacing: 0.6, marginTop: 22, marginBottom: 12 },
+
+    // Fields
+    fieldGroup: { marginBottom: 14 },
+    fieldLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginBottom: 8 },
+    input: {
+        borderRadius: 10,
+        paddingHorizontal: 14,
+        height: 48,
+        fontSize: 15,
+    },
     textArea: { height: 90, paddingTop: 12 },
-    charCount: { fontSize: 11, textAlign: 'right', marginTop: -6, marginBottom: 8 },
-    chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1 },
-    chipText: { fontSize: 13, fontWeight: '600' },
+    charCount: { fontSize: 11, textAlign: 'right', marginTop: 4 },
+
+    // Links
+    linksCard: { borderRadius: 12, paddingVertical: 4, paddingHorizontal: 14 },
+    linkRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
+    linkInput: { flex: 1, fontSize: 14, fontWeight: '700', padding: 0 },
+    divider: { height: StyleSheet.hairlineWidth },
+
+    // Chips
+    chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    chip: { paddingVertical: 9, paddingHorizontal: 14, borderRadius: 8 },
+    chipText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.4 },
+
+    // Bottom
+    bottom: { position: 'absolute', bottom: 0, left: 0, right: 0 },
 });

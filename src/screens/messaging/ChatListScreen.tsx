@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import BrandBar from '../../components/common/BrandBar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -166,7 +167,7 @@ export default function ChatListScreen() {
                 {/* Status dot */}
                 <View style={[
                     styles.statusDot,
-                    { backgroundColor: chat.status === 'pending' ? Colors.warning : Colors.success }
+                    { backgroundColor: chat.status === 'pending' ? Colors.warning : Colors.success, borderColor: Colors.background }
                 ]} />
             </View>
 
@@ -210,35 +211,27 @@ export default function ChatListScreen() {
     );
 
     return (
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: Colors.background }]} edges={['top']}>
+        <View style={[styles.safeArea, { backgroundColor: Colors.background }]}>
+            <BrandBar />
             {/* Header */}
-            <View style={{ backgroundColor: Platform.OS === 'ios' ? 'transparent' : (isDarkMode ? Colors.background : '#FFFFFF'), borderBottomWidth: 1, borderBottomColor: Colors.border, overflow: 'hidden' }}>
+            <View style={{ backgroundColor: Platform.OS === 'ios' ? 'transparent' : Colors.background, borderBottomWidth: 1, borderBottomColor: Colors.border, overflow: 'hidden' }}>
                 {Platform.OS === 'ios' && (
                     <BlurView intensity={80} tint={isDarkMode ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
                 )}
-                <View style={[styles.header, { borderBottomWidth: 0, paddingHorizontal: 20, paddingVertical: 14 }]}>
+                <View style={[styles.header, { borderBottomWidth: 0, paddingHorizontal: 12, paddingVertical: 14 }]}>
                     <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                         <TouchableOpacity
                             style={{
                                 width: 38,
                                 height: 38,
                                 borderRadius: 19,
-                                borderWidth: 2,
-                                borderColor: Colors.primary,
                                 backgroundColor: Colors.backgroundCard,
-                                overflow: 'hidden',
                                 justifyContent: 'center',
                                 alignItems: 'center',
                             }}
-                            onPress={() => navigation.navigate('Profile')}
+                            onPress={() => navigation.goBack()}
                         >
-                            <Ionicons name="person" size={20} color={Colors.textMuted} />
-                            {user?.photoURL && (
-                                <Image
-                                    source={{ uri: user.photoURL }}
-                                    style={{ position: 'absolute', width: 34, height: 34, borderRadius: 17 }}
-                                />
-                            )}
+                            <Ionicons name="chevron-back" size={22} color={Colors.textPrimary} />
                         </TouchableOpacity>
                         <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>Messages</Text>
                     </View>
@@ -351,7 +344,7 @@ export default function ChatListScreen() {
                     />
                 </SafeAreaView>
             </Modal>
-        </SafeAreaView >
+        </View>
     );
 }
 
@@ -378,7 +371,7 @@ const styles = StyleSheet.create({
     avatarGrad: { width: 54, height: 54, borderRadius: 27, justifyContent: 'center', alignItems: 'center' },
     avatar: { width: 54, height: 54, borderRadius: 27, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
     avatarImg: { width: '100%', height: '100%' },
-    statusDot: { position: 'absolute', bottom: 1, right: 1, width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: '#FFF' },
+    statusDot: { position: 'absolute', bottom: 1, right: 1, width: 12, height: 12, borderRadius: 6, borderWidth: 2 },
     chatContent: { flex: 1 },
     chatHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
     chatName: { flex: 1 },

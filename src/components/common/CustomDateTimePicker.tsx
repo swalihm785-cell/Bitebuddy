@@ -11,18 +11,30 @@ interface CustomDateTimePickerProps {
     initialDate: Date;
     onClose: () => void;
     onSave: (date: Date) => void;
+    disableTime?: boolean;
+    isRange?: boolean;
+    initialStartDate?: Date | null;
+    initialEndDate?: Date | null;
+    onSaveRange?: (start: Date, end: Date) => void;
 }
 
 export const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
     visible,
     initialDate,
     onClose,
-    onSave
+    onSave,
+    disableTime = false,
+    isRange = false,
+    initialStartDate = null,
+    initialEndDate = null,
+    onSaveRange
 }) => {
     const { currentTheme } = useThemeStore();
     const { Colors } = currentTheme;
 
     const [selectedDate, setSelectedDate] = useState(initialDate);
+    const [rangeStart, setRangeStart] = useState<Date | null>(initialStartDate);
+    const [rangeEnd, setRangeEnd] = useState<Date | null>(initialEndDate);
     const [mode, setMode] = useState<'date' | 'time'>('date');
 
     const [hour, setHour] = useState(initialDate.getHours() % 12 || 12);
@@ -55,11 +67,25 @@ export const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
     const calendarPadding = Array(firstDayIndex).fill(null);
 
     const handleSave = () => {
+        if (isRange) {
+            const start = rangeStart || selectedDate;
+            const end = rangeEnd || start;
+            start.setHours(0, 0, 0, 0);
+            end.setHours(0, 0, 0, 0);
+            onSaveRange?.(start, end);
+            onClose();
+            return;
+        }
+
         const finalDate = new Date(selectedDate);
-        let h = hour % 12;
-        if (ampm === 'PM') h += 12;
-        finalDate.setHours(h);
-        finalDate.setMinutes(minute);
+        if (!disableTime) {
+            let h = hour % 12;
+            if (ampm === 'PM') h += 12;
+            finalDate.setHours(h);
+            finalDate.setMinutes(minute);
+        } else {
+            finalDate.setHours(0, 0, 0, 0);
+        }
         onSave(finalDate);
         onClose();
     };
@@ -88,22 +114,64 @@ export const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
                 <View style={styles.daysGrid}>
                     {calendarPadding.map((_, i) => <View key={`pad-${i}`} style={styles.dayBox} />)}
                     {allDays.map((d, i) => {
-                        const isSelected = d.toDateString() === selectedDate.toDateString();
+                        const isSelected = isRange
+                            ? (rangeStart && d.toDateString() === rangeStart.toDateString()) || (rangeEnd && d.toDateString() === rangeEnd.toDateString())
+                            : d.toDateString() === selectedDate.toDateString();
+                            
+                        const isInRange = isRange && rangeStart && rangeEnd && d > rangeStart && d < rangeEnd;
                         const selectable = isDateSelectable(d);
+                        
+                        const handlePress = () => {
+                            if (isRange) {
+                                if (!rangeStart || (rangeStart && rangeEnd)) {
+                                    setRangeStart(d);
+                                    setRangeEnd(null);
+                                } else if (rangeStart && !rangeEnd) {
+                                    if (d < rangeStart) {
+                                        setRangeStart(d);
+                                    } else {
+                                        setRangeEnd(d);
+                                    }
+                                }
+                            } else {
+                                setSelectedDate(d);
+                            }
+                        };
+
+                        let customBorderRadiusStyle: any = { borderRadius: 12 };
+                        if (isRange && rangeStart && rangeEnd) {
+                            if (d.toDateString() === rangeStart.toDateString()) {
+                                customBorderRadiusStyle = {
+                                    borderTopLeftRadius: 12,
+                                    borderBottomLeftRadius: 12,
+                                    borderTopRightRadius: 0,
+                                    borderBottomRightRadius: 0,
+                                };
+                            } else if (d.toDateString() === rangeEnd.toDateString()) {
+                                customBorderRadiusStyle = {
+                                    borderTopLeftRadius: 0,
+                                    borderBottomLeftRadius: 0,
+                                    borderTopRightRadius: 12,
+                                    borderBottomRightRadius: 12,
+                                };
+                            }
+                        }
+
                         return (
                             <TouchableOpacity
                                 key={i}
                                 disabled={!selectable}
-                                onPress={() => setSelectedDate(d)}
+                                onPress={handlePress}
                                 style={[
                                     styles.dayBox,
-                                    isSelected && { backgroundColor: Colors.primary, borderRadius: 12 },
+                                    isSelected && { backgroundColor: Colors.primary, ...customBorderRadiusStyle },
+                                    isInRange && { backgroundColor: Colors.primary + '30', borderRadius: 0 },
                                     !selectable && { opacity: 0.2 }
                                 ]}
                             >
                                 <Text style={[
                                     styles.dayText,
-                                    { color: isSelected ? '#FFF' : Colors.textPrimary },
+                                    { color: isSelected ? '#FFF' : (isInRange ? Colors.primary : Colors.textPrimary) },
                                     !selectable && { color: Colors.textMuted }
                                 ]}>
                                     {d.getDate()}
@@ -180,18 +248,20 @@ export const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
                                 <Ionicons name="close" size={24} color={Colors.textMuted} />
                             </TouchableOpacity>
                         </View>
-                        <View style={[styles.tabContainer, { backgroundColor: Colors.backgroundElevated }]}>
-                            <TouchableOpacity
-                                onPress={() => setMode('date')}
-                                style={[styles.tab, mode === 'date' && { backgroundColor: Colors.background }]}>
-                                <Text style={[styles.tabText, { color: mode === 'date' ? Colors.primary : Colors.textMuted }]}>Date</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={() => setMode('time')}
-                                style={[styles.tab, mode === 'time' && { backgroundColor: Colors.background }]}>
-                                <Text style={[styles.tabText, { color: mode === 'time' ? Colors.primary : Colors.textMuted }]}>Time</Text>
-                            </TouchableOpacity>
-                        </View>
+                        {!disableTime && (
+                            <View style={[styles.tabContainer, { backgroundColor: Colors.backgroundElevated }]}>
+                                <TouchableOpacity
+                                    onPress={() => setMode('date')}
+                                    style={[styles.tab, mode === 'date' && { backgroundColor: Colors.background }]}>
+                                    <Text style={[styles.tabText, { color: mode === 'date' ? Colors.primary : Colors.textMuted }]}>Date</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() => setMode('time')}
+                                    style={[styles.tab, mode === 'time' && { backgroundColor: Colors.background }]}>
+                                    <Text style={[styles.tabText, { color: mode === 'time' ? Colors.primary : Colors.textMuted }]}>Time</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
                     </View>
 
                     <View style={styles.content}>
@@ -199,10 +269,10 @@ export const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
                     </View>
 
                     <View style={styles.footer}>
-                        <TouchableOpacity style={styles.confirmBtn} onPress={handleSave}>
-                            <LinearGradient colors={Colors.gradientPrimary} style={styles.gradient}>
-                                <Text style={styles.confirmText}>Confirm Timing</Text>
-                            </LinearGradient>
+                        <TouchableOpacity style={[styles.confirmBtn, { backgroundColor: Colors.primary }]} onPress={handleSave}>
+                            <Text style={styles.confirmText}>
+                                {isRange ? 'CONFIRM DATE RANGE' : 'CONFIRM TIMING'}
+                            </Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -243,7 +313,6 @@ const styles = StyleSheet.create({
     ampmText: { fontSize: 14, fontWeight: '900' },
     // Footer
     footer: { paddingHorizontal: 24, marginTop: 20 },
-    confirmBtn: { height: 56, borderRadius: 28, overflow: 'hidden' },
-    gradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    confirmText: { color: '#FFF', fontSize: 16, fontWeight: '900' },
+    confirmBtn: { height: 48, borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
+    confirmText: { color: '#000000', fontSize: 16, fontWeight: '900', letterSpacing: 1.2 },
 });

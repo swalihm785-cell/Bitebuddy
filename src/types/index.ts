@@ -158,6 +158,50 @@ export interface Review {
     createdAt: Date;
 }
 
+/** Post-dining review submitted by a participant after a dining event closes */
+export interface DiningReview {
+    id: string;
+    postId: string;
+    hostId: string;
+    reviewerId: string;
+    reviewerName: string;
+    reviewerPhotoURL?: string;
+    // Ratings (1–5)
+    overallRating: number;
+    foodQuality: number;
+    atmosphere: number;
+    hostExperience: number;
+    // Optional content
+    reviewText?: string;
+    photoUrls?: string[];
+    // Food-themed host appreciation
+    tastePointsAwarded: 0 | 5 | 10 | 25;
+    createdAt: Date;
+}
+
+/** Tier name based on total Taste Points */
+export type HostTier = 'Sous Chef' | 'Chef' | 'Star Chef' | 'Elite Culinary Host';
+
+export interface HostMilestone {
+    points: number;
+    title: string;
+    icon: string;
+    description: string;
+    unlocked: boolean;
+}
+
+/** Per-host reputation object aggregated from all their dining events */
+export interface HostReputation {
+    hostId: string;
+    totalTastePoints: number;
+    tier: HostTier;
+    earnedBadges: string[];
+    milestones: HostMilestone[];
+    recentAwards: { awardedBy: string; awardedByName: string; points: number; postId: string; createdAt: Date }[];
+    averageRating: number;
+    totalReviews: number;
+}
+
 export interface SocialPost {
     id: string;
     userId: string;
@@ -181,7 +225,7 @@ export interface Badge {
 export interface Notification {
     id: string;
     userId: string;
-    type: 'join_request' | 'request_accepted' | 'request_rejected' | 'participant_left' | 'new_message' | 'review' | 'event' | 'follow_request' | 'follow_accepted' | 'new_meal' | 'report' | 'welcome' | 'system' | 'invite_received' | 'invite_accepted' | 'invite_rejected';
+    type: 'join_request' | 'request_accepted' | 'request_rejected' | 'participant_left' | 'new_message' | 'review' | 'event' | 'follow_request' | 'follow_accepted' | 'new_meal' | 'report' | 'welcome' | 'system' | 'invite_received' | 'invite_accepted' | 'invite_rejected' | 'review_request';
     title: string;
     body: string;
     data?: Record<string, string>;
@@ -212,6 +256,7 @@ export type RootStackParamList = {
     Main: undefined;
     Profile: undefined;
     PostDetail: { postId: string };
+    ChatList: undefined;
     ChatDetail: { chatId: string; chatName: string; isGroup?: boolean; chatAvatar?: string };
     EditProfile: undefined;
     CreatePost: undefined;
@@ -230,6 +275,10 @@ export type RootStackParamList = {
     CreateMenu: undefined;
     Community: undefined;
     CreateGroupChat: undefined;
+    // Post-dining features
+    DiningReview: { postId: string };
+    HostRewards: { hostId: string };
+    ReviewSuccess: { hostId: string; postId: string };
 };
 
 export type MainTabParamList = {

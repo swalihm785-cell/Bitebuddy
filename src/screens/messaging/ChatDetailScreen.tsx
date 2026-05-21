@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import BrandBar from '../../components/common/BrandBar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -391,7 +392,8 @@ export default function ChatDetailScreen() {
     };
 
     return (
-        <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: Colors.background }]}>
+        <View style={[styles.container, { backgroundColor: Colors.background }]}>
+            <BrandBar />
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: Colors.border }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -730,7 +732,9 @@ export default function ChatDetailScreen() {
 
                         <ScrollView style={{ flex: 1, marginTop: 10 }}>
                             {chat?.isGroup && chat.members?.map((member: any) => {
-                                const u = ALL_USERS.find(user => user.id === member.user_id);
+                                const u = member.user_id === user?.id
+                                    ? user
+                                    : ALL_USERS.find(user => user.id === member.user_id);
                                 const isMemberHost = chat.initiatorId === member.user_id;
 
                                 return (
@@ -852,7 +856,7 @@ export default function ChatDetailScreen() {
                     </Modal>
                 )
             }
-        </SafeAreaView >
+        </View>
     );
 }
 

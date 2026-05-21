@@ -129,15 +129,11 @@ export default function SignUpScreen() {
                         )}
 
                         <TouchableOpacity onPress={handleSignUp} activeOpacity={0.85}>
-                            <LinearGradient
-                                colors={['#FF6B35', '#FF3CAC']}
-                                style={styles.signUpBtn}
-                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                            >
+                            <View style={styles.signUpBtn}>
                                 <Text style={styles.signUpBtnText}>
-                                    {tab === 'phone' ? 'Send OTP →' : 'Create Account'}
+                                    {tab === 'phone' ? 'SEND OTP →' : 'CREATE ACCOUNT'}
                                 </Text>
-                            </LinearGradient>
+                            </View>
                         </TouchableOpacity>
 
                         <View style={styles.divider}>
@@ -210,12 +206,13 @@ const getStyles = (Colors: any, FontSize: any, FontWeight: any, Spacing: any, Bo
     input: { flex: 1, fontSize: FontSize.md, color: Colors.textPrimary },
     countryCode: { fontSize: FontSize.md, color: Colors.textPrimary, marginRight: 12, fontWeight: FontWeight.medium },
     signUpBtn: {
-        height: 54,
-        borderRadius: BorderRadius.full,
+        height: 48,
+        borderRadius: 6,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: '#ffb534'
     },
-    signUpBtnText: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: '#FFF' },
+    signUpBtnText: { color: '#000000', fontSize: 16, fontWeight: '900', letterSpacing: 1.2, textTransform: 'uppercase' },
     divider: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
     dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
     dividerText: { fontSize: FontSize.xs, color: Colors.textMuted },

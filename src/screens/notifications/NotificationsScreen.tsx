@@ -112,7 +112,7 @@ export default function NotificationsScreen() {
                 style={[
                     styles.item,
                     {
-                        paddingHorizontal: 20,
+                        paddingHorizontal: 12,
                         paddingVertical: 18,
                         backgroundColor: notif.isRead ? 'transparent' : (isDarkMode ? Colors.primary + '10' : Colors.primary + '08'),
                     },
@@ -155,7 +155,7 @@ export default function NotificationsScreen() {
     return (
         <SafeAreaView style={[styles.safe, { backgroundColor: Colors.background }]} edges={['top']}>
             {/* Header */}
-            <View style={[styles.header, { borderBottomColor: Colors.border, paddingHorizontal: 20, paddingVertical: 14, backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'transparent' }]}>
+            <View style={[styles.header, { borderBottomColor: Colors.border, paddingHorizontal: 12, paddingVertical: 14, backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'transparent' }]}>
                 {Platform.OS === 'ios' && (
                     <BlurView intensity={80} tint={isDarkMode ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
                 )}
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     body: { fontSize: 14, lineHeight: 20 },
     unreadBadge: { width: 10, height: 10, borderRadius: 5 },
     dot: { width: 10, height: 10, borderRadius: 5, marginLeft: 8 },
-    separator: { height: 1, marginHorizontal: 20, opacity: 0.5 },
+    separator: { height: 1, marginHorizontal: 12, opacity: 0.5 },
     empty: { alignItems: 'center', paddingTop: 80, gap: 12 },
     emptyIconWrap: { width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
     emptyTitle: {},

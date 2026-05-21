@@ -6,6 +6,7 @@ import { DiningPost } from '../../types';
 import { useThemeStore } from '../../store/useThemeStore';
 import { BUDGET_LABELS } from '../../theme/theme';
 import { TEST_USERS } from '../../data/testUsers';
+import { useAuthStore } from '../../store/useAuthStore';
 import { handleDiningPlanShare } from '../../utils/diningPlanShareUtils';
 
 const { width } = Dimensions.get('window');
@@ -70,6 +71,10 @@ const getRelativeTimeAgo = (post: DiningPost): string => {
 
 // Resolve host name from hostId
 const getHostInfo = (hostId: string) => {
+    const currentUser = useAuthStore.getState().user;
+    if (currentUser && currentUser.id === hostId) {
+        return { name: currentUser.name, photoURL: currentUser.photoURL, isPro: currentUser.plan === 'pro' };
+    }
     const testUser = Object.values(TEST_USERS).find(u => u.user.id === hostId);
     return testUser
         ? { name: testUser.user.name, photoURL: testUser.user.photoURL, isPro: testUser.user.plan === 'pro' }
@@ -98,7 +103,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
     // Format Meet At Time
     const postDateObj = post.dateTime instanceof Date ? post.dateTime : new Date(post.dateTime);
     const meetTimeStr = !isNaN(postDateObj.getTime()) ? postDateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'TBD';
-    const meetDateStr = !isNaN(postDateObj.getTime()) ? postDateObj.toLocaleDateString([], { day: 'numeric', month: 'short' }).toUpperCase() : '';
+    const meetDateStr = !isNaN(postDateObj.getTime()) ? postDateObj.toLocaleDateString([], { day: 'numeric', month: 'short' }) : '';
 
     return (
         <TouchableOpacity
@@ -114,12 +119,17 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
                 <View style={styles.topRow}>
                     <View style={styles.hostInfo}>
                         <Image source={{ uri: hostInfo.photoURL }} style={styles.hostAvatar} />
-                        <Text style={[styles.hostName, { color: textColor }]}>
-                            {hostInfo.name}
-                        </Text>
+                        <View style={styles.hostTextCol}>
+                            <Text style={[styles.hostLabel, { color: textMuted }]}>Hosted</Text>
+                            <Text style={[styles.hostName, { color: textColor }]} numberOfLines={1}>
+                                {hostInfo.name}
+                            </Text>
+                        </View>
                     </View>
                     <View style={styles.dateInfo}>
-                        <Text style={[styles.dateText, { color: textMuted }]}>{meetDateStr}</Text>
+                        <View style={styles.dateBadge}>
+                            <Text style={styles.dateText}>{meetDateStr}</Text>
+                        </View>
                         <View style={styles.meetAtChip}>
                             <Ionicons name="time" size={12} color="#000" style={{ marginRight: 4 }} />
                             <Text style={styles.meetAtText}>Meet at: {meetTimeStr}</Text>
@@ -191,6 +201,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
+        flex: 1,
+        minWidth: 0,
+    },
+    hostTextCol: {
+        flex: 1,
+        minWidth: 0,
+        gap: 2,
     },
     hostAvatar: {
         width: 38,
@@ -199,26 +216,43 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#FFF',
     },
-    hostName: {
-        fontSize: 14,
-        fontWeight: '700',
+    hostLabel: {
+        fontSize: 10,
+        fontWeight: '600',
+        letterSpacing: 0.6,
         textTransform: 'uppercase',
-        letterSpacing: 0.5,
+    },
+    hostName: {
+        fontSize: 16,
+        fontWeight: '700',
+        letterSpacing: 0.3,
     },
     dateInfo: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: 6,
+    },
+    dateBadge: {
+        backgroundColor: '#141218',
+        borderRadius: 4,
+        height: 26,
+        paddingHorizontal: 8,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     dateText: {
-        fontSize: 10,
+        fontSize: 11,
         fontWeight: '700',
+        color: '#938F99',
+        textTransform: 'uppercase',
     },
     meetAtChip: {
         flexDirection: 'row',
+        justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#ffb534',
-        paddingVertical: 4,
+        height: 26,
         paddingHorizontal: 8,
         borderRadius: 4,
     },

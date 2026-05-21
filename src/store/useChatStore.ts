@@ -6,7 +6,7 @@ import { TEST_USERS } from '../data/testUsers';
 import { Platform } from 'react-native';
 import { Notification as NotificationType } from '../types';
 
-export const API_URL = 'http://192.168.29.245:5002';
+export const API_URL = 'http://192.168.29.36:5002';
 
 export type ChatStatus = 'pending' | 'accepted' | 'blocked' | 'deleted';
 export type MessageType = 'text' | 'image' | 'video' | 'contact';
@@ -133,7 +133,7 @@ export const useChatStore = create<ChatState>()(
 
                 set({ conversations: convos });
             } catch (err) {
-                console.error('Failed to fetch chats:', err);
+                console.warn('Failed to fetch chats:', err);
             }
         },
 
@@ -157,7 +157,7 @@ export const useChatStore = create<ChatState>()(
                     messages: { ...state.messages, [chatId]: mapped }
                 }));
             } catch (err) {
-                console.error('Failed to fetch messages:', err);
+                console.warn('Failed to fetch messages:', err);
             }
         },
 
@@ -172,7 +172,7 @@ export const useChatStore = create<ChatState>()(
                 await get().fetchChats(owner.id);
                 return chat.id;
             } catch (err) {
-                console.error(err);
+                console.warn(err);
                 return '';
             }
         },
@@ -191,7 +191,7 @@ export const useChatStore = create<ChatState>()(
                 }
                 return { success: false, error: data.error };
             } catch (err: any) {
-                console.error(err);
+                console.warn(err);
                 return { success: false, error: err.message };
             }
         },
@@ -280,7 +280,13 @@ export const useChatStore = create<ChatState>()(
         }),
 
         sendMessageOut: (chatId, message) => {
-            const { socket } = get();
+            const { socket, addMessage, updateLastMessage } = get();
+            
+            // Optimistic update
+            addMessage(chatId, message);
+            const textToDisplay = message.type === 'text' ? (message.text || 'Message') : (message.type === 'contact' ? 'Shared contact' : 'Sent media');
+            updateLastMessage(chatId, textToDisplay, message.senderId);
+
             if (socket) {
                 socket.emit('sendMessage', { chatId, message });
             }
@@ -308,7 +314,7 @@ export const useChatStore = create<ChatState>()(
                 });
                 await get().fetchChats(userId);
             } catch (err) {
-                console.error(err);
+                console.warn(err);
             }
         },
 
@@ -320,7 +326,7 @@ export const useChatStore = create<ChatState>()(
                     body: JSON.stringify({ userId })
                 });
             } catch (err) {
-                console.error(err);
+                console.warn(err);
             }
         },
 
@@ -333,7 +339,7 @@ export const useChatStore = create<ChatState>()(
                 });
                 await get().fetchChats(userId);
             } catch (err) {
-                console.error(err);
+                console.warn(err);
             }
         },
 
@@ -346,7 +352,7 @@ export const useChatStore = create<ChatState>()(
                 });
                 await get().fetchChats(hostId);
             } catch (err) {
-                console.error(err);
+                console.warn(err);
             }
         },
 
@@ -359,7 +365,7 @@ export const useChatStore = create<ChatState>()(
                 });
                 await get().fetchChats(userId);
             } catch (err) {
-                console.error(err);
+                console.warn(err);
             }
         },
 

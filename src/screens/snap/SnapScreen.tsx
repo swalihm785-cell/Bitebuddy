@@ -13,6 +13,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useSnapStore, Snap } from '../../store/useSnapStore';
 import { CustomAlert } from '../../components/common/CustomAlert';
 import { isCurrentlyPro } from '../../utils/authUtils';
+import { TEST_USERS } from '../../data/testUsers';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const SNAP_DURATION = 5000;
@@ -164,10 +165,18 @@ function SnapViewer({
                 {/* Header */}
                 <View style={sv.header}>
                     <View style={sv.userRow}>
-                        <Image
-                            source={{ uri: `https://i.pravatar.cc/60?u=${snap.userId}` }}
-                            style={sv.avatar}
-                        />
+                        {(() => {
+                            const viewerUser = snap.userId === currentUserId
+                                ? useAuthStore.getState().user
+                                : Object.values(TEST_USERS).map(t => t.user).find(u => u.id === snap.userId);
+                            const photo = viewerUser?.photoURL || `https://i.pravatar.cc/60?u=${snap.userId}`;
+                            return (
+                                <Image
+                                    source={{ uri: photo }}
+                                    style={sv.avatar}
+                                />
+                            );
+                        })()}
                         <View>
                             <Text style={sv.userName}>{snap.userName}</Text>
                             <Text style={sv.time}>
@@ -396,10 +405,14 @@ export default function SnapScreen() {
                             );
                         }
                         const group = item.data;
+                        const groupUser = group[0].userId === user?.id
+                            ? user
+                            : Object.values(TEST_USERS).map(t => t.user).find(u => u.id === group[0].userId);
+                        const imgUrl = groupUser?.photoURL || `https://i.pravatar.cc/100?u=${group[0].userId}`;
                         return (
                             <SnapPreviewCard
                                 label={group[0].userName}
-                                imageUrl={`https://i.pravatar.cc/100?u=${group[0].userId}`}
+                                imageUrl={imgUrl}
                                 snaps={group}
                                 onPress={() => openGroupSnaps(index - 1)}
                                 Colors={Colors}

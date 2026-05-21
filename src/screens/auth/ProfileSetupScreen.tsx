@@ -230,9 +230,9 @@ export default function ProfileSetupScreen() {
                             Your profile is ready. Start exploring dining experiences and connect with fellow foodies!
                         </Text>
                         <TouchableOpacity onPress={handleFinish} activeOpacity={0.85}>
-                            <LinearGradient colors={['#FF6B35', '#FF3CAC']} style={styles.finishBtn}>
+                            <View style={styles.finishBtn}>
                                 <Text style={styles.finishBtnText}>Explore Bites 🍽️</Text>
-                            </LinearGradient>
+                            </View>
                         </TouchableOpacity>
                     </View>
                 )}
@@ -241,9 +241,9 @@ export default function ProfileSetupScreen() {
             {step < 2 && (
                 <View style={styles.footer}>
                     <TouchableOpacity onPress={handleNext} activeOpacity={0.85}>
-                        <LinearGradient colors={['#FF6B35', '#FF3CAC']} style={styles.nextBtn}>
+                        <View style={styles.nextBtn}>
                             <Text style={styles.nextBtnText}>{step === 1 ? 'Finish Setup →' : 'Next →'}</Text>
-                        </LinearGradient>
+                        </View>
                     </TouchableOpacity>
                 </View>
             )}
@@ -318,9 +318,9 @@ const getStyles = (Colors: any, FontSize: any, FontWeight: any, Spacing: any, Bo
     doneIcon: { width: 140, height: 140, borderRadius: 40, justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.xl },
     doneTitle: { fontSize: FontSize.xxxl, fontWeight: FontWeight.extrabold, color: Colors.textPrimary, marginBottom: Spacing.md },
     doneSubtitle: { fontSize: FontSize.md, color: Colors.textSecondary, textAlign: 'center', lineHeight: 24, marginBottom: Spacing.xl },
-    finishBtn: { paddingVertical: 16, paddingHorizontal: 60, borderRadius: BorderRadius.full },
-    finishBtnText: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: '#FFF' },
+    finishBtn: { height: 48, paddingHorizontal: 60, borderRadius: 6, justifyContent: 'center', alignItems: 'center', backgroundColor: '#ffb534' },
+    finishBtnText: { fontSize: 16, fontWeight: '900', color: '#000000', letterSpacing: 1.2, textTransform: 'uppercase' },
     footer: { position: 'absolute', bottom: 40, left: Spacing.xl, right: Spacing.xl },
-    nextBtn: { height: 54, borderRadius: BorderRadius.full, justifyContent: 'center', alignItems: 'center' },
-    nextBtnText: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: '#FFF' },
+    nextBtn: { height: 48, borderRadius: 6, justifyContent: 'center', alignItems: 'center', backgroundColor: '#ffb534' },
+    nextBtnText: { fontSize: 16, fontWeight: '900', color: '#000000', letterSpacing: 1.2, textTransform: 'uppercase' },
 });

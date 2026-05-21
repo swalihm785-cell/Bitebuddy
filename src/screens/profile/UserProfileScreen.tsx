@@ -3,6 +3,7 @@ import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert, Modal, Share, TextInput, Clipboard, Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import BrandBar from '../../components/common/BrandBar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
@@ -15,8 +16,11 @@ import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
 import { useNotificationStore } from '../../store/useNotificationStore';
 import { useReportStore } from '../../store/useReportStore';
+import { useHostReputationStore } from '../../store/useHostReputationStore';
 import { isCurrentlyPro } from '../../utils/authUtils';
 import { showMessage } from 'react-native-flash-message';
+import { TastePointsBadge } from '../../components/dining/TastePointsBadge';
+import { TEST_USERS } from '../../data/testUsers';
 
 const { width } = Dimensions.get('window');
 
@@ -26,6 +30,12 @@ const REPORT_REASONS: { label: string; value: ReportReason }[] = [
     { label: 'Fake Profile', value: 'fake_profile' },
     { label: 'Inappropriate Behavior', value: 'inappropriate' },
     { label: 'Other', value: 'other' },
+];
+
+const TASTE_POINT_OPTIONS: Array<{ value: 0 | 5 | 10 | 25; label: string; icon: string }> = [
+    { value: 5, label: '5 pts', icon: '🥄' },
+    { value: 10, label: '10 pts', icon: '👨‍🍳' },
+    { value: 25, label: '25 pts', icon: '🏆' },
 ];
 
 const MOCK_USERS: Record<string, Partial<User>> = {
@@ -80,21 +90,28 @@ export default function UserProfileScreen() {
     const [reportModalVisible, setReportModalVisible] = useState(false);
     const [reportReason, setReportReason] = useState<ReportReason | null>(null);
     const [reportDescription, setReportDescription] = useState('');
+    
+    const [givePointsModalVisible, setGivePointsModalVisible] = useState(false);
+    const [tastePoints, setTastePoints] = useState<0 | 5 | 10 | 25>(0);
+
+    const { getReputation, awardTastePoints } = useHostReputationStore();
 
     const isMe = userId === currentUser?.id;
     const isFollowing = currentUser?.following?.includes(userId);
     const hasRequested = currentUser?.sentBuddyRequests?.includes(userId);
     const isBlocked = currentUser?.blockedUsers?.includes(userId);
+    const hostRep = getReputation(userId);
 
     const mockData = MOCK_USERS[userId] || { name: 'Foodie Buddy', bio: 'Bite Buddy member.' };
     const userIsPro = isCurrentlyPro(isMe && currentUser ? currentUser : mockData as any);
 
     // Build the profile object — private fields stripped for non-owners
+    const testUserObj = Object.values(TEST_USERS).find(u => u.user.id === userId);
     const user: Partial<User> = isMe && currentUser ? currentUser : {
         id: userId,
         name: mockData.name || 'User',
         bio: mockData.bio || 'Food enthusiast',
-        photoURL: `https://i.pravatar.cc/150?u=${userId}`,
+        photoURL: testUserObj?.user.photoURL || `https://i.pravatar.cc/150?u=${userId}`,
         profession: mockData.profession,
         city: mockData.city,
         cuisineInterests: mockData.cuisineInterests || [],
@@ -237,6 +254,23 @@ export default function UserProfileScreen() {
         Alert.alert('Report Received', 'Thank you for helping keep our community safe.');
     };
 
+    const handleGivePoints = () => {
+        if (!currentUser || tastePoints === 0) return;
+        awardTastePoints(userId, tastePoints, currentUser.id, currentUser.name || 'Food Buddy', 'profile_gift');
+        
+        addNotification({
+            userId: userId,
+            type: 'system',
+            title: 'You got Taste Points! 🏆',
+            body: `${currentUser.name} gave you ${tastePoints} points from your profile!`,
+            data: { userId: currentUser.id }
+        });
+        
+        setGivePointsModalVisible(false);
+        setTastePoints(0);
+        showMessage({ message: 'Points Awarded!', description: `You gave ${tastePoints} Taste Points to ${user.name}.`, type: 'success', icon: 'success' });
+    };
+
     if (isBlocked) {
         return (
             <SafeAreaView style={[styles.container, { backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center', padding: 40 }]}>
@@ -252,27 +286,21 @@ export default function UserProfileScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: Colors.background }]}>
+            <BrandBar />
             <ScrollView showsVerticalScrollIndicator={false}>
-                <LinearGradient colors={Colors.gradientPrimary} style={styles.hero}>
-                    <SafeAreaView edges={['top']} style={{ backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'transparent' }}>
-                        {Platform.OS === 'ios' && (
-                            <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
-                        )}
-                        <View style={[styles.topActions, { paddingVertical: 12 }]}>
-                            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.circleBtn}>
-                                <Ionicons name="chevron-back" size={20} color="#FFF" />
-                            </TouchableOpacity>
-                            {!isMe && (
-                                <TouchableOpacity style={styles.circleBtn} onPress={() => setMenuVisible(true)}>
-                                    <Ionicons name="ellipsis-vertical" size={20} color="#FFF" />
-                                </TouchableOpacity>
-                            )}
-                        </View>
-                    </SafeAreaView>
-                </LinearGradient>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10 }}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.backgroundCard, justifyContent: 'center', alignItems: 'center' }}>
+                        <Ionicons name="chevron-back" size={20} color={Colors.textPrimary} />
+                    </TouchableOpacity>
+                    {!isMe && (
+                        <TouchableOpacity style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.backgroundCard, justifyContent: 'center', alignItems: 'center' }} onPress={() => setMenuVisible(true)}>
+                            <Ionicons name="ellipsis-vertical" size={20} color={Colors.textPrimary} />
+                        </TouchableOpacity>
+                    )}
+                </View>
 
-                <View style={[styles.profileCard, { backgroundColor: Colors.background, marginTop: -60 }]}>
-                    <View style={styles.avatarContainer}>
+                <View style={[styles.profileCard, { backgroundColor: Colors.background, marginTop: 10 }]}>
+                    <View style={[styles.avatarContainer, { marginTop: 0 }]}>
                         <View style={[styles.avatarBorder, { borderColor: Colors.background }]}>
                             {user?.photoURL ? (
                                 <Image source={{ uri: user.photoURL }} style={styles.avatarImg} />
@@ -412,10 +440,47 @@ export default function UserProfileScreen() {
                         </View>
                     )}
 
+                    {/* Host Reputation Card */}
+                    <View style={{ marginTop: 20 }}>
+                        <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Reputation & Taste Points</Text>
+                        <TouchableOpacity
+                            style={[styles.repCard, { borderColor: Colors.border }]}
+                            onPress={isMe ? () => navigation.navigate('HostRewards' as any, { hostId: userId }) : undefined}
+                            activeOpacity={isMe ? 0.85 : 1}
+                        >
+                            <LinearGradient colors={['#FF6B3512', '#6C63FF0A']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                            <View style={styles.repRow}>
+                                <View style={{ flex: 1, gap: 6 }}>
+                                    <TastePointsBadge points={hostRep.totalTastePoints} tier={hostRep.tier} size="md" showTier />
+                                    <Text style={[styles.repStat, { color: Colors.textMuted }]}>
+                                        ★ {hostRep.averageRating.toFixed(1)} avg · {hostRep.totalReviews} review{hostRep.totalReviews !== 1 ? 's' : ''}
+                                    </Text>
+                                </View>
+                                <View style={styles.repRight}>
+                                    {hostRep.earnedBadges.slice(0, 2).map((b, i) => (
+                                        <View key={i} style={[styles.miniChip, { backgroundColor: Colors.primary + '15', borderColor: Colors.primary + '30' }]}>
+                                            <Text style={{ fontSize: 12 }}>🏅</Text>
+                                            <Text style={[styles.miniChipTxt, { color: Colors.primary }]} numberOfLines={1}>{b}</Text>
+                                        </View>
+                                    ))}
+                                    {isMe && <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />}
+                                    {!isMe && (
+                                        <TouchableOpacity 
+                                            style={{ backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, marginTop: 4 }}
+                                            onPress={() => setGivePointsModalVisible(true)}
+                                        >
+                                            <Text style={{ color: '#000', fontWeight: '800', fontSize: 12 }}>+ Give Points</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+
                     {/* Dining Plans */}
                     {userPosts.length > 0 && (
                         <View style={{ marginTop: 20 }}>
-                            <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Dining Plans</Text>
+                            <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Hosted Dining</Text>
                             {[...userPosts]
                                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                                 .map((post: DiningPost) => {
@@ -438,7 +503,7 @@ export default function UserProfileScreen() {
                                                     <View style={[styles.postTag, { backgroundColor: isCurrent ? '#22C55E18' : Colors.border + '60' }]}>
                                                         <View style={[styles.postTagDot, { backgroundColor: isCurrent ? '#22C55E' : Colors.textMuted }]} />
                                                         <Text style={[styles.postTagText, { color: isCurrent ? '#22C55E' : Colors.textMuted }]}>
-                                                            {isCurrent ? 'Current' : 'Previous'}
+                                                            {isCurrent ? 'Active' : 'Past'}
                                                         </Text>
                                                     </View>
                                                 </View>
@@ -461,7 +526,7 @@ export default function UserProfileScreen() {
                                                     <View style={styles.postMetaItem}>
                                                         <Ionicons name="location-outline" size={13} color={Colors.textMuted} />
                                                         <Text style={[styles.postMetaText, { color: Colors.textMuted }]} numberOfLines={1}>
-                                                            {post.area}, {post.city}
+                                                            {post.area}
                                                         </Text>
                                                     </View>
                                                 </View>
@@ -558,6 +623,47 @@ export default function UserProfileScreen() {
                     </View>
                 </View>
             </Modal>
+
+            <Modal visible={givePointsModalVisible} transparent animationType="fade">
+                <View style={styles.reportOverlay}>
+                    <View style={[styles.reportContainer, { backgroundColor: Colors.backgroundCard }]}>
+                        <Text style={[styles.reportTitle, { color: Colors.textPrimary }]}>Give Taste Points</Text>
+                        <Text style={[styles.reportSub, { color: Colors.textMuted }]}>Reward {user.name} for being a great Food Buddy!</Text>
+
+                        <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+                            {TASTE_POINT_OPTIONS.map((opt) => {
+                                const selected = tastePoints === opt.value;
+                                return (
+                                    <TouchableOpacity
+                                        key={opt.value}
+                                        onPress={() => setTastePoints(opt.value)}
+                                        style={[{
+                                            flex: 1, minWidth: 70, alignItems: 'center', paddingVertical: 14, borderRadius: 16, borderWidth: 2, gap: 6,
+                                            borderColor: selected ? Colors.primary : Colors.border,
+                                            backgroundColor: selected ? Colors.primary + '18' : Colors.backgroundCard,
+                                        }]}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={{ fontSize: 22 }}>{opt.icon}</Text>
+                                        <Text style={{ fontSize: 13, fontWeight: '700', color: selected ? Colors.primary : Colors.textSecondary }}>
+                                            {opt.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+
+                        <View style={styles.reportActions}>
+                            <TouchableOpacity style={styles.reportCancel} onPress={() => { setGivePointsModalVisible(false); setTastePoints(0); }}>
+                                <Text style={{ color: Colors.textMuted, fontWeight: '700' }}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.reportSubmit, { backgroundColor: tastePoints > 0 ? Colors.primary : Colors.border }]} onPress={handleGivePoints} disabled={tastePoints === 0}>
+                                <Text style={{ color: tastePoints > 0 ? '#000' : Colors.textMuted, fontWeight: '800' }}>Give Points</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View >
     );
 }
@@ -583,14 +689,14 @@ const styles = StyleSheet.create({
     avatarImg: { width: '100%', height: '100%' },
     avatarPlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
     proBadgeLarge: { position: 'absolute', bottom: 5, right: 5, width: 32, height: 32, borderRadius: 16, borderWidth: 3, borderColor: '#FFF', justifyContent: 'center', alignItems: 'center' },
-    userInfo: { alignItems: 'center', padding: 20 },
+    userInfo: { alignItems: 'center', paddingHorizontal: 20, paddingTop: 12 },
     nameContainer: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     userName: { fontSize: 24, fontWeight: '900' },
     badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
     pBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
     pBadgeText: { fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
     userHandle: { fontSize: 14, fontWeight: '600' },
-    bio: { fontSize: 15, textAlign: 'center', marginTop: 12, paddingHorizontal: 20 },
+    bio: { fontSize: 12, fontWeight: '400', lineHeight: 18, textAlign: 'center', marginTop: 8, paddingHorizontal: 20 },
     actionRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20 },
     followBtn: { flex: 4, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
     followBtnText: { fontWeight: '700', fontSize: 15 },
@@ -598,10 +704,10 @@ const styles = StyleSheet.create({
     statsRow: { flexDirection: 'row', marginHorizontal: 20, borderRadius: 20, padding: 20, borderWidth: 1, alignItems: 'center' },
     statItem: { flex: 1, alignItems: 'center' },
     statValue: { fontSize: 20, fontWeight: '900' },
-    statLabel: { fontSize: 12, fontWeight: '600' },
+    statLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginTop: 4 },
     vDivider: { width: 1, height: 30 },
     content: { padding: 20 },
-    sectionTitle: { fontSize: 18, fontWeight: '900', marginBottom: 16 },
+    sectionTitle: { fontSize: 14, fontWeight: '600', letterSpacing: 0.6, marginBottom: 16 },
     detailsGrid: { padding: 16, borderRadius: 24, borderWidth: 1, gap: 16 },
     detailRow: { flexDirection: 'row', alignItems: 'center' },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
@@ -624,8 +730,15 @@ const styles = StyleSheet.create({
     chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     chip: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1 },
     chipTxt: { fontSize: 12, fontWeight: '700' },
+    // ── Reputation Card ──
+    repCard: { borderRadius: 20, borderWidth: 1, padding: 18, overflow: 'hidden' },
+    repRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    repStat: { fontSize: 13, fontWeight: '600' },
+    repRight: { alignItems: 'flex-end', gap: 6 },
+    miniChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, maxWidth: 120 },
+    miniChipTxt: { fontSize: 10, fontWeight: '700', flex: 1 },
     // ── Post Card Styles ──
-    postCard: { flexDirection: 'row', borderRadius: 16, borderWidth: 1, overflow: 'hidden', marginBottom: 12 },
+    postCard: { flexDirection: 'row', borderRadius: 18, borderWidth: 1, overflow: 'hidden', marginBottom: 12 },
     postImage: { width: 90, height: 90, backgroundColor: '#E5E7EB' },
     postInfo: { flex: 1, padding: 12, justifyContent: 'center', gap: 4 },
     postTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },

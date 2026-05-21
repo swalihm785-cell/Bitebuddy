@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Linking } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { CustomAlert } from '../../components/common/CustomAlert';
+import FudioLogo from '../../components/FudioLogo';
+import BottomTabBar from '../../components/common/BottomTabBar';
 
 export default function SettingsScreen() {
     const navigation = useNavigation<any>();
@@ -31,17 +33,25 @@ export default function SettingsScreen() {
         </TouchableOpacity>
     );
 
+    const insets = useSafeAreaInsets();
+
     return (
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: Colors.background }]} edges={['top']}>
-            <View style={[styles.header, { borderBottomColor: Colors.border }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
-                </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>Settings</Text>
-                <View style={{ width: 32 }} />
+        <View style={[styles.safeArea, { backgroundColor: Colors.background }]}>
+            {/* Brand bar */}
+            <View style={[styles.brandBar, { paddingTop: Math.max(insets.top, 10), backgroundColor: Colors.backgroundElevated }]}>
+                <FudioLogo width={74} height={26} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+            {/* Header */}
+            <View style={styles.headerRow}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBackBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+                    <Text style={[styles.headerBackText, { color: Colors.textPrimary }]}>Settings</Text>
+                </TouchableOpacity>
+                <View style={{ width: 24 }} />
+            </View>
+
+            <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 140 }]} showsVerticalScrollIndicator={false}>
                 {/* HIDDEN_FEATURE: Pro Features - Upgrade to Pro CTA
                 {user?.plan === 'free' && (
                     <TouchableOpacity
@@ -156,12 +166,17 @@ export default function SettingsScreen() {
                 type="error"
                 confirmText="Delete"
             />
-        </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     safeArea: { flex: 1 },
+    brandBar: { alignItems: 'center', justifyContent: 'center', paddingBottom: 16 },
+    headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+    headerBackBtn: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    headerBackText: { fontSize: 17, fontWeight: '700' },
+    bottomBarHost: { position: 'absolute', bottom: 0, left: 0, right: 0 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1 },
     backBtn: { padding: 4 },
     headerTitle: { fontSize: 18, fontWeight: '700' },
@@ -170,7 +185,7 @@ const styles = StyleSheet.create({
     proIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
     proTitle: { fontSize: 16, fontWeight: '700' },
     proSub: { fontSize: 12, marginTop: 2 },
-    sectionHeader: { fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 },
+    sectionHeader: { fontSize: 16, fontWeight: '900', marginBottom: 12 },
     card: { borderRadius: 20, overflow: 'hidden', borderWidth: 1, marginBottom: 24 },
     row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16 },
     rowIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },

@@ -70,6 +70,7 @@ import CreateMenuModal from './src/screens/create/CreateMenuModal';
 import MainNavigator from './src/navigation/MainNavigator';
 import PostDetailScreen from './src/screens/dashboard/PostDetailScreen';
 import ChatDetailScreen from './src/screens/messaging/ChatDetailScreen';
+import ChatListScreen from './src/screens/messaging/ChatListScreen';
 import EditProfileScreen from './src/screens/profile/EditProfileScreen';
 import UserProfileScreen from './src/screens/profile/UserProfileScreen';
 import NotificationsScreen from './src/screens/dashboard/NotificationsScreen';
@@ -80,6 +81,9 @@ import FollowListScreen from './src/screens/profile/FollowListScreen';
 import BlockedUsersScreen from './src/screens/settings/BlockedUsersScreen';
 import ProfileScreen from './src/screens/profile/ProfileScreen';
 import CreateGroupChatScreen from './src/screens/messaging/CreateGroupChatScreen';
+import DiningReviewScreen from './src/screens/dining/DiningReviewScreen';
+import ReviewSuccessScreen from './src/screens/dining/ReviewSuccessScreen';
+import HostRewardsScreen from './src/screens/profile/HostRewardsScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -118,11 +122,13 @@ function RootNavigator() {
             component={PostDetailScreen}
             options={{ presentation: 'modal' }}
           />
+          <Stack.Screen name="ChatList" component={ChatListScreen} />
           <Stack.Screen name="ChatDetail" component={ChatDetailScreen} />
           <Stack.Screen name="CreateGroupChat" component={CreateGroupChatScreen} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />
           <Stack.Screen name="EditPost" component={EditPostScreen} />
           <Stack.Screen name="UserProfile" component={UserProfileScreen} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
           <Stack.Screen name="Plan" component={PlanScreen} />
@@ -154,7 +160,9 @@ function RootNavigator() {
             component={CreateMenuModal}
             options={{ presentation: 'transparentModal' }}
           />
-          <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="DiningReview" component={DiningReviewScreen} options={{ presentation: 'modal' }} />
+          <Stack.Screen name="ReviewSuccess" component={ReviewSuccessScreen} />
+          <Stack.Screen name="HostRewards" component={HostRewardsScreen} />
         </>
       )}
     </Stack.Navigator>
@@ -177,8 +185,6 @@ export default function App() {
       setInitialTheme(isSystemDark);
     }
     if (Platform.OS === 'android') {
-      NavigationBar.setPositionAsync('absolute');
-      NavigationBar.setBackgroundColorAsync('transparent');
       NavigationBar.setButtonStyleAsync(isDarkMode ? 'light' : 'dark');
     }
   }, [isDarkMode, hasSetInitialTheme]);
@@ -189,7 +195,11 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <NavigationContainer>
-          <StatusBar style={isDarkMode ? 'light' : 'dark'} translucent backgroundColor="transparent" />
+          <StatusBar
+            style={isDarkMode ? 'light' : 'dark'}
+            translucent={true}
+            backgroundColor="transparent"
+          />
           <RootNavigator />
           <FlashMessage position="top" />
         </NavigationContainer>

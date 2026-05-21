@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../store/useThemeStore';
 import { SocialPost, User } from '../../types';
 import { ALL_USERS } from '../../store/useChatStore';
+import { useAuthStore } from '../../store/useAuthStore';
 
 interface SocialPostCardProps {
     post: SocialPost;
@@ -14,7 +15,11 @@ interface SocialPostCardProps {
 export const SocialPostCard: React.FC<SocialPostCardProps> = ({ post, onLike, isLiked }) => {
     const { currentTheme } = useThemeStore();
     const { Colors } = currentTheme;
-    const author = Object.values(ALL_USERS).find(u => u.id === post.userId);
+    
+    const currentUser = useAuthStore.getState().user;
+    const author = currentUser && currentUser.id === post.userId
+        ? currentUser
+        : Object.values(ALL_USERS).find(u => u.id === post.userId);
 
     return (
         <View style={[styles.container, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>

@@ -12,6 +12,7 @@ interface PostState {
     deletePost: (id: string) => void;
     addJoinRequest: (request: JoinRequest) => void;
     updateJoinRequest: (id: string, status: JoinRequest['status']) => void;
+    removeJoinRequest: (id: string) => void;
     addInvite: (invite: Invite) => void;
     updateInvite: (id: string, status: Invite['status'], note?: string) => void;
     removeInvite: (id: string) => void;
@@ -237,6 +238,9 @@ export const usePostStore = create<PostState>()(
                     posts: updatedPosts
                 };
             }),
+            removeJoinRequest: (id) => set((state) => ({
+                joinRequests: state.joinRequests.filter((r) => r.id !== id)
+            })),
             leavePost: (postId, userId) => set((state) => ({
                 posts: state.posts.map(p => {
                     if (p.id === postId) {

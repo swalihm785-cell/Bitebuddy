@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../store/useThemeStore';
 import { Review } from '../../types';
 import { ALL_USERS } from '../../store/useChatStore';
+import { useAuthStore } from '../../store/useAuthStore';
 
 interface ReviewCardProps {
     review: Review;
@@ -14,7 +15,11 @@ interface ReviewCardProps {
 export const ReviewCard: React.FC<ReviewCardProps> = ({ review, onLike, isLiked }) => {
     const { currentTheme } = useThemeStore();
     const { Colors } = currentTheme;
-    const author = Object.values(ALL_USERS).find(u => u.id === review.reviewerId);
+    
+    const currentUser = useAuthStore.getState().user;
+    const author = currentUser && currentUser.id === review.reviewerId
+        ? currentUser
+        : Object.values(ALL_USERS).find(u => u.id === review.reviewerId);
 
     return (
         <View style={[styles.container, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>

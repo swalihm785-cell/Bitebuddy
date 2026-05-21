@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
-    View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert, Share, Clipboard
+    View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert, Share, Clipboard, Platform
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import BrandBar from '../../components/common/BrandBar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -11,8 +12,10 @@ import { RootStackParamList } from '../../types';
 import { useAuthStore } from '../../store/useAuthStore';
 import { usePostStore } from '../../store/usePostStore';
 import { useThemeStore } from '../../store/useThemeStore';
+import { useHostReputationStore } from '../../store/useHostReputationStore';
 import { isCurrentlyPro } from '../../utils/authUtils';
 import { showMessage } from 'react-native-flash-message';
+import { TastePointsBadge } from '../../components/dining/TastePointsBadge';
 
 const { width } = Dimensions.get('window');
 
@@ -26,6 +29,8 @@ export default function ProfileScreen() {
 
     const myPosts = posts.filter(p => p.hostId === user?.id);
     const isPro = isCurrentlyPro(user);
+    const { getReputation } = useHostReputationStore();
+    const hostRep = getReputation(user?.id || '');
 
     const StatCard = ({ value, label, onPress }: { value: string | number; label: string; onPress?: () => void }) => (
         <TouchableOpacity style={styles.statItem} onPress={onPress} disabled={!onPress}>
@@ -36,27 +41,25 @@ export default function ProfileScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: Colors.background }]}>
+            <BrandBar />
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
             >
-                {/* Hero Header */}
-                <LinearGradient colors={Colors.gradientPrimary} style={styles.hero}>
-                    <SafeAreaView edges={['top']}>
-                        <View style={styles.topActions}>
-                            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.circleBtn}>
-                                <Ionicons name="chevron-back" size={24} color="#FFF" />
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.circleBtn}>
-                                <Ionicons name="settings" size={20} color="#FFF" />
-                            </TouchableOpacity>
-                        </View>
-                    </SafeAreaView>
-                </LinearGradient>
+                {/* Header Actions */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10 }}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                        <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+                        <Text style={{ color: Colors.textPrimary, fontSize: 16, fontWeight: '700' }}>Profile</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.backgroundCard, justifyContent: 'center', alignItems: 'center' }}>
+                        <Ionicons name="settings-outline" size={20} color={Colors.textPrimary} />
+                    </TouchableOpacity>
+                </View>
 
                 {/* Profile Info Card */}
-                <View style={[styles.profileCard, { backgroundColor: Colors.background, marginTop: -60 }]}>
-                    <View style={styles.avatarContainer}>
+                <View style={[styles.profileCard, { backgroundColor: Colors.background, marginTop: 10 }]}>
+                    <View style={[styles.avatarContainer, { marginTop: 0 }]}>
                         <View style={[styles.avatarBorder, { borderColor: Colors.background }]}>
                             {user?.photoURL ? (
                                 <Image source={{ uri: user.photoURL }} style={styles.avatarImg} />
@@ -66,6 +69,11 @@ export default function ProfileScreen() {
                                 </View>
                             )}
                         </View>
+                        {isPro && (
+                            <LinearGradient colors={['#FFD700', '#FFA500']} style={{ position: 'absolute', bottom: 5, right: 5, width: 32, height: 32, borderRadius: 16, borderWidth: 3, borderColor: '#FFF', justifyContent: 'center', alignItems: 'center' }}>
+                                <Ionicons name="star" size={16} color="#FFF" />
+                            </LinearGradient>
+                        )}
                     </View>
 
                     <View style={styles.userInfo}>
@@ -130,13 +138,91 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Stats Row */}
-                <View style={[styles.statsRow, { borderBottomColor: Colors.border }]}>
+                <View style={[styles.statsRow, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border, marginTop: 10, marginHorizontal: 20 }]}>
                     <StatCard value={myPosts.length} label="Plans" />
-                    <StatCard value={user?.followersCount || 0} label="Followers" onPress={() => navigation.navigate('FollowList')} />
-                    <StatCard value={user?.followingCount || 0} label="Following" onPress={() => navigation.navigate('FollowList')} />
+                    <View style={{ width: 1, height: 30, backgroundColor: Colors.border }} />
+                    <StatCard 
+                        value={(user?.followersCount || 0) + (user?.followingCount || 0)} 
+                        label="Food Buddies" 
+                        onPress={() => navigation.navigate('FollowList')} 
+                    />
                 </View>
 
-                {/* Content Section */}
+                {/* About Section */}
+                <View style={styles.contentSection}>
+                    <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>About</Text>
+                    <View style={[styles.detailsGrid, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
+                        {user?.profession && <DetailItem icon="briefcase-outline" label="Profession" value={user.profession} color={Colors.primary} textColor={Colors.textPrimary} mutedColor={Colors.textMuted} />}
+                        {user?.city && <DetailItem icon="location-outline" label="City" value={user.city} color={Colors.primary} textColor={Colors.textPrimary} mutedColor={Colors.textMuted} />}
+                        {user?.dietaryPreference && <DetailItem icon="nutrition-outline" label="Dietary" value={user.dietaryPreference} color={Colors.success} textColor={Colors.textPrimary} mutedColor={Colors.textMuted} />}
+                        {user?.socialPreference && <DetailItem icon="people-outline" label="Social Vibe" value={user.socialPreference} color={Colors.secondary} textColor={Colors.textPrimary} mutedColor={Colors.textMuted} />}
+                        {user?.languagesSpoken && user.languagesSpoken.length > 0 && (
+                            <DetailItem icon="language-outline" label="Languages" value={user.languagesSpoken.join(', ')} color={Colors.primary} textColor={Colors.textPrimary} mutedColor={Colors.textMuted} />
+                        )}
+                        {user?.cuisineInterests && user.cuisineInterests.length > 0 && (
+                            <DetailItem icon="restaurant-outline" label="Fav Cuisine" value={user.cuisineInterests.join(', ')} color={Colors.primary} textColor={Colors.textPrimary} mutedColor={Colors.textMuted} />
+                        )}
+                    </View>
+
+                    {/* Cuisine Interests */}
+                    {user?.cuisineInterests && user.cuisineInterests.length > 0 && (
+                        <View style={{ marginTop: 20 }}>
+                            <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Cuisine Interests</Text>
+                            <View style={styles.chipRow}>
+                                {user.cuisineInterests.map(c => (
+                                    <View key={c} style={[styles.chip, { backgroundColor: Colors.primary + '15', borderColor: Colors.primary + '30' }]}>
+                                        <Text style={[styles.chipTxt, { color: Colors.primary }]}>{c}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Personality / Vibe */}
+                    {user?.personalityTags && user.personalityTags.length > 0 && (
+                        <View style={{ marginTop: 20 }}>
+                            <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Vibe</Text>
+                            <View style={styles.chipRow}>
+                                {user.personalityTags.map(t => (
+                                    <View key={t} style={[styles.chip, { backgroundColor: Colors.secondary + '15', borderColor: Colors.secondary + '30' }]}>
+                                        <Text style={[styles.chipTxt, { color: Colors.secondary }]}>{t}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Reputation & Taste Points */}
+                    <View style={{ marginTop: 20 }}>
+                        <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Reputation & Taste Points</Text>
+                        <TouchableOpacity
+                            style={[styles.repCard, { borderColor: Colors.border }]}
+                            onPress={() => navigation.navigate('HostRewards' as any, { hostId: user?.id })}
+                            activeOpacity={0.85}
+                        >
+                            <LinearGradient colors={['#FF6B3512', '#6C63FF0A']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                            <View style={styles.repRow}>
+                                <View style={{ flex: 1, gap: 6 }}>
+                                    <TastePointsBadge points={hostRep.totalTastePoints} tier={hostRep.tier} size="md" showTier />
+                                    <Text style={[styles.repStat, { color: Colors.textMuted }]}>
+                                        ★ {hostRep.averageRating.toFixed(1)} avg · {hostRep.totalReviews} review{hostRep.totalReviews !== 1 ? 's' : ''}
+                                    </Text>
+                                </View>
+                                <View style={styles.repRight}>
+                                    {hostRep.earnedBadges.slice(0, 2).map((b, i) => (
+                                        <View key={i} style={[styles.miniChip, { backgroundColor: Colors.primary + '15', borderColor: Colors.primary + '30' }]}>
+                                            <Text style={{ fontSize: 12 }}>🏅</Text>
+                                            <Text style={[styles.miniChipTxt, { color: Colors.primary }]} numberOfLines={1}>{b}</Text>
+                                        </View>
+                                    ))}
+                                    <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+                                </View>
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Dining Plans Section */}
                 <View style={styles.contentSection}>
                     <View style={styles.sectionHeader}>
                         <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>My Dining Plans</Text>
@@ -236,6 +322,15 @@ export default function ProfileScreen() {
     );
 }
 
+const DetailItem = ({ icon, label, value, color, textColor, mutedColor }: any) => (
+    <View style={styles.detailRow}>
+        <Ionicons name={icon} size={18} color={color} />
+        <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: mutedColor }}>{label}</Text>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: textColor }}>{value || 'Not specified'}</Text>
+        </View>
+    </View>
+);
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -259,100 +354,108 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     profileCard: {
-        marginHorizontal: 20,
-        borderRadius: 20,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 5,
+        alignItems: 'center',
+        paddingBottom: 20,
     },
     avatarContainer: {
-        alignItems: 'center',
-        marginTop: -60,
+        alignSelf: 'center',
+        position: 'relative',
     },
     avatarBorder: {
-        padding: 5,
-        borderRadius: 60,
-        borderWidth: 5,
+        width: 130,
+        height: 130,
+        borderRadius: 65,
+        borderWidth: 6,
+        overflow: 'hidden',
     },
     avatarImg: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
+        width: '100%',
+        height: '100%',
     },
     avatarPlaceholder: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
+        width: '100%',
+        height: '100%',
         justifyContent: 'center',
         alignItems: 'center',
     },
     userInfo: {
         alignItems: 'center',
-        marginTop: 15,
+        marginTop: 12,
     },
     nameContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 5,
+        gap: 6,
     },
     userName: {
         fontSize: 24,
-        fontWeight: 'bold',
+        fontWeight: '900',
     },
     userHandle: {
-        fontSize: 16,
+        fontSize: 14,
+        fontWeight: '600',
         marginTop: 4,
     },
     bio: {
-        fontSize: 14,
+        fontSize: 12,
+        fontWeight: '400',
+        lineHeight: 18,
         textAlign: 'center',
-        marginTop: 12,
-        lineHeight: 20,
+        marginTop: 8,
+        paddingHorizontal: 20,
     },
     actionRow: {
         flexDirection: 'row',
-        gap: 10,
+        gap: 12,
         marginTop: 20,
+        paddingHorizontal: 10,
     },
     editBtn: {
         flex: 1,
-        height: 45,
-        borderRadius: 12,
+        height: 48,
+        borderRadius: 24,
         justifyContent: 'center',
         alignItems: 'center',
     },
     editBtnText: {
-        color: '#FFF',
-        fontWeight: 'bold',
+        color: '#000',
+        fontWeight: '800',
+        fontSize: 15,
     },
     shareBtn: {
-        width: 45,
-        height: 45,
-        borderRadius: 12,
+        width: 48,
+        height: 48,
+        borderRadius: 24,
         borderWidth: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
     statsRow: {
         flexDirection: 'row',
-        paddingVertical: 20,
-        marginHorizontal: 20,
-        borderBottomWidth: 1,
+        borderRadius: 20,
+        padding: 20,
+        borderWidth: 1,
+        alignItems: 'center',
     },
     statItem: {
         flex: 1,
         alignItems: 'center',
     },
     statValue: {
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontSize: 20,
+        fontWeight: '900',
     },
     statLabel: {
-        fontSize: 12,
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 0.5,
         marginTop: 4,
+    },
+    autoApproveSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 4,
+        marginTop: 2
     },
     contentSection: {
         padding: 20,
@@ -361,8 +464,10 @@ const styles = StyleSheet.create({
         marginBottom: 15,
     },
     sectionTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
+        fontSize: 14,
+        fontWeight: '600',
+        letterSpacing: 0.6,
+        marginBottom: 12,
     },
     postGrid: {
         gap: 12,
@@ -443,4 +548,18 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: 'bold',
     },
+    // ── About Section ──
+    detailsGrid: { padding: 16, borderRadius: 24, borderWidth: 1, gap: 16 },
+    detailRow: { flexDirection: 'row', alignItems: 'center' },
+    // ── Chips ──
+    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    chip: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1 },
+    chipTxt: { fontSize: 12, fontWeight: '700' },
+    // ── Reputation Card ──
+    repCard: { borderRadius: 20, borderWidth: 1, padding: 18, overflow: 'hidden' },
+    repRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    repStat: { fontSize: 13, fontWeight: '600' },
+    repRight: { alignItems: 'flex-end', gap: 6 },
+    miniChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, maxWidth: 120 },
+    miniChipTxt: { fontSize: 10, fontWeight: '700', flex: 1 },
 });

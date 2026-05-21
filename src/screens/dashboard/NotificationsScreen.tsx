@@ -1,39 +1,44 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, FlatList, TouchableOpacity
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import BrandBar from '../../components/common/BrandBar';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNotificationStore } from '../../store/useNotificationStore';
 import { useAuthStore } from '../../store/useAuthStore';
+import { CustomAlert } from '../../components/common/CustomAlert';
+
 import { Notification as NotificationType } from '../../types';
 import { useThemeStore } from '../../store/useThemeStore';
 import { RootStackParamList } from '../../types';
 
+const ICON_COLOR = '#FFB534';
+
 const NOTIF_CONFIG: Record<string, { icon: string; color: string }> = {
-    join_request: { icon: 'person-add-outline', color: '#6C63FF' },
-    request_accepted: { icon: 'checkmark-circle-outline', color: '#2ECC71' },
-    request_rejected: { icon: 'close-circle-outline', color: '#E74C3C' },
-    participant_left: { icon: 'exit-outline', color: '#FF6B35' },
-    new_message: { icon: 'chatbubble-outline', color: '#3CA5FF' },
-    review: { icon: 'star-outline', color: '#FFD166' },
-    event: { icon: 'calendar-outline', color: '#9B59B6' },
-    follow_request: { icon: 'person-outline', color: '#FF3CAC' },
-    follow_accepted: { icon: 'people-outline', color: '#2ECC71' },
-    new_meal: { icon: 'restaurant-outline', color: '#FF6B35' },
-    invite_received: { icon: 'mail-outline', color: '#6C63FF' },
-    invite_accepted: { icon: 'checkmark-circle-outline', color: '#2ECC71' },
-    invite_rejected: { icon: 'close-circle-outline', color: '#E74C3C' },
-    report: { icon: 'flag-outline', color: '#E74C3C' },
-    welcome: { icon: 'hand-left-outline', color: '#FF6B35' },
-    system: { icon: 'information-circle-outline', color: '#3CA5FF' },
+    join_request: { icon: 'person-add-outline', color: ICON_COLOR },
+    request_accepted: { icon: 'checkmark-circle-outline', color: ICON_COLOR },
+    request_rejected: { icon: 'close-circle-outline', color: ICON_COLOR },
+    participant_left: { icon: 'exit-outline', color: ICON_COLOR },
+    new_message: { icon: 'chatbubble-outline', color: ICON_COLOR },
+    review: { icon: 'star-outline', color: ICON_COLOR },
+    event: { icon: 'calendar-outline', color: ICON_COLOR },
+    follow_request: { icon: 'person-outline', color: ICON_COLOR },
+    follow_accepted: { icon: 'people-outline', color: ICON_COLOR },
+    new_meal: { icon: 'restaurant-outline', color: ICON_COLOR },
+    invite_received: { icon: 'mail-outline', color: ICON_COLOR },
+    invite_accepted: { icon: 'checkmark-circle-outline', color: ICON_COLOR },
+    invite_rejected: { icon: 'close-circle-outline', color: ICON_COLOR },
+    report: { icon: 'flag-outline', color: ICON_COLOR },
+    welcome: { icon: 'hand-left-outline', color: ICON_COLOR },
+    system: { icon: 'information-circle-outline', color: ICON_COLOR },
 };
 
 function getNotifConfig(type: string) {
-    return NOTIF_CONFIG[type] || { icon: 'notifications-outline', color: '#6C63FF' };
+    return NOTIF_CONFIG[type] || { icon: 'notifications-outline', color: ICON_COLOR };
 }
 
 function getTimeDiff(date: Date) {
@@ -54,24 +59,31 @@ export default function NotificationsScreen() {
     const { currentTheme } = useThemeStore();
     const { Colors } = currentTheme;
 
+    const [alertConfig, setAlertConfig] = useState<{ visible: boolean; title: string; message: string; type?: 'success' | 'error' | 'info' | 'warning' }>({ visible: false, title: '', message: '' });
+
     const userNotifs = notifications.filter(n => n.userId === user?.id);
     const unreadCount = userNotifs.filter(n => !n.isRead).length;
 
     const handleNotifPress = (notif: NotificationType) => {
-        // Mark as read immediately
         markAsRead(notif.id);
 
-        // Route based on notification type and available data
         const { type, data } = notif;
 
-        if ((type === 'join_request' || type === 'request_accepted' || type === 'request_rejected' || type === 'participant_left' || type === 'new_meal' || type === 'invite_received' || type === 'invite_accepted' || type === 'invite_rejected') && data?.postId) {
-            navigation.navigate('PostDetail', { postId: data.postId });
-        } else if ((type === 'follow_request' || type === 'follow_accepted') && data?.userId) {
-            navigation.navigate('UserProfile', { userId: data.userId });
-        } else if (type === 'new_message' && data?.chatId) {
-            navigation.navigate('ChatDetail', { chatId: data.chatId, chatName: data.chatName || 'Chat' });
-        }
-        // For types with no navigation target, just mark read
+        setTimeout(() => {
+            if (data?.postId) {
+                // Any notification tied to a specific meal/post
+                navigation.navigate('PostDetail', { postId: data.postId });
+            } else if (data?.chatId) {
+                // Any notification tied to a chat (new message, request, etc)
+                navigation.navigate('ChatDetail', { chatId: data.chatId, chatName: data.chatName || 'Chat' });
+            } else if (data?.userId && type !== 'welcome' && type !== 'system') {
+                // Any notification tied to a user profile (follow, review)
+                navigation.navigate('UserProfile', { userId: data.userId });
+            } else {
+                // Fallback for system, welcome, reports, or missing data
+                setAlertConfig({ visible: true, title: notif.title, message: notif.body, type: 'info' });
+            }
+        }, 100);
     };
 
     const renderNotifItem = ({ item }: { item: NotificationType }) => {
@@ -106,7 +118,8 @@ export default function NotificationsScreen() {
     };
 
     return (
-        <SafeAreaView style={[styles.safeArea, { backgroundColor: Colors.background }]}>
+        <View style={[styles.safeArea, { backgroundColor: Colors.background }]}>
+            <BrandBar />
             {/* Header */}
             <View style={[styles.header, { borderBottomColor: Colors.border }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -143,7 +156,17 @@ export default function NotificationsScreen() {
                     </View>
                 }
             />
-        </SafeAreaView>
+
+            <CustomAlert
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                type={alertConfig.type}
+                onClose={() => setAlertConfig({ ...alertConfig, visible: false })}
+                onConfirm={() => setAlertConfig({ ...alertConfig, visible: false })}
+                confirmText="Got it"
+            />
+        </View>
     );
 }
 

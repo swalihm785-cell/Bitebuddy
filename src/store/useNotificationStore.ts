@@ -20,7 +20,7 @@ const SEED_NOTIFICATIONS: NotificationType[] = [
         body: 'Roshan wants to join your Malabar Biryani plan.',
         isRead: false,
         createdAt: new Date(),
-        data: { postId: 'plan_kozhikode_1' }
+        data: { postId: 'plan_swalih_open_1' }
     },
     {
         id: 'notif_2',
@@ -30,7 +30,7 @@ const SEED_NOTIFICATIONS: NotificationType[] = [
         body: 'Swalih invited you to join Legendary Malabar Biryani.',
         isRead: false,
         createdAt: new Date(),
-        data: { postId: 'plan_kozhikode_1' }
+        data: { postId: 'plan_swalih_open_1' }
     }
 ];
 

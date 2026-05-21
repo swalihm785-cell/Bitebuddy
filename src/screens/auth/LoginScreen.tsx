@@ -113,15 +113,11 @@ export default function LoginScreen() {
                         </TouchableOpacity>
 
                         <TouchableOpacity onPress={handleLogin} disabled={isLoading} activeOpacity={0.85}>
-                            <LinearGradient
-                                colors={['#FF6B35', '#FF3CAC']}
-                                style={styles.loginBtn}
-                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                            >
+                            <View style={styles.loginBtn}>
                                 <Text style={styles.loginBtnText}>
-                                    {isLoading ? 'Signing In...' : 'Sign In'}
+                                    {isLoading ? 'Signing In...' : 'SIGN IN'}
                                 </Text>
-                            </LinearGradient>
+                            </View>
                         </TouchableOpacity>
 
                         {/* Divider */}
@@ -204,12 +200,13 @@ const getStyles = (Colors: any, FontSize: any, FontWeight: any, Spacing: any, Bo
     forgotBtn: { alignSelf: 'flex-end' },
     forgotText: { fontSize: FontSize.sm, color: Colors.primary },
     loginBtn: {
-        height: 54,
-        borderRadius: BorderRadius.full,
+        height: 48,
+        borderRadius: 6,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: '#ffb534'
     },
-    loginBtnText: { fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: '#FFF' },
+    loginBtnText: { color: '#000000', fontSize: 16, fontWeight: '900', letterSpacing: 1.2, textTransform: 'uppercase' },
     divider: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
     dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
     dividerText: { fontSize: FontSize.xs, color: Colors.textMuted },

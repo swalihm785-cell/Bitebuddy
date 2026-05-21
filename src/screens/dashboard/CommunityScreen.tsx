@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
+        paddingHorizontal: 12,
         paddingVertical: 16,
     },
     headerTitle: {
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
     },
     tabsWrap: {
         flexDirection: 'row',
-        paddingHorizontal: 20,
+        paddingHorizontal: 12,
         borderBottomWidth: 1,
     },
     tab: {
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     feedContent: {
-        padding: 20,
+        padding: 12,
         paddingBottom: 100,
     },
     emptyWrap: {
