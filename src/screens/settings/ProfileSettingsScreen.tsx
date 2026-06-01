@@ -34,7 +34,7 @@ export default function ProfileSettingsScreen() {
         <View style={[styles.safeArea, { backgroundColor: Colors.background }]}>
             {/* Brand bar */}
             <View style={[styles.brandBar, { paddingTop: Math.max(insets.top, 10), backgroundColor: Colors.backgroundElevated }]}>
-                <FudioLogo width={74} height={26} />
+                <FudioLogo width={74} height={26} color={Colors.textPrimary} />
             </View>
 
             {/* Header */}

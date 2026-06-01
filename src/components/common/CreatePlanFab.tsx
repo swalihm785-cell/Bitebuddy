@@ -46,14 +46,21 @@ export const CreatePlanFab: React.FC<CreatePlanFabProps> = ({
     });
 
     useEffect(() => {
-        // Horizontal texture scroll — always loops
+        // Horizontal texture scroll — always loops seamlessly
         Animated.loop(
-            Animated.timing(scrollAnim, {
-                toValue: -diameter,
-                duration: 1800,
-                easing: Easing.linear,
-                useNativeDriver: true,
-            }),
+            Animated.sequence([
+                Animated.timing(scrollAnim, {
+                    toValue: -diameter,
+                    duration: 1800,
+                    easing: Easing.linear,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(scrollAnim, {
+                    toValue: 0,
+                    duration: 0,
+                    useNativeDriver: true,
+                }),
+            ])
         ).start();
     }, [diameter]);
 
@@ -82,14 +89,6 @@ export const CreatePlanFab: React.FC<CreatePlanFabProps> = ({
         `C ${d * 0.25} ${d * 0.42}, ${d * 0.75} ${d * 0.78}, ${d * 1.0} ${d * 0.60}`,
         `C ${d * 1.25} ${d * 0.42}, ${d * 1.75} ${d * 0.78}, ${d * 2.0} ${d * 0.60}`,
         `C ${d * 2.25} ${d * 0.42}, ${d * 2.75} ${d * 0.78}, ${d * 3.0} ${d * 0.60}`,
-        `L ${d * 3} ${d * 2}`, `L 0 ${d * 2}`, 'Z',
-    ].join(' ');
-
-    const waveBack = [
-        `M 0 ${d * 0.72}`,
-        `C ${d * 0.25} ${d * 0.58}, ${d * 0.75} ${d * 0.86}, ${d * 1.0} ${d * 0.72}`,
-        `C ${d * 1.25} ${d * 0.58}, ${d * 1.75} ${d * 0.86}, ${d * 2.0} ${d * 0.72}`,
-        `C ${d * 2.25} ${d * 0.58}, ${d * 2.75} ${d * 0.86}, ${d * 3.0} ${d * 0.72}`,
         `L ${d * 3} ${d * 2}`, `L 0 ${d * 2}`, 'Z',
     ].join(' ');
 
@@ -125,21 +124,20 @@ export const CreatePlanFab: React.FC<CreatePlanFabProps> = ({
                 {/* Wave: scrolls horizontally always; rises to fill on press */}
                 <Animated.View
                     pointerEvents="none"
-                    style={[
-                        StyleSheet.absoluteFill,
-                        {
-                            width: waveWidth,
-                            height: waveHeight,
-                            transform: [
-                                { translateX: scrollAnim },
-                                { translateY: fillTranslateY },
-                            ],
-                        },
-                    ]}
+                    style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        width: waveWidth,
+                        height: waveHeight,
+                        transform: [
+                            { translateX: scrollAnim },
+                            { translateY: fillTranslateY },
+                        ],
+                    }}
                 >
                     <Svg width={waveWidth} height={waveHeight} viewBox={`0 0 ${waveWidth} ${waveHeight}`}>
-                        <Path d={waveBack}  fill="rgba(170, 90, 0, 0.22)" />
-                        <Path d={waveFront} fill="rgba(210, 125, 0, 0.32)" />
+                        <Path d={waveFront} fill="#B75907" fillOpacity={0.5} />
                     </Svg>
                 </Animated.View>
 

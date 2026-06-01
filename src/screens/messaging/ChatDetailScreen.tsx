@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
     View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity,
-    KeyboardAvoidingView, Platform, Image, Modal, Alert, ActivityIndicator, Linking, ScrollView
+    KeyboardAvoidingView, Platform, Image, Modal, Alert, ActivityIndicator,
+    Linking, ScrollView, Clipboard, Animated, PanResponder,
 } from 'react-native';
 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +22,13 @@ import { usePostStore } from '../../store/usePostStore';
 
 type MessageType = 'text' | 'image' | 'video' | 'contact';
 
+interface ReplyRef {
+    id: string;
+    text: string;
+    senderName: string;
+    isMe: boolean;
+}
+
 interface ChatMessage {
     id: string;
     senderId: string;
@@ -31,7 +39,11 @@ interface ChatMessage {
     type: MessageType;
     time: string;
     status?: 'sent' | 'delivered' | 'read';
+    replyTo?: ReplyRef;
 }
+
+// Quick emoji set (WhatsApp-style)
+const QUICK_EMOJIS = ['❤️', '😂', '😮', '😢', '😡', '👍'];
 
 const INITIAL_MESSAGES: ChatMessage[] = [
     { id: '1', senderId: 'other', type: 'text', text: 'Hey! Excited for sushi tonight 🍣', time: '6:30 PM' },
@@ -46,7 +58,7 @@ export default function ChatDetailScreen() {
     const route = useRoute<any>();
     const { chatId, chatName, isGroup } = route.params || { chatId: '', chatName: 'Chat', isGroup: false };
     const { user } = useAuthStore();
-    const { currentTheme } = useThemeStore();
+    const { currentTheme, isDarkMode } = useThemeStore();
     const { Colors } = currentTheme;
     const {
         conversations, updateLastMessage, acceptRequest, deleteRequest,
@@ -98,6 +110,86 @@ export default function ChatDetailScreen() {
     const [isSending, setIsSending] = useState(false);
     const [isTyping, setIsTyping] = useState(false);
     const listRef = useRef<FlatList>(null);
+    const inputRef = useRef<TextInput>(null);
+
+    // ── Reply / Emoji / Context menu state ────────────────────────────────────
+    const [replyTo, setReplyTo] = useState<ReplyRef | null>(null);
+    const [emojiPickerMsg, setEmojiPickerMsg] = useState<ChatMessage | null>(null);
+    const [contextMsg, setContextMsg] = useState<ChatMessage | null>(null);
+    // Map of msgId → emoji reactions: { '❤️': ['userId1'], '😂': ['userId2'] }
+    const [reactions, setReactions] = useState<Record<string, Record<string, string[]>>>({});
+    // Local message overrides for reply (since store messages may not have replyTo)
+    const [localMessages, setLocalMessages] = useState<Record<string, ChatMessage>>({});
+
+    // Auto-upgrade sent → delivered after 1.5 s, → read when chat opened (simulated)
+    React.useEffect(() => {
+        const myMsgs = messages.filter(
+            m => (m.senderId === user?.id || m.senderId === 'me') && m.status === 'sent'
+        );
+        if (myMsgs.length === 0) return;
+        const t = setTimeout(() => {
+            // Simulate delivered
+            myMsgs.forEach(m => {
+                const overrideKey = m.id;
+                setLocalMessages(prev => ({ ...prev, [overrideKey]: { ...m, status: 'delivered' } }));
+            });
+        }, 1500);
+        return () => clearTimeout(t);
+    }, [messages.length]);
+
+    // Simulate read (other opened chat) after 4 s
+    React.useEffect(() => {
+        const deliveredMsgs = messages.filter(
+            m => (m.senderId === user?.id || m.senderId === 'me') &&
+                (m.status === 'delivered' || (localMessages[m.id]?.status === 'delivered'))
+        );
+        if (deliveredMsgs.length === 0) return;
+        const t = setTimeout(() => {
+            deliveredMsgs.forEach(m => {
+                setLocalMessages(prev => ({ ...prev, [m.id]: { ...(prev[m.id] || m), status: 'read' } }));
+            });
+        }, 4000);
+        return () => clearTimeout(t);
+    }, [messages.length]);
+
+    const addReaction = (msgId: string, emoji: string) => {
+        const userId = user?.id || 'me';
+        setReactions(prev => {
+            const msgReactions = { ...(prev[msgId] || {}) };
+            const emojiUsers = [...(msgReactions[emoji] || [])];
+            const idx = emojiUsers.indexOf(userId);
+            if (idx >= 0) emojiUsers.splice(idx, 1); // toggle off
+            else emojiUsers.push(userId);
+            if (emojiUsers.length === 0) delete msgReactions[emoji];
+            else msgReactions[emoji] = emojiUsers;
+            return { ...prev, [msgId]: msgReactions };
+        });
+        setEmojiPickerMsg(null);
+        setContextMsg(null);
+    };
+
+    const handleLongPress = (msg: ChatMessage) => {
+        setContextMsg(msg);
+    };
+
+    const handleReply = (msg: ChatMessage) => {
+        const isMe = msg.senderId === user?.id || msg.senderId === 'me';
+        setReplyTo({
+            id: msg.id,
+            text: msg.text || (msg.type === 'image' ? '📷 Photo' : msg.type === 'video' ? '🎥 Video' : '📎 Attachment'),
+            senderName: isMe ? 'You' : (chat?.participantName || 'Them'),
+            isMe,
+        });
+        setContextMsg(null);
+    };
+
+    const handleCopyText = (msg: ChatMessage) => {
+        if (msg.text) {
+            // Clipboard.setString(msg.text); // uncomment if @react-native-clipboard is installed
+            Alert.alert('Copied', 'Message copied to clipboard.');
+        }
+        setContextMsg(null);
+    };
 
 
     const handleViewProfile = () => {
@@ -115,9 +207,11 @@ export default function ChatDetailScreen() {
             text: inputText.trim(),
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             status: 'sent',
+            replyTo: replyTo || undefined,
         };
         sendMessageOut(chatId, newMsg);
         setInputText('');
+        setReplyTo(null);
     };
 
     const openCamera = async () => {
@@ -291,165 +385,260 @@ export default function ChatDetailScreen() {
         { label: 'Phone', icon: 'call-outline', value: user?.phone || '' },
     ];
 
-        const getMessageTick = (status?: 'sent' | 'delivered' | 'read') => {
-        const s = status || 'read';
-        if (s === 'sent') return <Ionicons name="checkmark" size={16} color="rgba(255,255,255,0.7)" style={{ marginLeft: 4 }} />;
-        if (s === 'delivered') return <Ionicons name="checkmark-done" size={16} color="rgba(255,255,255,0.7)" style={{ marginLeft: 4 }} />;
-        if (s === 'read') return <Ionicons name="checkmark-done" size={16} color="#34B7F1" style={{ marginLeft: 4 }} />;
+    const getMessageTick = (status?: 'sent' | 'delivered' | 'read') => {
+        // Only show ticks on sent messages; no tick on received messages
+        if (!status) return null;
+        const muted = isDarkMode ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.35)';
+        if (status === 'sent')
+            return <Ionicons name="checkmark" size={14} color={muted} style={{ marginLeft: 3 }} />;
+        if (status === 'delivered')
+            return <Ionicons name="checkmark-done" size={14} color={muted} style={{ marginLeft: 3 }} />;
+        if (status === 'read')
+            return <Ionicons name="checkmark-done" size={14} color="#34B7F1" style={{ marginLeft: 3 }} />;
         return null;
     };
 
+
+
     const renderMessage = ({ item }: { item: ChatMessage }) => {
-        const isMe = item.senderId === user?.id || item.senderId === 'me';
-        const isSystem = item.senderId === 'system';
+        // Merge local overrides (status updates) into message
+        const msg: ChatMessage = { ...item, ...(localMessages[item.id] || {}) };
+        const isMe = msg.senderId === user?.id || msg.senderId === 'me';
+        const isSystem = msg.senderId === 'system';
+        const msgReactions = reactions[msg.id] || {};
+        const hasReactions = Object.keys(msgReactions).length > 0;
+
+        const myBubbleBg = Colors.primary;
+        const otherBubbleBg = isDarkMode ? Colors.backgroundCard : '#F0F0F0';
+        const myTextColor = isDarkMode ? '#FFF' : '#111014';
+        const otherTextColor = Colors.textPrimary;
+        const myTimeMuted = isDarkMode ? 'rgba(255,255,255,0.65)' : 'rgba(17,16,20,0.55)';
+        const otherTimeMuted = Colors.textMuted;
+        const activeCardBg = isDarkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)';
+        const activePreviewIconBg = isDarkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)';
+        const activeIconColor = isDarkMode ? '#FFF' : '#111014';
+        const activeChevronColor = isDarkMode ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)';
 
         if (isSystem) {
             return (
                 <View style={styles.systemMessageContainer}>
-                    <Text style={[styles.systemMessageText, { color: Colors.textMuted }]}>{item.text}</Text>
+                    <Text style={[styles.systemMessageText, { color: Colors.textMuted }]}>{msg.text}</Text>
                 </View>
             );
         }
 
+        // Reply-to quote block
+        const QuotedBlock = msg.replyTo ? (
+            <View style={[styles.quotedBlock, {
+                backgroundColor: isMe
+                    ? 'rgba(255,255,255,0.18)'
+                    : (isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
+                borderLeftColor: isMe ? 'rgba(255,255,255,0.6)' : Colors.primary,
+            }]}>
+                <Text style={[styles.quotedName, {
+                    color: isMe ? 'rgba(255,255,255,0.8)' : Colors.primary
+                }]}>
+                    {msg.replyTo.senderName}
+                </Text>
+                <Text style={[styles.quotedText, {
+                    color: isMe ? 'rgba(255,255,255,0.7)' : Colors.textMuted
+                }]} numberOfLines={1}>
+                    {msg.replyTo.text}
+                </Text>
+            </View>
+        ) : null;
+
         return (
             <View style={[styles.messageRow, isMe ? styles.myRow : styles.otherRow]}>
+                <TouchableOpacity
+                    activeOpacity={0.85}
+                    onLongPress={() => handleLongPress(msg)}
+                    delayLongPress={350}
+                    style={{ maxWidth: '80%' }}
+                >
                 <View style={[
                     styles.bubble,
                     isMe
-                        ? { backgroundColor: Colors.primary, borderBottomRightRadius: 4 }
-                        : { backgroundColor: Colors.backgroundCard, borderColor: Colors.border, borderWidth: 1, borderBottomLeftRadius: 4 }
+                        ? { backgroundColor: myBubbleBg, borderBottomRightRadius: 6 }
+                        : { backgroundColor: otherBubbleBg, borderBottomLeftRadius: 6 },
+                    (msg.type === 'image' || msg.type === 'video') && { paddingHorizontal: 4, paddingVertical: 4, borderRadius: 16 }
                 ]}>
-                    {item.type === 'text' && (
+                    {/* Quoted reply */}
+                    {QuotedBlock}
+                    {msg.type === 'text' && (
                         <>
                             {(() => {
-                                const postUrlMatch = item.text?.match(/https:\/\/bitebuddy\.app\/post\/([a-zA-Z0-9]+)/);
+                                const postUrlMatch = msg.text?.match(/https:\/\/bitebuddy\.app\/post\/([a-zA-Z0-9]+)/);
                                 if (postUrlMatch) {
                                     const postId = postUrlMatch[1];
                                     const sharedPost = posts.find(p => p.id === postId);
                                     if (sharedPost) {
                                         return (
                                             <TouchableOpacity
-                                                style={[styles.sharePreviewCard, { backgroundColor: isMe ? 'rgba(255,255,255,0.1)' : Colors.backgroundElevated }]}
+                                                style={[styles.sharePreviewCard, { backgroundColor: isMe ? activeCardBg : Colors.backgroundElevated }]}
                                                 onPress={() => navigation.navigate('PostDetail', { postId })}
                                             >
-                                                <View style={styles.sharePreviewIcon}>
-                                                    <Ionicons name="restaurant" size={20} color={isMe ? '#FFF' : Colors.primary} />
+                                                <View style={[styles.sharePreviewIcon, { backgroundColor: isMe ? activePreviewIconBg : (isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)') }]}>
+                                                    <Ionicons name="restaurant" size={20} color={isMe ? activeIconColor : Colors.primary} />
                                                 </View>
                                                 <View style={{ flex: 1 }}>
-                                                    <Text style={[styles.sharePreviewTitle, { color: isMe ? '#FFF' : Colors.textPrimary }]} numberOfLines={1}>{sharedPost.title}</Text>
-                                                    <Text style={[styles.sharePreviewSub, { color: isMe ? 'rgba(255,255,255,0.7)' : Colors.textMuted }]} numberOfLines={1}>
+                                                    <Text style={[styles.sharePreviewTitle, { color: isMe ? myTextColor : otherTextColor }]} numberOfLines={1}>{sharedPost.title}</Text>
+                                                    <Text style={[styles.sharePreviewSub, { color: isMe ? myTimeMuted : otherTimeMuted }]} numberOfLines={1}>
                                                         📍 {sharedPost.restaurantName || sharedPost.area}
                                                     </Text>
                                                 </View>
-                                                <Ionicons name="chevron-forward" size={16} color={isMe ? 'rgba(255,255,255,0.5)' : Colors.textMuted} />
+                                                <Ionicons name="chevron-forward" size={16} color={isMe ? activeChevronColor : Colors.textMuted} />
                                             </TouchableOpacity>
                                         );
                                     }
                                 }
-                                return <Text style={[styles.msgText, { color: isMe ? '#FFF' : Colors.textPrimary }]}>{item.text}</Text>;
+                                return <Text style={[styles.msgText, { color: isMe ? myTextColor : otherTextColor }]}>{msg.text}</Text>;
                             })()}
                             <View style={styles.timeRow}>
-                                <Text style={[styles.msgTime, { color: isMe ? 'rgba(255,255,255,0.7)' : Colors.textMuted }]}>{item.time}</Text>
-                                {isMe && getMessageTick(item.status)}
+                                <Text style={[styles.msgTime, { color: isMe ? myTimeMuted : otherTimeMuted }]}>{msg.time}</Text>
+                                {isMe && getMessageTick(msg.status)}
                             </View>
                         </>
                     )}
-                    {item.type === 'image' && item.mediaUri && (
+                    {msg.type === 'image' && msg.mediaUri && (
                         <>
-                            <Image source={{ uri: item.mediaUri }} style={styles.mediaImage} />
+                            <Image source={{ uri: msg.mediaUri }} style={styles.mediaImage} />
                             <View style={styles.timeRow}>
-                                <Text style={[styles.msgTime, { color: isMe ? 'rgba(255,255,255,0.7)' : Colors.textMuted }]}>{item.time}</Text>
-                                {isMe && getMessageTick(item.status)}
+                                <Text style={[styles.msgTime, { color: isMe ? myTimeMuted : otherTimeMuted }]}>{msg.time}</Text>
+                                {isMe && getMessageTick(msg.status)}
                             </View>
                         </>
                     )}
-                    {item.type === 'video' && item.mediaUri && (
+                    {msg.type === 'video' && msg.mediaUri && (
                         <>
                             <View style={styles.videoThumb}>
                                 <Ionicons name="play-circle" size={44} color="#FFF" />
                                 <Text style={{ color: '#FFF', fontSize: 12, marginTop: 6 }}>Video</Text>
                             </View>
                             <View style={styles.timeRow}>
-                                <Text style={[styles.msgTime, { color: 'rgba(255,255,255,0.7)' }]}>{item.time}</Text>
-                                {isMe && getMessageTick(item.status)}
+                                <Text style={[styles.msgTime, { color: isMe ? myTimeMuted : otherTimeMuted }]}>{msg.time}</Text>
+                                {isMe && getMessageTick(msg.status)}
                             </View>
                         </>
                     )}
-                    {item.type === 'contact' && item.contactData && (
+                    {msg.type === 'contact' && msg.contactData && (
                         <>
                             <TouchableOpacity
                                 style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
-                                onPress={() => openContactLink(item.contactData!.label, item.contactData!.value)}
+                                onPress={() => openContactLink(msg.contactData!.label, msg.contactData!.value)}
                                 activeOpacity={0.75}
                             >
-                                <Ionicons name="person-circle-outline" size={36} color={isMe ? '#FFF' : Colors.primary} />
+                                <Ionicons name="person-circle-outline" size={36} color={isMe ? activeIconColor : Colors.primary} />
                                 <View style={{ flexShrink: 1 }}>
-                                    <Text style={{ fontSize: 11, color: isMe ? 'rgba(255,255,255,0.7)' : Colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                        {item.contactData.label}
+                                    <Text style={{ fontSize: 11, color: isMe ? myTimeMuted : otherTimeMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                        {msg.contactData.label}
                                     </Text>
-                                    <Text style={{ fontSize: 16, color: isMe ? '#FFF' : Colors.textPrimary, fontWeight: '800', marginTop: 1 }}>
-                                        {item.contactData.value}
+                                    <Text style={{ fontSize: 16, color: isMe ? myTextColor : otherTextColor, fontWeight: '800', marginTop: 1 }}>
+                                        {msg.contactData.value}
                                     </Text>
                                 </View>
                             </TouchableOpacity>
                             <View style={styles.timeRow}>
-                                <Text style={[styles.msgTime, { color: isMe ? 'rgba(255,255,255,0.7)' : Colors.textMuted }]}>{item.time}</Text>
-                                {isMe && getMessageTick(item.status)}
+                                <Text style={[styles.msgTime, { color: isMe ? myTimeMuted : otherTimeMuted }]}>{msg.time}</Text>
+                                {isMe && getMessageTick(msg.status)}
                             </View>
                         </>
                     )}
                 </View>
+
+                {/* Emoji reactions row */}
+                {hasReactions && (
+                    <TouchableOpacity
+                        onPress={() => setEmojiPickerMsg(msg)}
+                        style={[styles.reactionsRow, isMe ? { alignSelf: 'flex-end' } : { alignSelf: 'flex-start' }]}
+                    >
+                        {Object.entries(msgReactions).map(([emoji, users]) => (
+                            <View
+                                key={emoji}
+                                style={[styles.reactionBubble, {
+                                    backgroundColor: Colors.backgroundCard,
+                                    borderColor: (users as string[]).includes(user?.id || '') ? Colors.primary : Colors.border,
+                                }]}
+                            >
+                                <Text style={styles.reactionEmoji}>{emoji}</Text>
+                                {(users as string[]).length > 1 && (
+                                    <Text style={[styles.reactionCount, { color: Colors.textMuted }]}>
+                                        {(users as string[]).length}
+                                    </Text>
+                                )}
+                            </View>
+                        ))}
+                    </TouchableOpacity>
+                )}
+                </TouchableOpacity>
             </View>
         );
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: Colors.background }]}>
+        <KeyboardAvoidingView
+            style={[styles.container, { backgroundColor: Colors.background }]}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        >
             <BrandBar />
-            {/* Header */}
+            {/* Header — Instagram DM style */}
             <View style={[styles.header, { borderBottomColor: Colors.border }]}>
+                {/* Back button */}
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+                    <Ionicons name="chevron-back" size={26} color={Colors.textPrimary} />
                 </TouchableOpacity>
-                {chat?.participantAvatar ? (
-                    <Image source={{ uri: chat.participantAvatar }} style={styles.headerAvatar} />
-                ) : (
-                    <LinearGradient
-                        colors={isGroup ? ['#6C63FF', '#3CA5FF'] : ['#FF6B35', '#FF3CAC']}
-                        style={styles.headerAvatar}
-                    >
-                        <Text style={{ fontSize: 18 }}>{isGroup ? '👥' : '👤'}</Text>
-                    </LinearGradient>
-                )}
-                <View style={{ flex: 1 }}>
-                    <TouchableOpacity onPress={handleViewProfile} activeOpacity={0.7}>
-                        <Text style={[styles.headerName, { color: Colors.textPrimary }]}>{chatName}</Text>
-                    </TouchableOpacity>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={[styles.headerStatus, { color: Colors.success, fontSize: 11 }]}>{isGroup ? 'Group Chat' : 'Active now'}</Text>
-                        {isGroup && chat?.planId && (
-                            <>
-                                <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: Colors.textMuted }} />
+
+                {/* Center: avatar + name + status */}
+                <TouchableOpacity
+                    style={styles.headerCenter}
+                    onPress={handleViewProfile}
+                    activeOpacity={0.75}
+                >
+                    {chat?.participantAvatar ? (
+                        <Image source={{ uri: chat.participantAvatar }} style={styles.headerAvatar} />
+                    ) : (
+                        <LinearGradient
+                            colors={isGroup ? ['#6C63FF', '#3CA5FF'] : ['#FF6B35', '#FF3CAC']}
+                            style={styles.headerAvatar}
+                        >
+                            <Text style={{ fontSize: 16, color: '#FFF', fontWeight: '800' }}>
+                                {chatName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+                            </Text>
+                        </LinearGradient>
+                    )}
+                    <View style={{ alignItems: 'flex-start' }}>
+                        <Text style={[styles.headerName, { color: Colors.textPrimary }]} numberOfLines={1}>
+                            {chatName}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Text style={[styles.headerStatus, { color: Colors.success }]}>
+                                {isGroup ? `Group · ${chat?.participantsCount || 2} members` : 'Active now'}
+                            </Text>
+                            {isGroup && chat?.planId && (
                                 <TouchableOpacity
-                                    onPress={() => {
-                                        navigation.navigate('PostDetail' as any, { postId: chat.planId });
-                                    }}
-                                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Colors.primary + '10', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}
+                                    onPress={() => navigation.navigate('PostDetail' as any, { postId: chat.planId })}
+                                    style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: Colors.primary + '18', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}
                                 >
-                                    <Ionicons name="restaurant-outline" size={12} color={Colors.primary} />
-                                    <Text style={{ fontSize: 11, color: Colors.primary, fontWeight: '700' }}>View Plan</Text>
+                                    <Ionicons name="restaurant-outline" size={11} color={Colors.primary} />
+                                    <Text style={{ fontSize: 11, color: Colors.primary, fontWeight: '700' }}>Plan</Text>
                                 </TouchableOpacity>
-                            </>
-                        )}
+                            )}
+                        </View>
                     </View>
-                </View>
+                </TouchableOpacity>
+
+                {/* Right: more button */}
                 <TouchableOpacity
                     style={styles.moreBtn}
                     onPress={() => setShowMenuPopup(true)}
                 >
-                    <Ionicons name="ellipsis-vertical" size={20} color={Colors.textPrimary} />
+                    <Ionicons name="ellipsis-horizontal" size={22} color={Colors.textPrimary} />
                 </TouchableOpacity>
             </View>
+
+            {/* FlatList + Input wrapped together */}
+            <View style={{ flex: 1 }}>
 
             {/* Messages */}
             <FlatList
@@ -491,45 +680,58 @@ export default function ChatDetailScreen() {
                     <Text style={{ color: Colors.warning, fontWeight: '600' }}>Waiting for user to accept request...</Text>
                 </View>
             ) : (
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
-                    <View style={[styles.inputArea, { backgroundColor: Colors.backgroundCard, borderTopColor: Colors.border, paddingBottom: Math.max(insets.bottom, 12) }]}>
-                        <TouchableOpacity style={styles.attachBtn} onPress={() => setShowMediaMenu(true)}>
-                            <Ionicons name="camera-outline" size={26} color={Colors.primary} />
-                        </TouchableOpacity>
-
-                        <TextInput
-                            style={[styles.input, { backgroundColor: Colors.backgroundElevated, color: Colors.textPrimary }]}
-                            placeholder="Type a message..."
-                            placeholderTextColor={Colors.textMuted}
-                            value={inputText}
-                            onChangeText={setInputText}
-                            multiline
-                            maxLength={1000}
-                        />
-
-                        {inputText.trim() ? (
-                            <TouchableOpacity style={styles.sendBtn} onPress={sendTextMessage}>
-                                <LinearGradient colors={['#FF6B35', '#FF3CAC']} style={styles.sendGradient}>
-                                    <Ionicons name="send" size={18} color="#FFF" />
-                                </LinearGradient>
-                            </TouchableOpacity>
-                        ) : (
-                            <TouchableOpacity
-                                style={styles.sendBtn}
-                                onPress={() => isPro ? setShowContactMenu(true) : setShowProAlert(true)}
-                            >
-                                <View style={[styles.sendGradient, { backgroundColor: isPro ? Colors.primary + '20' : Colors.backgroundElevated }]}>
-                                    <Ionicons
-                                        name="person-add-outline"
-                                        size={18}
-                                        color={isPro ? Colors.primary : Colors.textMuted}
-                                    />
+                <View style={[styles.inputArea, { backgroundColor: Colors.background, borderTopColor: Colors.border, paddingBottom: Math.max(insets.bottom, 8) }]}>
+                    {/* Reply preview bar + pill input */}
+                    <View style={{ flex: 1 }}>
+                        {replyTo && (
+                            <View style={[styles.replyBar, { backgroundColor: isDarkMode ? Colors.backgroundCard : '#F5F5F8', borderLeftColor: Colors.primary }]}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={[styles.replyBarName, { color: Colors.primary }]}>{replyTo.senderName}</Text>
+                                    <Text style={[styles.replyBarText, { color: Colors.textMuted }]} numberOfLines={1}>{replyTo.text}</Text>
                                 </View>
-                            </TouchableOpacity>
+                                <TouchableOpacity onPress={() => setReplyTo(null)} style={{ padding: 4 }}>
+                                    <Ionicons name="close" size={18} color={Colors.textMuted} />
+                                </TouchableOpacity>
+                            </View>
                         )}
+
+                        {/* Pill input */}
+                        <View style={[styles.inputPill, { backgroundColor: isDarkMode ? Colors.backgroundCard : '#F0F0F0', borderColor: Colors.border }]}>
+                            <TextInput
+                                ref={inputRef}
+                                style={[styles.input, { color: Colors.textPrimary }]}
+                                placeholder="Type a message..."
+                                placeholderTextColor={Colors.textMuted}
+                                value={inputText}
+                                onChangeText={setInputText}
+                                multiline
+                                maxLength={1000}
+                            />
+
+                            {/* Camera icon inside the pill (right) */}
+                            <TouchableOpacity style={{ paddingHorizontal: 6 }} onPress={() => setShowMediaMenu(true)}>
+                                <Ionicons name="camera-outline" size={22} color={Colors.textMuted} />
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                </KeyboardAvoidingView>
+
+                    {/* Circular Action Button outside the pill (right) */}
+                    <TouchableOpacity
+                        onPress={inputText.trim() ? sendTextMessage : () => isPro ? setShowContactMenu(true) : setShowProAlert(true)}
+                        style={styles.sendBtn}
+                    >
+                        <LinearGradient colors={[Colors.primary, Colors.primary + 'CC']} style={styles.sendGradient}>
+                            {inputText.trim() ? (
+                                <Ionicons name="send" size={16} color={isDarkMode ? '#111014' : '#FFF'} />
+                            ) : (
+                                <Ionicons name="person-add" size={18} color={isDarkMode ? '#111014' : '#FFF'} />
+                            )}
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </View>
             )}
+
+            </View>
 
             {/* Group Approval Overlay */}
             {isGroupPending && (
@@ -549,7 +751,7 @@ export default function ChatDetailScreen() {
                                 style={{ backgroundColor: Colors.primary, paddingVertical: 14, borderRadius: 12, alignItems: 'center' }}
                                 onPress={() => respondToGroupInvite(chatId, user?.id || '', 'approved')}
                             >
-                                <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 16 }}>Accept & Join</Text>
+                                <Text style={{ color: isDarkMode ? '#FFF' : '#111014', fontWeight: '700', fontSize: 16 }}>Accept & Join</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={{ backgroundColor: Colors.background, paddingVertical: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: Colors.border }}
@@ -564,6 +766,99 @@ export default function ChatDetailScreen() {
                     </View>
                 </View>
             )}
+
+            {/* ── Emoji Picker Modal (WhatsApp-style) ───────────────── */}
+            <Modal
+                visible={!!emojiPickerMsg || (!!contextMsg && false)}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setEmojiPickerMsg(null)}
+                statusBarTranslucent
+            >
+                <TouchableOpacity
+                    style={styles.emojiOverlay}
+                    activeOpacity={1}
+                    onPress={() => setEmojiPickerMsg(null)}
+                >
+                    <View style={[styles.emojiPickerCard, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
+                        {QUICK_EMOJIS.map(emoji => (
+                            <TouchableOpacity
+                                key={emoji}
+                                style={styles.emojiBtn}
+                                onPress={() => emojiPickerMsg && addReaction(emojiPickerMsg.id, emoji)}
+                            >
+                                <Text style={styles.emojiGlyph}>{emoji}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+
+            {/* ── Context Menu Modal (Reply / Copy / Delete) ─────────── */}
+            <Modal
+                visible={!!contextMsg}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setContextMsg(null)}
+                statusBarTranslucent
+            >
+                <TouchableOpacity
+                    style={styles.emojiOverlay}
+                    activeOpacity={1}
+                    onPress={() => setContextMsg(null)}
+                >
+                    <View style={{ alignItems: contextMsg && (contextMsg.senderId === user?.id || contextMsg.senderId === 'me') ? 'flex-end' : 'flex-start', paddingHorizontal: 16 }}>
+
+                        {/* Emoji quick-react strip */}
+                        <View style={[styles.emojiPickerCard, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border, marginBottom: 8 }]}>
+                            {QUICK_EMOJIS.map(emoji => (
+                                <TouchableOpacity
+                                    key={emoji}
+                                    style={styles.emojiBtn}
+                                    onPress={() => contextMsg && addReaction(contextMsg.id, emoji)}
+                                >
+                                    <Text style={styles.emojiGlyph}>{emoji}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        {/* Action menu */}
+                        <View style={[styles.contextMenu, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
+                            <TouchableOpacity
+                                style={[styles.contextMenuItem, { borderBottomColor: Colors.border }]}
+                                onPress={() => contextMsg && handleReply(contextMsg)}
+                            >
+                                <Ionicons name="return-down-back-outline" size={19} color={Colors.textPrimary} />
+                                <Text style={[styles.contextMenuText, { color: Colors.textPrimary }]}>Reply</Text>
+                            </TouchableOpacity>
+                            {contextMsg?.text && (
+                                <TouchableOpacity
+                                    style={[styles.contextMenuItem, { borderBottomColor: Colors.border }]}
+                                    onPress={() => contextMsg && handleCopyText(contextMsg)}
+                                >
+                                    <Ionicons name="copy-outline" size={19} color={Colors.textPrimary} />
+                                    <Text style={[styles.contextMenuText, { color: Colors.textPrimary }]}>Copy</Text>
+                                </TouchableOpacity>
+                            )}
+                            {(contextMsg?.senderId === user?.id || contextMsg?.senderId === 'me') && (
+                                <TouchableOpacity
+                                    style={styles.contextMenuItem}
+                                    onPress={() => {
+                                        setContextMsg(null);
+                                        Alert.alert('Delete message?', 'This will only remove it locally.', [
+                                            { text: 'Cancel', style: 'cancel' },
+                                            { text: 'Delete', style: 'destructive', onPress: () => {} },
+                                        ]);
+                                    }}
+                                >
+                                    <Ionicons name="trash-outline" size={19} color="#EF4444" />
+                                    <Text style={[styles.contextMenuText, { color: '#EF4444' }]}>Delete</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
 
             {/* Media Menu Modal */}
             <Modal visible={showMediaMenu} transparent animationType="slide" onRequestClose={() => setShowMediaMenu(false)} statusBarTranslucent>
@@ -819,7 +1114,7 @@ export default function ChatDetailScreen() {
                                 setShowReportModal(false);
                                 Alert.alert('Report Submitted', 'Thank you. We will review this report shortly.');
                             }}>
-                                <Text style={[styles.reportBtnText, { color: '#FFF' }]}>Submit</Text>
+                                <Text style={[styles.reportBtnText, { color: isDarkMode ? '#FFF' : '#111014' }]}>Submit</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -855,10 +1150,10 @@ export default function ChatDetailScreen() {
                                         onPress={sendMedia}
                                         disabled={isSending}
                                     >
-                                        <LinearGradient colors={['#FF6B35', '#FF3CAC']} style={styles.sendGradientFull}>
+                                        <LinearGradient colors={[Colors.primary, Colors.primary + 'CC']} style={styles.sendGradientFull}>
                                             {isSending
                                                 ? <ActivityIndicator color="#FFF" />
-                                                : <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 16 }}>Send</Text>
+                                                : <Text style={{ color: isDarkMode ? '#111014' : '#FFF', fontWeight: '800', fontSize: 16 }}>Send</Text>
                                             }
                                         </LinearGradient>
                                     </TouchableOpacity>
@@ -868,23 +1163,36 @@ export default function ChatDetailScreen() {
                     </Modal>
                 )
             }
-        </View>
+        </KeyboardAvoidingView>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 12, gap: 12, borderBottomWidth: 1 },
-    backBtn: { padding: 4 },
-    headerAvatar: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-    headerName: { fontSize: 16, fontWeight: '700' },
-    headerStatus: { fontSize: 11, marginTop: 1 },
-    moreBtn: { padding: 4 },
+    // Instagram-style header
+    header: {
+        flexDirection: 'row', alignItems: 'center',
+        paddingHorizontal: 8, paddingVertical: 10,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        gap: 4,
+    },
+    backBtn: { padding: 6 },
+    headerCenter: {
+        flex: 1, flexDirection: 'row', alignItems: 'center',
+        justifyContent: 'flex-start', gap: 10,
+    },
+    headerAvatar: {
+        width: 38, height: 38, borderRadius: 19,
+        justifyContent: 'center', alignItems: 'center',
+    },
+    headerName: { fontSize: 15, fontWeight: '700', textAlign: 'left' },
+    headerStatus: { fontSize: 11, textAlign: 'left' },
+    moreBtn: { padding: 8 },
     messageList: { paddingHorizontal: 12, paddingVertical: 12, paddingBottom: 40 },
     messageRow: { marginBottom: 12, flexDirection: 'row' },
     myRow: { justifyContent: 'flex-end' },
     otherRow: { justifyContent: 'flex-start' },
-    bubble: { maxWidth: '80%', paddingHorizontal: 14, paddingVertical: 12, borderRadius: 24 },
+    bubble: { paddingHorizontal: 14, paddingVertical: 12, borderRadius: 24 },
     sharePreviewCard: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -919,11 +1227,91 @@ const styles = StyleSheet.create({
     mediaImage: { width: 200, height: 200, borderRadius: 12 },
     videoThumb: { width: 200, height: 140, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
     contactCard: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 4, paddingVertical: 2 },
-    inputArea: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingVertical: 12, gap: 10, borderTopWidth: 1 },
-    attachBtn: { padding: 4, alignSelf: 'center', marginBottom: 4 },
-    input: { flex: 1, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 12, maxHeight: 120, fontSize: 16 },
-    sendBtn: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', alignSelf: 'center', marginLeft: 4 },
+    // ── Input area ──────────────────────────────────────────────────────────
+    inputArea: {
+        flexDirection: 'row', alignItems: 'flex-end',
+        paddingHorizontal: 10, paddingVertical: 8, gap: 8,
+        borderTopWidth: StyleSheet.hairlineWidth,
+    },
+    attachBtn: { padding: 6, alignSelf: 'flex-end', paddingBottom: 10 },
+    inputPill: {
+        flex: 1, flexDirection: 'row', alignItems: 'center',
+        borderRadius: 22, borderWidth: 1,
+        paddingHorizontal: 14, paddingVertical: 2,
+        minHeight: 44, maxHeight: 120,
+    },
+    input: { flex: 1, fontSize: 15, paddingVertical: 10, maxHeight: 110 },
+    sendBtn: {
+        width: 40, height: 40, borderRadius: 20,
+        overflow: 'hidden', alignSelf: 'flex-end', marginBottom: 2,
+    },
     sendGradient: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+    // ── Reply bar above input ────────────────────────────────────────────────
+    replyBar: {
+        flexDirection: 'row', alignItems: 'center',
+        paddingHorizontal: 14, paddingVertical: 8,
+        borderLeftWidth: 3, marginHorizontal: 10,
+        marginBottom: 4, borderRadius: 8,
+        gap: 8,
+    },
+    replyBarName: { fontSize: 12, fontWeight: '700', marginBottom: 2 },
+    replyBarText: { fontSize: 13 },
+
+    // ── Quoted block inside bubble ───────────────────────────────────────────
+    quotedBlock: {
+        borderLeftWidth: 3, borderRadius: 6,
+        paddingHorizontal: 10, paddingVertical: 6,
+        marginBottom: 6,
+    },
+    quotedName: { fontSize: 11, fontWeight: '700', marginBottom: 2 },
+    quotedText: { fontSize: 12, lineHeight: 16 },
+
+    // ── Emoji reactions below bubble ─────────────────────────────────────────
+    reactionsRow: {
+        flexDirection: 'row', flexWrap: 'wrap', gap: 4,
+        marginTop: 4, marginHorizontal: 12,
+    },
+    reactionBubble: {
+        flexDirection: 'row', alignItems: 'center',
+        paddingHorizontal: 7, paddingVertical: 3,
+        borderRadius: 12, borderWidth: 1, gap: 3,
+    },
+    reactionEmoji: { fontSize: 14 },
+    reactionCount: { fontSize: 11, fontWeight: '700' },
+
+    // ── Emoji picker overlay ─────────────────────────────────────────────────
+    emojiOverlay: {
+        flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'center', alignItems: 'center',
+    },
+    emojiPickerCard: {
+        flexDirection: 'row', alignItems: 'center',
+        paddingHorizontal: 10, paddingVertical: 10,
+        borderRadius: 50, borderWidth: StyleSheet.hairlineWidth,
+        gap: 4,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
+    },
+    emojiBtn: {
+        width: 44, height: 44, borderRadius: 22,
+        justifyContent: 'center', alignItems: 'center',
+    },
+    emojiGlyph: { fontSize: 26 },
+
+    // ── Context menu ─────────────────────────────────────────────────────────
+    contextMenu: {
+        borderRadius: 14, borderWidth: StyleSheet.hairlineWidth,
+        overflow: 'hidden', minWidth: 180,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
+    },
+    contextMenuItem: {
+        flexDirection: 'row', alignItems: 'center', gap: 12,
+        paddingHorizontal: 18, paddingVertical: 14,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    contextMenuText: { fontSize: 15, fontWeight: '500' },
     approvalCard: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 10 },
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
     bottomSheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40, borderWidth: 1 },

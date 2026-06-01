@@ -21,37 +21,42 @@ const PERSONALITY_TAGS = ['Foodie', 'Adventurous', 'Punctual', 'Chatty', 'Chill'
 
 // ── Reusable bits ──
 const SectionTitle = ({ children, style }: { children: React.ReactNode, style?: any }) => {
+    const { currentTheme } = useThemeStore();
     return (
-        <Text style={[styles.sectionTitle, { color: '#FFFFFF' }, style]}>{children}</Text>
+        <Text style={[styles.sectionTitle, { color: currentTheme.Colors.textPrimary }, style]}>{children}</Text>
     );
 };
 
 const FilledInput = (props: any) => {
     const { currentTheme } = useThemeStore();
     return (
-        <View style={styles.inputWrapper}>
+        <View style={[styles.inputWrapper, { backgroundColor: currentTheme.Colors.backgroundInput }]}>
             <TextInput
                 {...props}
                 style={[styles.input, { color: currentTheme.Colors.textPrimary }, props.multiline && styles.textArea, props.style]}
-                placeholderTextColor="#938F99"
+                placeholderTextColor={currentTheme.Colors.textMuted}
                 textAlignVertical={props.multiline ? 'top' : 'center'}
             />
         </View>
     );
 };
 
-const Chip = ({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) => (
-    <TouchableOpacity
-        onPress={onPress}
-        activeOpacity={0.85}
-        style={[
-            styles.chip,
-            active ? { backgroundColor: 'transparent', borderColor: '#FFB534', borderWidth: 1 } : { backgroundColor: '#1D1B22', borderWidth: 1, borderColor: 'transparent' },
-        ]}
-    >
-        <Text style={[styles.chipText, { color: active ? '#FFB534' : '#FFFFFF' }]}>{label}</Text>
-    </TouchableOpacity>
-);
+const Chip = ({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) => {
+    const { currentTheme } = useThemeStore();
+    const { Colors } = currentTheme;
+    return (
+        <TouchableOpacity
+            onPress={onPress}
+            activeOpacity={0.85}
+            style={[
+                styles.chip,
+                active ? { backgroundColor: 'transparent', borderColor: Colors.primary, borderWidth: 1 } : { backgroundColor: Colors.backgroundInput, borderWidth: 1, borderColor: 'transparent' },
+            ]}
+        >
+            <Text style={[styles.chipText, { color: active ? Colors.primary : Colors.textPrimary }]}>{label}</Text>
+        </TouchableOpacity>
+    );
+};
 
 const LinkRow = ({ label, value, onChangeText, placeholder }: any) => {
     const { currentTheme } = useThemeStore();
@@ -63,7 +68,7 @@ const LinkRow = ({ label, value, onChangeText, placeholder }: any) => {
                 onChangeText={onChangeText}
                 placeholder={placeholder}
                 placeholderTextColor={currentTheme.Colors.textMuted}
-                style={[styles.linkInput, { color: currentTheme.Colors.primary }]}
+                style={[styles.linkInput, { color: currentTheme.Colors.textPrimary }]}
                 autoCapitalize="none"
             />
         </View>
@@ -79,6 +84,7 @@ export default function EditProfileScreen() {
 
     const [name, setName] = useState(user?.name || '');
     const [bio, setBio] = useState(user?.bio || '');
+    const [slogan, setSlogan] = useState(user?.slogan || '');
     const [profession, setProfession] = useState(user?.profession || '');
     const [city, setCity] = useState(user?.city || '');
     const [email, setEmail] = useState(user?.email || '');
@@ -182,6 +188,7 @@ export default function EditProfileScreen() {
                 ...user,
                 name: name.trim(),
                 bio: bio.trim(),
+                slogan: slogan.trim(),
                 profession: profession.trim(),
                 city: city.trim(),
                 email: email.trim(),
@@ -212,8 +219,8 @@ export default function EditProfileScreen() {
             {/* Header */}
             <View style={styles.headerRow}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Ionicons name="arrow-back" size={24} color={'#ffb534'} />
-                    <Text style={{ fontSize: 14, fontWeight: '500', color: '#FFFFFF' }}>Edit Profile</Text>
+                    <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+                    <Text style={{ fontSize: 14, fontWeight: '500', color: Colors.textPrimary }}>Edit Profile</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleSave} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                     <Text style={[styles.saveText, { color: Colors.primary }]}>Save</Text>
@@ -259,6 +266,15 @@ export default function EditProfileScreen() {
                     />
                     <Text style={[styles.charCount, { color: bio.length > 180 ? Colors.error : Colors.textMuted }]}>{bio.length}/200</Text>
                 </View>
+                <View style={styles.fieldGroup}>
+                    <FilledInput
+                        value={slogan}
+                        onChangeText={setSlogan}
+                        placeholder="e.g. Biryani connoisseur and weekend chef."
+                        maxLength={100}
+                    />
+                    <Text style={[styles.charCount, { color: slogan.length > 90 ? Colors.error : Colors.textMuted }]}>{slogan.length}/100</Text>
+                </View>
                 <SectionTitle style={{ marginTop: 4 }}>Work & Location</SectionTitle>
                 <View style={styles.fieldGroup}>
                     <FilledInput value={profession} onChangeText={setProfession} placeholder="e.g. Software Engineer" />
@@ -279,7 +295,7 @@ export default function EditProfileScreen() {
 
                 {/* Links */}
                 <SectionTitle>Social Media</SectionTitle>
-                <View style={[styles.linksCard, { backgroundColor: Colors.backgroundElevated }]}>
+                <View style={[styles.linksCard, { backgroundColor: Colors.backgroundInput }]}>
                     <LinkRow label="WHATSAPP" value={whatsappNumber} onChangeText={setWhatsappNumber} placeholder="+91 9876543210" />
                     <View style={[styles.divider, { backgroundColor: Colors.border }]} />
                     <LinkRow label="INSTAGRAM" value={instagramId} onChangeText={setInstagramId} placeholder="yourhandle" />
@@ -304,8 +320,8 @@ export default function EditProfileScreen() {
                         value={customCuisineText}
                         onChangeText={setCustomCuisineText}
                         placeholder="+ Add custom cuisine"
-                        placeholderTextColor="#938F99"
-                        style={[styles.input, { flex: 1, backgroundColor: '#1D1B22', color: Colors.textPrimary, paddingHorizontal: 14, borderRadius: 6, minHeight: 40 }]}
+                        placeholderTextColor={Colors.textMuted}
+                        style={[styles.input, { flex: 1, backgroundColor: Colors.backgroundInput, color: Colors.textPrimary, paddingHorizontal: 14, borderRadius: 6, minHeight: 40 }]}
                         onSubmitEditing={addCustomCuisine}
                     />
                     <TouchableOpacity onPress={addCustomCuisine} style={{ backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 6 }}>
@@ -325,7 +341,7 @@ export default function EditProfileScreen() {
                     )}
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 15, marginTop: 4 }}>
-                    <TextInput value={customSocialPrefText} onChangeText={setCustomSocialPrefText} placeholder="+ Add custom social preference" placeholderTextColor="#938F99" style={[styles.input, { flex: 1, backgroundColor: '#1D1B22', color: Colors.textPrimary, paddingHorizontal: 14, borderRadius: 6, minHeight: 40 }]} onSubmitEditing={addCustomSocialPref} />
+                    <TextInput value={customSocialPrefText} onChangeText={setCustomSocialPrefText} placeholder="+ Add custom social preference" placeholderTextColor={Colors.textMuted} style={[styles.input, { flex: 1, backgroundColor: Colors.backgroundInput, color: Colors.textPrimary, paddingHorizontal: 14, borderRadius: 6, minHeight: 40 }]} onSubmitEditing={addCustomSocialPref} />
                     <TouchableOpacity onPress={addCustomSocialPref} style={{ backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 6 }}><Text style={{ color: '#111014', fontWeight: '800' }}>Add</Text></TouchableOpacity>
                 </View>
 
@@ -342,7 +358,7 @@ export default function EditProfileScreen() {
                     ))}
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 15, marginTop: 4 }}>
-                    <TextInput value={customVibeText} onChangeText={setCustomVibeText} placeholder="+ Add custom vibe" placeholderTextColor="#938F99" style={[styles.input, { flex: 1, backgroundColor: '#1D1B22', color: Colors.textPrimary, paddingHorizontal: 14, borderRadius: 6, minHeight: 40 }]} onSubmitEditing={addCustomVibe} />
+                    <TextInput value={customVibeText} onChangeText={setCustomVibeText} placeholder="+ Add custom vibe" placeholderTextColor={Colors.textMuted} style={[styles.input, { flex: 1, backgroundColor: Colors.backgroundInput, color: Colors.textPrimary, paddingHorizontal: 14, borderRadius: 6, minHeight: 40 }]} onSubmitEditing={addCustomVibe} />
                     <TouchableOpacity onPress={addCustomVibe} style={{ backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 6 }}><Text style={{ color: '#111014', fontWeight: '800' }}>Add</Text></TouchableOpacity>
                 </View>
 
@@ -359,7 +375,7 @@ export default function EditProfileScreen() {
                     ))}
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 15, marginTop: 4 }}>
-                    <TextInput value={customDietaryText} onChangeText={setCustomDietaryText} placeholder="+ Add custom dietary" placeholderTextColor="#938F99" style={[styles.input, { flex: 1, backgroundColor: '#1D1B22', color: Colors.textPrimary, paddingHorizontal: 14, borderRadius: 6, minHeight: 40 }]} onSubmitEditing={addCustomDietary} />
+                    <TextInput value={customDietaryText} onChangeText={setCustomDietaryText} placeholder="+ Add custom dietary" placeholderTextColor={Colors.textMuted} style={[styles.input, { flex: 1, backgroundColor: Colors.backgroundInput, color: Colors.textPrimary, paddingHorizontal: 14, borderRadius: 6, minHeight: 40 }]} onSubmitEditing={addCustomDietary} />
                     <TouchableOpacity onPress={addCustomDietary} style={{ backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 6 }}><Text style={{ color: '#111014', fontWeight: '800' }}>Add</Text></TouchableOpacity>
                 </View>
 
@@ -382,7 +398,7 @@ export default function EditProfileScreen() {
                     ))}
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 15, marginTop: 4 }}>
-                    <TextInput value={customLanguageText} onChangeText={setCustomLanguageText} placeholder="+ Add custom language" placeholderTextColor="#938F99" style={[styles.input, { flex: 1, backgroundColor: '#1D1B22', color: Colors.textPrimary, paddingHorizontal: 14, borderRadius: 6, minHeight: 40 }]} onSubmitEditing={addCustomLanguage} />
+                    <TextInput value={customLanguageText} onChangeText={setCustomLanguageText} placeholder="+ Add custom language" placeholderTextColor={Colors.textMuted} style={[styles.input, { flex: 1, backgroundColor: Colors.backgroundInput, color: Colors.textPrimary, paddingHorizontal: 14, borderRadius: 6, minHeight: 40 }]} onSubmitEditing={addCustomLanguage} />
                     <TouchableOpacity onPress={addCustomLanguage} style={{ backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 6 }}><Text style={{ color: '#111014', fontWeight: '800' }}>Add</Text></TouchableOpacity>
                 </View>
 
@@ -446,7 +462,7 @@ const styles = StyleSheet.create({
     fieldGroup: { marginBottom: 5 },
     fieldLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginBottom: 8 },
     
-    inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1D1B22', borderRadius: 6, paddingHorizontal: 14, minHeight: 50 },
+    inputWrapper: { flexDirection: 'row', alignItems: 'center', borderRadius: 6, paddingHorizontal: 14, minHeight: 50 },
     input: { flex: 1, fontSize: 14, fontWeight: '400' },
     textArea: { height: 90, paddingTop: 12 },
     charCount: { fontSize: 11, textAlign: 'right', marginTop: 4 },

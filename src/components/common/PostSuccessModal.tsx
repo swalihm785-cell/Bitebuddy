@@ -31,6 +31,7 @@ export const PostSuccessModal: React.FC<PostSuccessModalProps> = ({
             transparent={true}
             animationType="fade"
             onRequestClose={onClose}
+            statusBarTranslucent
         >
             <View style={styles.overlay}>
                 <View style={[styles.content, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>

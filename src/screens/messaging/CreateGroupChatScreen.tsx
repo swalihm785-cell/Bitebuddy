@@ -122,7 +122,10 @@ export default function CreateGroupChatScreen() {
                         {creating ? (
                             <ActivityIndicator size="small" color="#FFF" />
                         ) : (
-                            <Text style={[styles.createBtnText, { opacity: (groupName.trim() && selectedIds.size >= 1) ? 1 : 0.5 }]}>Create</Text>
+                            <Text style={[styles.createBtnText, {
+                                color: (groupName.trim() && selectedIds.size >= 1) ? (isDarkMode ? '#FFF' : '#111014') : Colors.textMuted,
+                                opacity: (groupName.trim() && selectedIds.size >= 1) ? 1 : 0.5
+                            }]}>Create</Text>
                         )}
                     </TouchableOpacity>
                 </View>
@@ -233,7 +236,7 @@ export default function CreateGroupChatScreen() {
                                 backgroundColor: isSelected ? Colors.primary : 'transparent',
                                 borderColor: isSelected ? Colors.primary : Colors.textMuted + '60'
                             }]}>
-                                {isSelected && <Ionicons name="checkmark" size={14} color="#FFF" />}
+                                {isSelected && <Ionicons name="checkmark" size={14} color={isDarkMode ? '#FFF' : '#111014'} />}
                             </View>
                         </TouchableOpacity>
                     );

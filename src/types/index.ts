@@ -12,6 +12,7 @@ export interface User {
     age?: number;
     gender?: string;
     bio?: string;
+    slogan?: string;
     photoURL?: string;
     cuisineInterests: string[];
     dietaryRestrictions: string[];
@@ -225,7 +226,7 @@ export interface Badge {
 export interface Notification {
     id: string;
     userId: string;
-    type: 'join_request' | 'request_accepted' | 'request_rejected' | 'participant_left' | 'new_message' | 'review' | 'event' | 'follow_request' | 'follow_accepted' | 'new_meal' | 'report' | 'welcome' | 'system' | 'invite_received' | 'invite_accepted' | 'invite_rejected' | 'review_request';
+    type: 'join_request' | 'request_accepted' | 'request_rejected' | 'participant_left' | 'new_message' | 'review' | 'event' | 'follow_request' | 'follow_accepted' | 'new_meal' | 'report' | 'welcome' | 'system' | 'invite_received' | 'invite_accepted' | 'invite_rejected' | 'review_request' | 'payment_saved' | 'payment_success' | 'goal_achieved';
     title: string;
     body: string;
     data?: Record<string, string>;

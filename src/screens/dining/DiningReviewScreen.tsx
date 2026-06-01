@@ -5,22 +5,25 @@ import {
     KeyboardAvoidingView, Dimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as ImagePicker from 'expo-image-picker';
-import { BlurView } from 'expo-blur';
+import Svg, { Path } from 'react-native-svg';
 
 import { useAuthStore } from '../../store/useAuthStore';
 import { usePostStore } from '../../store/usePostStore';
 import { useReviewStore } from '../../store/useReviewStore';
 import { useHostReputationStore } from '../../store/useHostReputationStore';
-import { useThemeStore } from '../../store/useThemeStore';
 import { RootStackParamList, DiningReview } from '../../types';
 import { AnimatedStarRow } from '../../components/common/AnimatedStarRow';
+import BrandBar from '../../components/common/BrandBar';
 
 const { width } = Dimensions.get('window');
+
+// Fork icon from the Figma design (top icon)
+const FORK_ICON_PATH =
+    'M3.48235 30.1944L4.20066 16.4882C2.94572 16.072 1.91507 15.317 1.10871 14.2233C0.302343 13.1296 -0.0642046 11.8837 0.00906575 10.4856L0.558594 0L3.55448 0.157008L3.00496 10.6426L4.5029 10.7211L5.05243 0.235512L8.04832 0.39252L7.49879 10.8781L8.99674 10.9566L9.54626 0.471024L12.5422 0.628032L11.9926 11.1136C11.9194 12.5117 11.4246 13.7125 10.5083 14.7159C9.59204 15.7193 8.48812 16.3624 7.19655 16.6452L6.47824 30.3514L3.48235 30.1944ZM18.4618 30.9795L19.0898 18.9959L14.596 18.7604L15.1455 8.27476C15.2541 6.20261 16.0769 4.47455 17.614 3.0906C19.151 1.70664 20.9556 1.06896 23.0278 1.17756L21.4577 31.1365L18.4618 30.9795Z';
 
 const TASTE_POINT_OPTIONS: Array<{ value: 0 | 5 | 10 | 25; label: string; icon: string }> = [
     { value: 0, label: 'None', icon: '—' },
@@ -37,13 +40,10 @@ export default function DiningReviewScreen() {
     const { posts } = usePostStore();
     const { addReview } = useReviewStore();
     const { awardTastePoints, updateRating } = useHostReputationStore();
-    const { currentTheme, isDarkMode } = useThemeStore();
-    const { Colors, Spacing, BorderRadius, FontSize } = currentTheme;
     const insets = useSafeAreaInsets();
 
     const post = posts.find((p) => p.id === postId);
 
-    // Rating state
     const [overallRating, setOverallRating] = useState(0);
     const [foodQuality, setFoodQuality] = useState(0);
     const [atmosphere, setAtmosphere] = useState(0);
@@ -69,8 +69,8 @@ export default function DiningReviewScreen() {
 
     if (!post) {
         return (
-            <SafeAreaView style={[styles.container, { backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-                <Text style={{ color: Colors.textPrimary }}>Post not found.</Text>
+            <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <Text style={{ color: '#E5E2E1' }}>Post not found.</Text>
             </SafeAreaView>
         );
     }
@@ -127,141 +127,127 @@ export default function DiningReviewScreen() {
         navigation.replace('ReviewSuccess', { hostId: post.hostId, postId: post.id });
     };
 
-    const SectionCard = ({ index, children }: { index: number; children: React.ReactNode }) => (
-        <Animated.View style={{ opacity: sectionFades[index] }}>
-            <View style={[styles.sectionCard, { backgroundColor: Colors.backgroundElevated, borderColor: Colors.border }]}>
-                {children}
-            </View>
-        </Animated.View>
-    );
+    const RATING_LABELS = ['', '😐 Poor', '🙂 Fair', '😊 Good', '😍 Great', '🤩 Outstanding!'];
 
     return (
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <View style={[styles.container, { backgroundColor: Colors.background }]}>
-                {/* Header */}
-                <View style={[styles.header, { paddingTop: Math.max(insets.top, 16), borderBottomColor: Colors.border }]}>
-                    {Platform.OS === 'ios' && (
-                        <BlurView tint={isDarkMode ? 'dark' : 'light'} intensity={60} style={StyleSheet.absoluteFill} />
-                    )}
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                        <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+            <View style={styles.container}>
+                <BrandBar />
+
+                {/* Header Row */}
+                <View style={styles.headerRow}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtnRow} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                        <Ionicons name="arrow-back" size={24} color="#FFD700" />
+                        <Text style={styles.headerTextTitle}>Leave a Review</Text>
                     </TouchableOpacity>
-                    <View style={styles.headerCenter}>
-                        <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>Leave a Review</Text>
-                        <Text style={[styles.headerSub, { color: Colors.textMuted }]} numberOfLines={1}>
-                            {post.title}
-                        </Text>
-                    </View>
-                    <View style={{ width: 40 }} />
                 </View>
 
                 <ScrollView
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 100 }]}
+                    contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]}
                 >
-                    {/* Hero banner */}
-                    <View
-                        style={[styles.heroBanner, { borderWidth: 2, borderColor: '#FFB534', backgroundColor: 'transparent' }]}
-                    >
-                        <Text style={styles.heroEmoji}>🍽️</Text>
-                        <Text style={[styles.heroTitle, { color: Colors.textPrimary }]}>How was your dining experience?</Text>
-                        <Text style={[styles.heroSub, { color: Colors.textMuted }]}>Your feedback helps the community grow</Text>
+                    {/* Hero section matching Figma layout */}
+                    <View style={styles.heroSection}>
+                        <View style={styles.heroTextCol}>
+                            <Text style={styles.heroTitle}>How was your dining experience?</Text>
+                            <Text style={styles.heroSub}>
+                                Your feedback helps the community grow and discover hidden gems.
+                            </Text>
+                        </View>
+                        <View style={styles.heroIconWrap}>
+                            <Svg width={24} height={32} viewBox="0 0 24 32" fill="none">
+                                <Path d={FORK_ICON_PATH} fill="#FFD700" />
+                            </Svg>
+                        </View>
                     </View>
 
                     {/* Section 1 — Overall Rating */}
-                    <SectionCard index={0}>
-                        <Text style={[styles.sectionLabel, { color: Colors.textPrimary }]}>Overall Experience</Text>
-                        <Text style={[styles.sectionSub, { color: Colors.textMuted }]}>
-                            How would you rate this dining overall?
-                        </Text>
+                    <Animated.View style={[styles.sectionContainer, { opacity: sectionFades[0] }]}>
+                        <Text style={styles.sectionHeading}>Overall Experience</Text>
+                        <Text style={styles.sectionDesc}>How would you rate this dining overall?</Text>
                         <View style={styles.bigStarRow}>
                             <AnimatedStarRow value={overallRating} onChange={setOverallRating} size={40} />
                         </View>
                         {overallRating > 0 && (
-                            <Text style={[styles.ratingLabel, { color: Colors.primary }]}>
-                                {['', '😐 Poor', '🙂 Fair', '😊 Good', '😍 Great', '🤩 Outstanding!'][overallRating]}
+                            <Text style={styles.ratingLabel}>
+                                {RATING_LABELS[overallRating]}
                             </Text>
                         )}
-                    </SectionCard>
+                    </Animated.View>
 
-                    {/* Section 2 — Sub-ratings */}
-                    <SectionCard index={1}>
-                        <Text style={[styles.sectionLabel, { color: Colors.textPrimary }]}>Detailed Ratings</Text>
+                    <View style={styles.flatDivider} />
 
-                        <View style={styles.subRatingItem}>
-                            <View style={styles.subRatingLabelRow}>
-                                <Text style={styles.subRatingIcon}>🍽️</Text>
-                                <Text style={[styles.subRatingText, { color: Colors.textSecondary }]}>Food Quality</Text>
-                            </View>
-                            <AnimatedStarRow value={foodQuality} onChange={setFoodQuality} size={26} />
-                        </View>
-
-                        <View style={[styles.divider, { backgroundColor: Colors.border }]} />
+                    {/* Section 2 — Detailed Ratings */}
+                    <Animated.View style={[styles.sectionContainer, { opacity: sectionFades[1] }]}>
+                        <Text style={styles.sectionHeading}>Detailed Ratings</Text>
 
                         <View style={styles.subRatingItem}>
                             <View style={styles.subRatingLabelRow}>
-                                <Text style={styles.subRatingIcon}>🌟</Text>
-                                <Text style={[styles.subRatingText, { color: Colors.textSecondary }]}>Atmosphere</Text>
+                                <View style={[styles.subRatingIconWrap, { backgroundColor: 'rgba(255, 215, 0, 0.08)' }]}>
+                                    <Ionicons name="restaurant" size={20} color="#FFD700" />
+                                </View>
+                                <Text style={styles.subRatingText}>Food Quality</Text>
                             </View>
-                            <AnimatedStarRow value={atmosphere} onChange={setAtmosphere} size={26} />
+                            <AnimatedStarRow value={foodQuality} onChange={setFoodQuality} size={20} />
                         </View>
-
-                        <View style={[styles.divider, { backgroundColor: Colors.border }]} />
 
                         <View style={styles.subRatingItem}>
                             <View style={styles.subRatingLabelRow}>
-                                <Text style={styles.subRatingIcon}>🧑‍🍳</Text>
-                                <Text style={[styles.subRatingText, { color: Colors.textSecondary }]}>Host Experience</Text>
+                                <View style={[styles.subRatingIconWrap, { backgroundColor: 'rgba(255, 255, 255, 0.08)' }]}>
+                                    <Ionicons name="sparkles" size={20} color="#E5E2E1" />
+                                </View>
+                                <Text style={styles.subRatingText}>Atmosphere</Text>
                             </View>
-                            <AnimatedStarRow value={hostExperience} onChange={setHostExperience} size={26} />
+                            <AnimatedStarRow value={atmosphere} onChange={setAtmosphere} size={20} />
                         </View>
-                    </SectionCard>
+                    </Animated.View>
+
+                    <View style={styles.flatDivider} />
 
                     {/* Section 3 — Taste Points (hidden for host) */}
                     {user?.id !== post?.hostId && (
-                    <SectionCard index={2}>
-                        <Text style={[styles.sectionLabel, { color: Colors.textPrimary }]}>Award Taste Points to Host</Text>
-                        <Text style={[styles.sectionSub, { color: Colors.textMuted }]}>
-                            Reward the host with Taste Points for a great experience
-                        </Text>
-                        <View style={styles.pointsGrid}>
-                            {TASTE_POINT_OPTIONS.map((opt) => {
-                                const selected = tastePoints === opt.value;
-                                return (
-                                    <TouchableOpacity
-                                        key={opt.value}
-                                        onPress={() => setTastePoints(opt.value)}
-                                        style={[
-                                            styles.pointsOption,
-                                            {
-                                                borderColor: selected ? Colors.primary : Colors.border,
-                                                backgroundColor: selected ? Colors.primary + '18' : Colors.backgroundCard,
-                                            },
-                                        ]}
-                                        activeOpacity={0.75}
-                                    >
-                                        <Text style={{ fontSize: 22 }}>{opt.icon}</Text>
-                                        <Text style={[styles.pointsLabel, { color: selected ? Colors.primary : Colors.textSecondary }]}>
-                                            {opt.label}
-                                        </Text>
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
-                    </SectionCard>
+                        <>
+                            <Animated.View style={[styles.sectionContainer, { opacity: sectionFades[2] }]}>
+                                <Text style={styles.sectionHeading}>Award Taste Points to Host</Text>
+                                <Text style={styles.sectionDesc}>
+                                    Reward the host with Taste Points for a great experience
+                                </Text>
+                                <View style={styles.pointsGrid}>
+                                    {TASTE_POINT_OPTIONS.map((opt) => {
+                                        const selected = tastePoints === opt.value;
+                                        return (
+                                            <TouchableOpacity
+                                                key={opt.value}
+                                                onPress={() => setTastePoints(opt.value)}
+                                                style={[
+                                                    styles.pointsOption,
+                                                    selected && styles.pointsOptionSelected,
+                                                ]}
+                                                activeOpacity={0.75}
+                                            >
+                                                <Text style={{ fontSize: 22 }}>{opt.icon}</Text>
+                                                <Text style={[
+                                                    styles.pointsLabel,
+                                                    { color: selected ? '#FFD700' : '#9CA3AF' },
+                                                ]}>
+                                                    {opt.label}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </View>
+                            </Animated.View>
+                            <View style={styles.flatDivider} />
+                        </>
                     )}
 
-                    {/* Section 4 — Written Review */}
-                    <SectionCard index={3}>
-                        <Text style={[styles.sectionLabel, { color: Colors.textPrimary }]}>Write a Review</Text>
-                        <Text style={[styles.sectionSub, { color: Colors.textMuted }]}>Optional — share your experience in words</Text>
+                    {/* Section 4 — Additional Thoughts */}
+                    <Animated.View style={[styles.sectionContainer, { opacity: sectionFades[3] }]}>
+                        <Text style={styles.sectionHeading}>Additional Thoughts</Text>
                         <TextInput
-                            style={[
-                                styles.textInput,
-                                { backgroundColor: Colors.backgroundCard, borderColor: Colors.border, color: Colors.textPrimary },
-                            ]}
-                            placeholder="What made this dining experience memorable? Any highlights or suggestions?"
-                            placeholderTextColor={Colors.textMuted}
+                            style={styles.textInput}
+                            placeholder="Tell us more about the highlight of your night..."
+                            placeholderTextColor="#555"
                             value={reviewText}
                             onChangeText={setReviewText}
                             multiline
@@ -269,19 +255,19 @@ export default function DiningReviewScreen() {
                             textAlignVertical="top"
                             maxLength={500}
                         />
-                        <Text style={[styles.charCount, { color: Colors.textMuted }]}>{reviewText.length}/500</Text>
-                    </SectionCard>
+                        <Text style={styles.charCount}>{reviewText.length}/500</Text>
+                    </Animated.View>
 
                     {/* Section 5 — Photos */}
-                    <SectionCard index={4}>
-                        <Text style={[styles.sectionLabel, { color: Colors.textPrimary }]}>Add Photos</Text>
-                        <Text style={[styles.sectionSub, { color: Colors.textMuted }]}>Optional — up to 4 photos</Text>
+                    <Animated.View style={[styles.sectionContainer, { opacity: sectionFades[4] }]}>
+                        <Text style={styles.sectionHeading}>Add Photos</Text>
+                        <Text style={styles.sectionDesc}>Optional — up to 4 photos</Text>
                         <View style={styles.photoGrid}>
                             {photos.map((uri, i) => (
                                 <View key={i} style={styles.photoWrapper}>
                                     <Image source={{ uri }} style={styles.photo} />
                                     <TouchableOpacity
-                                        style={[styles.removePhoto, { backgroundColor: Colors.error }]}
+                                        style={styles.removePhoto}
                                         onPress={() => setPhotos((p) => p.filter((_, idx) => idx !== i))}
                                     >
                                         <Ionicons name="close" size={12} color="#FFF" />
@@ -289,32 +275,32 @@ export default function DiningReviewScreen() {
                                 </View>
                             ))}
                             {photos.length < 4 && (
-                                <TouchableOpacity
-                                    onPress={pickImages}
-                                    style={[styles.addPhoto, { borderColor: Colors.border, backgroundColor: Colors.backgroundCard }]}
-                                >
-                                    <Ionicons name="camera-outline" size={28} color={Colors.textMuted} />
-                                    <Text style={{ color: Colors.textMuted, fontSize: 12, marginTop: 4 }}>Add Photo</Text>
+                                <TouchableOpacity onPress={pickImages} style={styles.addPhoto}>
+                                    <Ionicons name="camera-outline" size={28} color="#555" />
+                                    <Text style={{ color: '#9CA3AF', fontSize: 12, marginTop: 4 }}>Add Photo</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
-                    </SectionCard>
+                    </Animated.View>
                 </ScrollView>
 
                 {/* Submit CTA */}
-                <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20), borderTopColor: Colors.border }]}>
+                <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
                     <TouchableOpacity
                         onPress={handleSubmit}
                         disabled={submitting}
                         activeOpacity={0.85}
-                        style={{ borderRadius: 6, overflow: 'hidden' }}
+                        style={[
+                            styles.submitBtn,
+                            { backgroundColor: overallRating > 0 ? '#FFD700' : '#2A2A2A' },
+                        ]}
                     >
-                        <View style={[styles.submitBtn, { backgroundColor: overallRating > 0 ? '#ffb534' : Colors.textMuted }]}>
-                            <Text style={styles.submitText}>
-                                {submitting ? 'Submitting...' : 'SUBMIT REVIEW'}
-                            </Text>
-                            {!submitting && <Ionicons name="send" size={18} color="#000000" style={{ marginLeft: 8 }} />}
-                        </View>
+                        <Text style={[
+                            styles.submitText,
+                            { color: overallRating > 0 ? '#1C1B1B' : '#555' },
+                        ]}>
+                            {submitting ? 'SUBMITTING...' : 'SUBMIT REVIEW'}
+                        </Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -323,14 +309,37 @@ export default function DiningReviewScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1 },
+    container: {
+        flex: 1,
+        backgroundColor: '#111111',
+    },
+
+    // ── Header ──
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        paddingBottom: 16,
+    },
+    backBtnRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    headerTextTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#E5E2E1',
+        fontFamily: 'SF-Pro-Medium',
+    },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 16,
         paddingBottom: 12,
         borderBottomWidth: 1,
-        overflow: 'hidden',
+        borderBottomColor: '#222',
     },
     backBtn: {
         width: 40,
@@ -338,41 +347,141 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    headerCenter: { flex: 1, alignItems: 'center' },
-    headerTitle: { fontSize: 17, fontWeight: '800' },
-    headerSub: { fontSize: 12, marginTop: 2 },
-    scrollContent: { paddingHorizontal: 20, paddingTop: 0, gap: 16 },
-    heroBanner: {
-        borderRadius: 24,
-        padding: 28,
-        alignItems: 'center',
-        marginTop: 20,
-        marginBottom: 4,
-        gap: 8,
+    headerTitle: {
+        flex: 1,
+        textAlign: 'center',
+        fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+        fontSize: 24,
+        fontWeight: '600',
+        color: '#E5E2E1',
+        lineHeight: 30,
     },
-    heroEmoji: { fontSize: 48 },
-    heroTitle: { fontSize: 20, fontWeight: '900', color: '#FFF', textAlign: 'center' },
-    heroSub: { fontSize: 14, color: 'rgba(255,255,255,0.8)', textAlign: 'center' },
-    sectionCard: {
-        borderRadius: 24,
+
+    // ── Scroll content ──
+    scrollContent: {
+        paddingHorizontal: 20,
+        paddingTop: 12,
+        gap: 10,
+    },
+
+    // ── Hero section ──
+    heroSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+        paddingBottom: 10,
+    },
+    heroIconWrap: {
+        width: 64,
+        height: 64,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#1E1E1E',
+        borderRadius: 16,
         borderWidth: 1,
-        padding: 20,
+        borderColor: '#2A2A2A',
+    },
+    heroTextCol: {
+        flex: 1,
+        gap: 6,
+    },
+    heroTitle: {
+        fontFamily: 'SF-Pro-Bold',
+        fontSize: 24,
+        fontWeight: '600',
+        color: '#E5E2E1',
+        lineHeight: 30,
+    },
+    heroSub: {
+        fontFamily: 'SF-Pro',
+        fontSize: 14,
+        fontWeight: '400',
+        color: '#9CA3AF',
+        lineHeight: 18,
+    },
+
+    // ── Section containers (Flat layout) ──
+    sectionContainer: {
+        paddingVertical: 12,
         gap: 12,
     },
-    sectionLabel: { fontSize: 17, fontWeight: '900' },
-    sectionSub: { fontSize: 13, lineHeight: 18, marginTop: -4 },
-    bigStarRow: { flexDirection: 'row', justifyContent: 'center', marginVertical: 8 },
-    ratingLabel: { textAlign: 'center', fontSize: 15, fontWeight: '700' },
+    sectionCard: {
+        backgroundColor: '#1A1A1A',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#2A2A2A',
+        padding: 20,
+        gap: 14,
+    },
+    sectionHeading: {
+        fontFamily: 'SF-Pro-Bold',
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#E5E2E1',
+        lineHeight: 28,
+        letterSpacing: -0.5,
+    },
+    sectionDesc: {
+        fontFamily: 'SF-Pro',
+        fontSize: 14,
+        fontWeight: '400',
+        color: '#B9CCB2',
+        lineHeight: 20,
+        marginTop: -6,
+    },
+
+    // ── Star row ──
+    bigStarRow: {
+        flexDirection: 'row',
+        justifyContent: 'flex-start',
+        paddingVertical: 4,
+    },
+    ratingLabel: {
+        textAlign: 'left',
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#FFD700',
+    },
+
+    // ── Sub-ratings ──
     subRatingItem: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: 4,
+        paddingVertical: 6,
     },
-    subRatingLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    subRatingIcon: { fontSize: 20 },
-    subRatingText: { fontSize: 14, fontWeight: '600' },
-    divider: { height: 1, marginVertical: 4 },
+    subRatingLabelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    subRatingIconWrap: {
+        width: 44,
+        height: 44,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    subRatingIcon: { fontSize: 18 },
+    subRatingText: {
+        fontFamily: 'SF-Pro',
+        fontSize: 16,
+        fontWeight: '400',
+        color: '#E5E2E1',
+        lineHeight: 20,
+    },
+    divider: {
+        height: 1,
+        backgroundColor: '#2A2A2A',
+        marginVertical: 2,
+    },
+    flatDivider: {
+        height: 1,
+        backgroundColor: '#2A2A2A',
+        marginVertical: 10,
+    },
+
+    // ── Taste points ──
     pointsGrid: {
         flexDirection: 'row',
         gap: 10,
@@ -383,20 +492,42 @@ const styles = StyleSheet.create({
         minWidth: 70,
         alignItems: 'center',
         paddingVertical: 14,
-        borderRadius: 16,
-        borderWidth: 2,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#2A2A2A',
+        backgroundColor: '#1E1E1E',
         gap: 6,
     },
-    pointsLabel: { fontSize: 13, fontWeight: '700' },
-    textInput: {
-        borderRadius: 16,
-        borderWidth: 1,
-        padding: 14,
-        fontSize: 14,
-        lineHeight: 22,
-        minHeight: 120,
+    pointsOptionSelected: {
+        borderColor: 'rgba(255,215,0,0.4)',
+        backgroundColor: 'rgba(255,215,0,0.08)',
     },
-    charCount: { textAlign: 'right', fontSize: 11, marginTop: -4 },
+    pointsLabel: {
+        fontSize: 13,
+        fontWeight: '700',
+    },
+
+    // ── Text input ──
+    textInput: {
+        color: '#9CA3AF',
+        fontFamily: 'SF-Pro',
+        fontSize: 16,
+        fontStyle: 'normal',
+        fontWeight: '400',
+        lineHeight: 24,
+        minHeight: 120,
+        backgroundColor: 'transparent',
+        padding: 0,
+        marginTop: 8,
+    },
+    charCount: {
+        textAlign: 'right',
+        fontSize: 11,
+        color: '#555',
+        marginTop: -6,
+    },
+
+    // ── Photos ──
     photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
     photoWrapper: { position: 'relative' },
     photo: { width: 80, height: 80, borderRadius: 12 },
@@ -407,6 +538,7 @@ const styles = StyleSheet.create({
         width: 20,
         height: 20,
         borderRadius: 10,
+        backgroundColor: '#E53E3E',
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -416,19 +548,32 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         borderWidth: 2,
         borderStyle: 'dashed',
+        borderColor: '#2A2A2A',
+        backgroundColor: '#1E1E1E',
         justifyContent: 'center',
         alignItems: 'center',
     },
+
+    // ── Footer / Submit ──
     footer: {
-        padding: 20,
+        paddingHorizontal: 20,
+        paddingTop: 16,
         borderTopWidth: 1,
+        borderTopColor: '#222',
+        backgroundColor: '#111111',
     },
     submitBtn: {
-        height: 48,
-        borderRadius: 6,
+        height: 56,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
-        flexDirection: 'row',
     },
-    submitText: { color: '#000000', fontSize: 16, fontWeight: '900', letterSpacing: 1.2, textTransform: 'uppercase' },
+    submitText: {
+        fontFamily: 'Manrope',
+        fontSize: 18,
+        fontWeight: '900',
+        lineHeight: 28,
+        letterSpacing: 2.7,
+        textAlign: 'center',
+    },
 });

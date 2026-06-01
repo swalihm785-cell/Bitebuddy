@@ -612,7 +612,7 @@ export default function DashboardScreen() {
     const SectionHeader = ({ icon, title }: { icon: React.ReactNode; title: string }) => (
         <View style={s.sectionHead}>
             {typeof icon === 'string' ? <Text style={{ fontSize: 16 }}>{icon}</Text> : icon}
-            <Text style={[s.sectionTitle, { color: '#FFF' }]}>{title}</Text>
+            <Text style={[s.sectionTitle, { color: Colors.textPrimary }]}>{title}</Text>
         </View>
     );
 
@@ -621,9 +621,9 @@ export default function DashboardScreen() {
     const stickyY = scrollY.interpolate({ inputRange: [0, STICKY_OFFSET], outputRange: [STICKY_OFFSET, 0], extrapolateLeft: 'extend', extrapolateRight: 'clamp' });
 
     return (
-        <View style={[s.safe, { backgroundColor: '#1D1B22' }]}>
+        <View style={[s.safe, { backgroundColor: Colors.backgroundElevated }]}>
             <BrandBar />
-            <View style={{ flex: 1, backgroundColor: '#000000' }}>
+            <View style={{ flex: 1, backgroundColor: Colors.background }}>
                 {/* ─── CONTENT AREA ─── */}
                 <View style={{ flex: 1 }}>
                     <Animated.SectionList
@@ -654,20 +654,20 @@ export default function DashboardScreen() {
                                         activeOpacity={0.7}
                                         style={{
                                             width: 42, height: 42, borderRadius: 21, borderWidth: 2,
-                                            borderColor: '#FFB534', backgroundColor: '#1d1b22',
+                                            borderColor: Colors.primary, backgroundColor: Colors.backgroundCard,
                                             justifyContent: 'center', alignItems: 'center', overflow: 'hidden',
                                             marginRight: 12,
                                         }}
                                     >
-                                        <Ionicons name="person" size={20} color={'rgba(255,255,255,0.3)'} />
+                                        <Ionicons name="person" size={20} color={Colors.textMuted} />
                                         {user?.photoURL && (
                                             <Image source={{ uri: user.photoURL }} style={{ position: 'absolute', width: 42, height: 42, borderRadius: 21 }} />
                                         )}
                                     </TouchableOpacity>
                                     {/* Greeting text */}
                                     <View style={{ flex: 1, justifyContent: 'center' }}>
-                                        <Text style={[s.greeting, { color: '#FFFFFF' }]}>Hi, {user?.name?.split(' ')[0] || 'Foodie'}</Text>
-                                        <Text style={[s.headerSub, { color: '#938f99' }]}>
+                                        <Text style={[s.greeting, { color: Colors.textPrimary }]}>Hi, {user?.name?.split(' ')[0] || 'Foodie'}</Text>
+                                        <Text style={[s.headerSub, { color: Colors.textMuted }]}>
                                             {view === 'list' ? 'Find your next meal companion' : 'Explore nearby plans'}
                                         </Text>
                                     </View>
@@ -678,9 +678,9 @@ export default function DashboardScreen() {
                                             onPress={() => navigation.navigate('Notifications')}
                                             activeOpacity={0.7}
                                         >
-                                            <Ionicons name="notifications-outline" size={24} color="#938F99" />
+                                            <Ionicons name="notifications-outline" size={24} color={Colors.textMuted} />
                                             {unreadCount > 0 && (
-                                                <View style={s.notifBadge}>
+                                                <View style={[s.notifBadge, { borderColor: Colors.backgroundElevated }]}>
                                                     <Text style={s.notifBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
                                                 </View>
                                             )}
@@ -690,9 +690,9 @@ export default function DashboardScreen() {
                                             onPress={() => navigation.navigate('ChatList')}
                                             activeOpacity={0.7}
                                         >
-                                            <Ionicons name="chatbubbles-outline" size={24} color="#938F99" />
+                                            <Ionicons name="chatbubbles-outline" size={24} color={Colors.textMuted} />
                                             {totalUnreadChats > 0 && (
-                                                <View style={s.notifBadge}>
+                                                <View style={[s.notifBadge, { borderColor: Colors.backgroundElevated }]}>
                                                     <Text style={s.notifBadgeText}>{totalUnreadChats > 9 ? '9+' : totalUnreadChats}</Text>
                                                 </View>
                                             )}
@@ -714,7 +714,7 @@ export default function DashboardScreen() {
                                 return (
                                     <View>
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 12, marginVertical: 16 }}>
-                                            <Text style={{ fontSize: Platform.select({ ios: 22, android: 20 }), fontWeight: '600', color: '#FFF' }}>
+                                            <Text style={{ fontSize: Platform.select({ ios: 22, android: 20 }), fontWeight: '600', color: Colors.textPrimary }}>
                                                 {search ? 'Search Results' : 'Nearby Dining Plans'}
                                             </Text>
                                         </View>
@@ -741,35 +741,35 @@ export default function DashboardScreen() {
                     left: 0,
                     right: 0,
                     transform: [{ translateY: stickyY }],
-                    backgroundColor: '#000000',
+                    backgroundColor: Colors.background,
                     zIndex: 9999,
                     elevation: 9999,
                     paddingTop: Platform.select({ ios: 10, android: 12 }),
                 }}>
                     {/* Search Bar + Filter Button */}
                     <View style={s.searchRow}>
-                        <View style={[s.searchBar, { backgroundColor: '#1d1b22', borderColor: 'rgba(73,69,79,0.2)' }]}>
-                            <Ionicons name="search-outline" size={18} color="rgba(147,143,153,0.5)" />
+                        <View style={[s.searchBar, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
+                            <Ionicons name="search-outline" size={18} color={Colors.textMuted} />
                             <TextInput
-                                style={[s.searchInput, { color: '#FFF' }]}
+                                style={[s.searchInput, { color: Colors.textPrimary }]}
                                 placeholder={view === 'list' ? "Search dining experiences..." : "Search places on map..."}
-                                placeholderTextColor="rgba(147,143,153,0.5)"
+                                placeholderTextColor={Colors.textMuted}
                                 value={view === 'list' ? searchInput : mapSearch}
                                 onChangeText={view === 'list' ? handleListSearchChange : fetchMapSuggestions}
                             />
                             {(view === 'list' ? searchInput : mapSearch).length > 0 && (
                                 <TouchableOpacity onPress={() => view === 'list' ? handleClearListSearch() : (setMapSearch(''), setMapSuggestions([]), setShowMapSuggestions(false))}>
-                                    <Ionicons name="close-circle" size={18} color="rgba(147,143,153,0.5)" />
+                                    <Ionicons name="close-circle" size={18} color={Colors.textMuted} />
                                 </TouchableOpacity>
                             )}
                         </View>
                         <TouchableOpacity
                             hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
-                            style={[s.filterBtn, { backgroundColor: '#1d1b22', borderColor: 'rgba(73,69,79,0.2)' }]}
+                            style={[s.filterBtn, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}
                             onPress={openFilters}
                             activeOpacity={0.7}
                         >
-                            <FilterIcon width={24} height={24} />
+                            <FilterIcon width={24} height={24} color={Colors.textPrimary} />
                             {activeFilterCount > 0 && (
                                 <View style={s.filterCount}>
                                     <Text style={s.filterCountText}>{activeFilterCount}</Text>
@@ -782,18 +782,18 @@ export default function DashboardScreen() {
                     <View style={{ paddingBottom: 12 }}>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.cuisineRow}>
                             <TouchableOpacity
-                                style={[s.cuisineChip, { borderColor: !selectedCuisine ? '#ffb534' : 'rgba(73,69,79,0.1)', backgroundColor: !selectedCuisine ? '#ffb534' : '#1d1b22' }]}
+                                style={[s.cuisineChip, { borderColor: !selectedCuisine ? Colors.primary : Colors.border, backgroundColor: !selectedCuisine ? Colors.primary : Colors.backgroundCard }]}
                                 onPress={() => setSelectedCuisine(null)}
                             >
-                                <Text style={[s.cuisineChipText, { color: !selectedCuisine ? '#000' : '#938f99' }]}>All</Text>
+                                <Text style={[s.cuisineChipText, { color: !selectedCuisine ? Colors.textInverse : Colors.textMuted }]}>All</Text>
                             </TouchableOpacity>
                             {CUISINE_TYPES.map(c => (
                                 <TouchableOpacity
                                     key={c}
-                                    style={[s.cuisineChip, { borderColor: selectedCuisine === c ? '#ffb534' : 'rgba(73,69,79,0.1)', backgroundColor: selectedCuisine === c ? '#ffb534' : '#1d1b22' }]}
+                                    style={[s.cuisineChip, { borderColor: selectedCuisine === c ? Colors.primary : Colors.border, backgroundColor: selectedCuisine === c ? Colors.primary : Colors.backgroundCard }]}
                                     onPress={() => setSelectedCuisine(selectedCuisine === c ? null : c)}
                                 >
-                                    <Text style={[s.cuisineChipText, { color: selectedCuisine === c ? '#000' : '#938f99' }]}>{c}</Text>
+                                    <Text style={[s.cuisineChipText, { color: selectedCuisine === c ? Colors.textInverse : Colors.textMuted }]}>{c}</Text>
                                 </TouchableOpacity>
                             ))}
                         </ScrollView>
@@ -839,22 +839,20 @@ export default function DashboardScreen() {
                         {/* Backdrop */}
                         <TouchableOpacity style={s.backdrop} activeOpacity={1} onPress={applyFilters} />
 
-                    <Animated.View style={[s.filterPanel, { backgroundColor: '#131313', transform: [{ translateY }] }]}>
+                    <Animated.View style={[s.filterPanel, { backgroundColor: isDarkMode ? '#131313' : Colors.backgroundCard, transform: [{ translateY }] }]}>
                         {/* Handle */}
                         <View style={s.handleWrap}>
-                            <View style={[s.handle, { backgroundColor: '#3A3A3C' }]} />
+                            <View style={[s.handle, { backgroundColor: isDarkMode ? '#3A3A3C' : Colors.border }]} />
                         </View>
 
                         {/* Header */}
                         <View style={s.filterHeader}>
-                            <Text style={[s.filterTitle, { color: '#FFF' }]}>Filters</Text>
+                            <Text style={[s.filterTitle, { color: Colors.textPrimary }]}>Filters</Text>
                             <TouchableOpacity onPress={resetFilters} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                <Text style={{ color: '#FFB534', fontWeight: '600', fontSize: 14 }}>Reset</Text>
-                                <Ionicons name="refresh" size={16} color="#FFB534" />
+                                <Text style={{ color: Colors.primary, fontWeight: '600', fontSize: 14 }}>Reset</Text>
+                                <Ionicons name="refresh" size={16} color={Colors.primary} />
                             </TouchableOpacity>
                         </View>
-
-                        {/* Top Navigation Row Removed per redesign */}
 
                         {/* Scrollable filter content */}
                         <ScrollView
@@ -867,28 +865,28 @@ export default function DashboardScreen() {
                         >
                             {/* ── Location ── */}
                             <View style={s.filterCard}>
-                                <SectionHeader icon={<Ionicons name="location-outline" size={18} color="#FFB534" />} title="Location" />
-                                <View style={[s.searchInputWrapper, { marginBottom: 8 }]}>
-                                    <Ionicons name="search" size={20} color="#A1A1AA" style={{ marginLeft: 16 }} />
+                                <SectionHeader icon={<Ionicons name="location-outline" size={18} color={Colors.primary} />} title="Location" />
+                                <View style={[s.searchInputWrapper, { backgroundColor: isDarkMode ? '#131313' : Colors.backgroundInput, borderColor: Colors.border, marginBottom: 8 }]}>
+                                    <Ionicons name="search" size={20} color={Colors.textMuted} style={{ marginLeft: 16 }} />
                                     <TextInput 
-                                        style={s.newFilterInput} 
+                                        style={[s.newFilterInput, { color: Colors.textPrimary }]} 
                                         placeholder="Search area or neighborhood" 
-                                        placeholderTextColor="#A1A1AA" 
+                                        placeholderTextColor={Colors.textMuted} 
                                         value={mapSearch} 
                                         onChangeText={fetchMapSuggestions} 
                                     />
                                     <TouchableOpacity style={{ padding: 12 }}>
-                                        <Ionicons name="locate-outline" size={20} color="#A1A1AA" />
+                                        <Ionicons name="locate-outline" size={20} color={Colors.textMuted} />
                                     </TouchableOpacity>
                                 </View>
                                 {showMapSuggestions && mapSuggestions.length > 0 && (
-                                    <View style={{ backgroundColor: '#1c1c1e', borderRadius: 12, marginBottom: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#2c2c2e' }}>
+                                    <View style={{ backgroundColor: isDarkMode ? '#1c1c1e' : Colors.backgroundInput, borderRadius: 12, marginBottom: 8, overflow: 'hidden', borderWidth: 1, borderColor: Colors.border }}>
                                         {mapSuggestions.map((place, i) => (
-                                            <TouchableOpacity key={i} style={{ padding: 12, borderBottomWidth: i === mapSuggestions.length - 1 ? 0 : 1, borderBottomColor: '#2c2c2e' }} onPress={() => {
+                                            <TouchableOpacity key={i} style={{ padding: 12, borderBottomWidth: i === mapSuggestions.length - 1 ? 0 : 1, borderBottomColor: Colors.border }} onPress={() => {
                                                 selectMapPlace(place.place_id, place.description);
                                                 setFilters(f => ({ ...f, area: place.description }));
                                             }}>
-                                                <Text style={{ color: '#FFF', fontSize: 14 }}>{place.description}</Text>
+                                                <Text style={{ color: Colors.textPrimary, fontSize: 14 }}>{place.description}</Text>
                                             </TouchableOpacity>
                                         ))}
                                     </View>
@@ -896,15 +894,15 @@ export default function DashboardScreen() {
                                 
                                 {/* Range Selection */}
                                 <View style={{ marginTop: 2 }}>
-                                    <Text style={{ color: '#E5E5EA', fontSize: 15, fontWeight: '600', marginBottom: 6 }}>Search Radius</Text>
+                                    <Text style={{ color: Colors.textSecondary, fontSize: 15, fontWeight: '600', marginBottom: 6 }}>Search Radius</Text>
                                     <View style={s.chipWrap}>
                                         {RANGE_OPTIONS.map(opt => (
                                             <TouchableOpacity 
                                                 key={opt.value} 
-                                                style={[s.timingChip, mapRange === opt.value && s.timingChipActive]} 
+                                                style={[s.timingChip, { backgroundColor: isDarkMode ? '#131313' : Colors.backgroundInput, borderColor: Colors.border }, mapRange === opt.value && [s.timingChipActive, { borderColor: Colors.primary }]]} 
                                                 onPress={() => setMapRange(opt.value)}
                                             >
-                                                <Text style={[s.timingChipText, mapRange === opt.value && s.timingChipTextActive]}>
+                                                <Text style={[s.timingChipText, { color: Colors.textMuted }, mapRange === opt.value && [s.timingChipTextActive, { color: Colors.primary }]]}>
                                                     {opt.label}
                                                 </Text>
                                             </TouchableOpacity>
@@ -915,11 +913,11 @@ export default function DashboardScreen() {
 
                             {/* ── Date ── */}
                             <View style={s.filterCard}>
-                                <SectionHeader icon={<Ionicons name="calendar-outline" size={18} color="#FFB534" />} title="Date Range" />
+                                <SectionHeader icon={<Ionicons name="calendar-outline" size={18} color={Colors.primary} />} title="Date Range" />
 
                                 <TouchableOpacity 
                                     style={{
-                                        backgroundColor: '#1c1c1e',
+                                        backgroundColor: isDarkMode ? '#1c1c1e' : Colors.backgroundInput,
                                         borderRadius: 12,
                                         paddingHorizontal: 16,
                                         paddingVertical: 14,
@@ -927,62 +925,62 @@ export default function DashboardScreen() {
                                         alignItems: 'center',
                                         justifyContent: 'space-between',
                                         borderWidth: 1,
-                                        borderColor: '#2c2c2e'
+                                        borderColor: Colors.border
                                     }} 
                                     onPress={() => { setPickerTarget('start'); setShowDatePicker(true); }}
                                     activeOpacity={0.7}
                                 >
                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                                        <Ionicons name="today" size={20} color={filters.dateRangeMin ? "#FFB534" : "#938F99"} />
-                                        <Text style={{ color: filters.dateRangeMin ? '#FFF' : '#E5E5EA', fontSize: 15, fontWeight: '600' }}>
+                                        <Ionicons name="today" size={20} color={filters.dateRangeMin ? Colors.primary : Colors.textMuted} />
+                                        <Text style={{ color: filters.dateRangeMin ? Colors.textPrimary : Colors.textSecondary, fontSize: 15, fontWeight: '600' }}>
                                             {filters.dateRangeMin && filters.dateRangeMax && filters.dateRangeMin !== filters.dateRangeMax
                                                 ? `${filters.dateRangeMin} - ${filters.dateRangeMax}`
                                                 : (filters.dateRangeMin || 'Choose Date Range')}
                                         </Text>
                                     </View>
-                                    <Ionicons name="chevron-forward" size={18} color="#A1A1AA" />
+                                    <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
                                 </TouchableOpacity>
                             </View>
 
                             {/* ── Timing ── */}
                             <View style={s.filterCard}>
-                                <SectionHeader icon={<Ionicons name="time-outline" size={18} color="#FFB534" />} title="Timing" />
+                                <SectionHeader icon={<Ionicons name="time-outline" size={18} color={Colors.primary} />} title="Timing" />
                                 <View style={s.chipWrap}>
-                                    <TouchableOpacity style={[s.timingChip, filters.timing === 'any' && s.timingChipActive]} onPress={() => setFilters(f => ({ ...f, timing: 'any' }))}>
-                                        <Ionicons name="infinite" size={16} color={filters.timing === 'any' ? "#FFB534" : "#A1A1AA"} />
-                                        <Text style={[s.timingChipText, filters.timing === 'any' && s.timingChipTextActive]}>Any</Text>
+                                    <TouchableOpacity style={[s.timingChip, { backgroundColor: isDarkMode ? '#131313' : Colors.backgroundInput, borderColor: Colors.border }, filters.timing === 'any' && [s.timingChipActive, { borderColor: Colors.primary }]]} onPress={() => setFilters(f => ({ ...f, timing: 'any' }))}>
+                                        <Ionicons name="infinite" size={16} color={filters.timing === 'any' ? Colors.primary : Colors.textMuted} />
+                                        <Text style={[s.timingChipText, { color: Colors.textMuted }, filters.timing === 'any' && [s.timingChipTextActive, { color: Colors.primary }]]}>Any</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity style={[s.timingChip, filters.timing === 'morning' && s.timingChipActive]} onPress={() => setFilters(f => ({ ...f, timing: 'morning' }))}>
-                                        <Ionicons name="partly-sunny-outline" size={16} color={filters.timing === 'morning' ? "#FFB534" : "#A1A1AA"} />
-                                        <Text style={[s.timingChipText, filters.timing === 'morning' && s.timingChipTextActive]}>Morning</Text>
+                                    <TouchableOpacity style={[s.timingChip, { backgroundColor: isDarkMode ? '#131313' : Colors.backgroundInput, borderColor: Colors.border }, filters.timing === 'morning' && [s.timingChipActive, { borderColor: Colors.primary }]]} onPress={() => setFilters(f => ({ ...f, timing: 'morning' }))}>
+                                        <Ionicons name="partly-sunny-outline" size={16} color={filters.timing === 'morning' ? Colors.primary : Colors.textMuted} />
+                                        <Text style={[s.timingChipText, { color: Colors.textMuted }, filters.timing === 'morning' && [s.timingChipTextActive, { color: Colors.primary }]]}>Morning</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity style={[s.timingChip, filters.timing === 'afternoon' && s.timingChipActive]} onPress={() => setFilters(f => ({ ...f, timing: 'afternoon' }))}>
-                                        <Ionicons name="sunny-outline" size={16} color={filters.timing === 'afternoon' ? "#FFB534" : "#A1A1AA"} />
-                                        <Text style={[s.timingChipText, filters.timing === 'afternoon' && s.timingChipTextActive]}>Afternoon</Text>
+                                    <TouchableOpacity style={[s.timingChip, { backgroundColor: isDarkMode ? '#131313' : Colors.backgroundInput, borderColor: Colors.border }, filters.timing === 'afternoon' && [s.timingChipActive, { borderColor: Colors.primary }]]} onPress={() => setFilters(f => ({ ...f, timing: 'afternoon' }))}>
+                                        <Ionicons name="sunny-outline" size={16} color={filters.timing === 'afternoon' ? Colors.primary : Colors.textMuted} />
+                                        <Text style={[s.timingChipText, { color: Colors.textMuted }, filters.timing === 'afternoon' && [s.timingChipTextActive, { color: Colors.primary }]]}>Afternoon</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity style={[s.timingChip, filters.timing === 'evening' && s.timingChipActive]} onPress={() => setFilters(f => ({ ...f, timing: 'evening' }))}>
-                                        <Ionicons name="cloudy-night-outline" size={16} color={filters.timing === 'evening' ? "#FFB534" : "#A1A1AA"} />
-                                        <Text style={[s.timingChipText, filters.timing === 'evening' && s.timingChipTextActive]}>Evening</Text>
+                                    <TouchableOpacity style={[s.timingChip, { backgroundColor: isDarkMode ? '#131313' : Colors.backgroundInput, borderColor: Colors.border }, filters.timing === 'evening' && [s.timingChipActive, { borderColor: Colors.primary }]]} onPress={() => setFilters(f => ({ ...f, timing: 'evening' }))}>
+                                        <Ionicons name="cloudy-night-outline" size={16} color={filters.timing === 'evening' ? Colors.primary : Colors.textMuted} />
+                                        <Text style={[s.timingChipText, { color: Colors.textMuted }, filters.timing === 'evening' && [s.timingChipTextActive, { color: Colors.primary }]]}>Evening</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity style={[s.timingChip, filters.timing === 'night' && s.timingChipActive]} onPress={() => setFilters(f => ({ ...f, timing: 'night' }))}>
-                                        <Ionicons name="moon-outline" size={16} color={filters.timing === 'night' ? "#FFB534" : "#A1A1AA"} />
-                                        <Text style={[s.timingChipText, filters.timing === 'night' && s.timingChipTextActive]}>Night</Text>
+                                    <TouchableOpacity style={[s.timingChip, { backgroundColor: isDarkMode ? '#131313' : Colors.backgroundInput, borderColor: Colors.border }, filters.timing === 'night' && [s.timingChipActive, { borderColor: Colors.primary }]]} onPress={() => setFilters(f => ({ ...f, timing: 'night' }))}>
+                                        <Ionicons name="moon-outline" size={16} color={filters.timing === 'night' ? Colors.primary : Colors.textMuted} />
+                                        <Text style={[s.timingChipText, { color: Colors.textMuted }, filters.timing === 'night' && [s.timingChipTextActive, { color: Colors.primary }]]}>Night</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity style={[s.timingChip, filters.timing === 'midnight' && s.timingChipActive]} onPress={() => setFilters(f => ({ ...f, timing: 'midnight' }))}>
-                                        <Ionicons name="star-outline" size={16} color={filters.timing === 'midnight' ? "#FFB534" : "#A1A1AA"} />
-                                        <Text style={[s.timingChipText, filters.timing === 'midnight' && s.timingChipTextActive]}>Midnight</Text>
+                                    <TouchableOpacity style={[s.timingChip, { backgroundColor: isDarkMode ? '#131313' : Colors.backgroundInput, borderColor: Colors.border }, filters.timing === 'midnight' && [s.timingChipActive, { borderColor: Colors.primary }]]} onPress={() => setFilters(f => ({ ...f, timing: 'midnight' }))}>
+                                        <Ionicons name="star-outline" size={16} color={filters.timing === 'midnight' ? Colors.primary : Colors.textMuted} />
+                                        <Text style={[s.timingChipText, { color: Colors.textMuted }, filters.timing === 'midnight' && [s.timingChipTextActive, { color: Colors.primary }]]}>Midnight</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>
 
                             {/* ── Budget ── */}
                             <View style={s.filterCard}>
-                                <SectionHeader icon={<Ionicons name="wallet-outline" size={18} color="#FFB534" />} title="Budget" />
+                                <SectionHeader icon={<Ionicons name="wallet-outline" size={18} color={Colors.primary} />} title="Budget" />
 
                                 <View style={s.chipWrap}>
                                     {['Any', '$100-250', '$250-300', '$300-500', '$500+', 'Free'].map(b => (
-                                        <TouchableOpacity key={b} style={[s.budgetChip, filters.budget === b && s.budgetChipActive]} onPress={() => setFilters(f => ({ ...f, budget: b }))}>
-                                            <Text style={[s.budgetChipText, filters.budget === b && s.budgetChipTextActive]}>{b}</Text>
+                                        <TouchableOpacity key={b} style={[s.budgetChip, { backgroundColor: isDarkMode ? '#131313' : Colors.backgroundInput, borderColor: Colors.border }, filters.budget === b && [s.budgetChipActive, { borderColor: Colors.primary }]]} onPress={() => setFilters(f => ({ ...f, budget: b }))}>
+                                            <Text style={[s.budgetChipText, { color: Colors.textMuted }, filters.budget === b && [s.budgetChipTextActive, { color: Colors.primary }]]}>{b}</Text>
                                         </TouchableOpacity>
                                     ))}
                                 </View>
@@ -990,12 +988,12 @@ export default function DashboardScreen() {
 
                             {/* ── Group Size ── */}
                             <View style={s.filterCard}>
-                                <SectionHeader icon={<Ionicons name="people-outline" size={18} color="#FFB534" />} title="Group Size" />
+                                <SectionHeader icon={<Ionicons name="people-outline" size={18} color={Colors.primary} />} title="Group Size" />
                                 <View style={{ flexDirection: 'row', gap: 10 }}>
                                     {['1', '2', '3', '4'].map(size => (
-                                        <TouchableOpacity key={size} style={[s.groupChip, filters.groupSize === size && s.groupChipActive]} onPress={() => setFilters(f => ({ ...f, groupSize: size }))}>
-                                            <Ionicons name="person-outline" size={14} color={filters.groupSize === size ? "#FFB534" : "#A1A1AA"} />
-                                            <Text style={[s.groupChipText, filters.groupSize === size && s.groupChipTextActive]}>{size}</Text>
+                                        <TouchableOpacity key={size} style={[s.groupChip, { backgroundColor: isDarkMode ? '#131313' : Colors.backgroundInput, borderColor: Colors.border }, filters.groupSize === size && [s.groupChipActive, { borderColor: Colors.primary }]]} onPress={() => setFilters(f => ({ ...f, groupSize: size }))}>
+                                            <Ionicons name="person-outline" size={14} color={filters.groupSize === size ? Colors.primary : Colors.textMuted} />
+                                            <Text style={[s.groupChipText, { color: Colors.textMuted }, filters.groupSize === size && [s.groupChipTextActive, { color: Colors.primary }]]}>{size}</Text>
                                         </TouchableOpacity>
                                     ))}
                                 </View>
@@ -1021,7 +1019,7 @@ export default function DashboardScreen() {
 
                         </ScrollView>
 
-                        <View style={[s.filterFooter, { paddingBottom: bottomInset + 16 + 50 }]}>
+                        <View style={[s.filterFooter, { backgroundColor: isDarkMode ? '#131313' : Colors.backgroundCard, borderTopColor: Colors.border, paddingBottom: bottomInset + 16 + 50 }]}>
                             <TouchableOpacity style={[s.applyBtnNew, { backgroundColor: Colors.primary, height: 48, borderRadius: 6, flex: 1 }]} onPress={applyFilters} activeOpacity={0.85}>
                                 <Text style={[s.applyTextNew, { letterSpacing: 1.2 }]}>APPLY FILTERS</Text>
                             </TouchableOpacity>
@@ -1080,20 +1078,20 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         paddingTop: 25,
         paddingRight: 25,
-        paddingBottom: 30,
+        paddingBottom: 25,
         paddingLeft: 25,
     },
     promoContent: {
         flex: 1,
-        justifyContent: 'center',
+        justifyContent: 'space-between',
     },
     promoText: {
         fontSize: Platform.select({ ios: 14, android: 13 }),
         color: '#000',
         lineHeight: Platform.select({ ios: 19, android: 18 }),
-        marginTop: 10,
-        marginBottom: 30,
-        maxWidth: Platform.select({ ios: 180, android: 210 }),
+        marginTop: 8,
+        marginBottom: 8,
+        flexShrink: 1,
     },
     promoBtn: {
         backgroundColor: '#ffb534',
@@ -1113,8 +1111,7 @@ const styles = StyleSheet.create({
     },
     promoImageWrap: {
         alignItems: 'center',
-        justifyContent: 'flex-end',
-        paddingBottom: 18,
+        justifyContent: 'center',
         overflow: 'hidden',
     },
     promoDots: {

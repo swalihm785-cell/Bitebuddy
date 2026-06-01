@@ -124,8 +124,8 @@ export default function NotificationsScreen() {
             <View style={[styles.header, { borderBottomColor: Colors.border }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 10 }}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Ionicons name="arrow-back" size={24} color={'#ffb534'} />
-                        <Text style={{ fontSize: 14, fontWeight: '500', color: '#FFFFFF' }}>Notifications</Text>
+                        <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+                        <Text style={{ fontSize: 14, fontWeight: '500', color: Colors.textPrimary }}>Notifications</Text>
                     </TouchableOpacity>
                     {unreadCount > 0 && (
                         <View style={[styles.countBadge, { backgroundColor: Colors.primary }]}>

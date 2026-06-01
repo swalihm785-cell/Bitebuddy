@@ -17,7 +17,7 @@ export const BrandBar: React.FC<{ style?: ViewStyle }> = ({ style }) => {
 
     return (
         <View style={[styles.bar, { paddingTop, backgroundColor: currentTheme.Colors.backgroundElevated }, style]}>
-            <FudioLogo width={74} height={26} />
+            <FudioLogo width={74} height={26} color={currentTheme.Colors.textPrimary} />
         </View>
     );
 };

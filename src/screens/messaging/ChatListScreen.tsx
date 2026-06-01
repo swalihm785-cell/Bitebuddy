@@ -15,29 +15,34 @@ import { useThemeStore } from '../../store/useThemeStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useChatStore, ChatConversation } from '../../store/useChatStore';
 import { TEST_USERS } from '../../data/testUsers';
-import { CustomAlert } from '../../components/common/CustomAlert';
-import { isCurrentlyPro } from '../../utils/authUtils';
 
-// All known users except current user — for "new chat" picker
+
 const ALL_USERS = Object.values(TEST_USERS).map(u => u.user);
-
-const STATUS_COLORS: Record<string, string> = {
-    accepted: '#22C55E',
-    pending: '#F59E0B',
-    blocked: '#EF4444',
-};
 
 const formatTime = (date?: Date) => {
     if (!date) return '';
     const now = new Date();
-    const diff = now.getTime() - new Date(date).getTime();
+    const d = new Date(date);
+    const diff = now.getTime() - d.getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return 'now';
     if (mins < 60) return `${mins}m`;
     const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h`;
-    return `${Math.floor(hrs / 24)}d`;
+    if (hrs < 24) {
+        let h = d.getHours();
+        const m = d.getMinutes();
+        const ampm = h >= 12 ? 'pm' : 'am';
+        h = h % 12 || 12;
+        return `${h}:${m.toString().padStart(2, '0')} ${ampm}`;
+    }
+    const days = Math.floor(hrs / 24);
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return d.toLocaleDateString([], { weekday: 'short' });
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 };
+
+const getInitials = (name: string) =>
+    name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
 export default function ChatListScreen() {
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
@@ -49,17 +54,19 @@ export default function ChatListScreen() {
     const [newChatVisible, setNewChatVisible] = useState(false);
     const [search, setSearch] = useState('');
 
-
     const isPro = true;
-    // Filter chats: exclude blocked and deleted, separate pending requests, and restrict non-pro from viewing groups
     const myId = user?.id || '';
-    const visibleChats = conversations.filter(c => c.ownerId === myId && c.status !== 'blocked' && c.status !== 'deleted' && (isPro || !c.isGroup));
-    const pendingIncoming = visibleChats.filter(c => c.status === 'pending' && !c.initiatedByMe)
+
+    const visibleChats = conversations.filter(c =>
+        c.ownerId === myId && c.status !== 'blocked' && c.status !== 'deleted' && (isPro || !c.isGroup)
+    );
+    const pendingIncoming = visibleChats
+        .filter(c => c.status === 'pending' && !c.initiatedByMe)
         .sort((a, b) => new Date(b.lastMessageAt || b.createdAt).getTime() - new Date(a.lastMessageAt || a.createdAt).getTime());
-    const activeChats = visibleChats.filter(c => !(c.status === 'pending' && !c.initiatedByMe))
+    const activeChats = visibleChats
+        .filter(c => !(c.status === 'pending' && !c.initiatedByMe))
         .sort((a, b) => new Date(b.lastMessageAt || b.createdAt).getTime() - new Date(a.lastMessageAt || a.createdAt).getTime());
 
-    // People not already in a conversation
     const existingIds = new Set(visibleChats.map(c => c.participantId));
     const searchResults = ALL_USERS
         .filter(u => u.id !== myId)
@@ -90,249 +97,339 @@ export default function ChatListScreen() {
         Alert.alert('Message Sent', `Your first message has been sent to ${targetUser.name}. They need to accept the request to continue chatting.`);
     };
 
-    // ── Pending request card (Accept / Block / Delete) ──────────────
+    // ── Pending request card ──────────────────────────────────────────────────
     const renderPendingCard = ({ item: chat }: { item: any }) => (
-        <View style={[styles.pendingCard, { backgroundColor: Colors.backgroundCard, borderColor: chat.isGroup ? Colors.primary + '40' : Colors.warning + '40' }]}>
+        <View style={[styles.pendingCard, {
+            backgroundColor: Colors.backgroundCard,
+            borderColor: chat.isGroup ? Colors.primary + '40' : Colors.warning + '40',
+            marginHorizontal: 16,
+            marginTop: 8,
+        }]}>
             <View style={styles.pendingTop}>
-                <View style={styles.avatarWrap}>
-                    {chat.participantAvatar
-                        ? <Image source={{ uri: chat.participantAvatar }} style={styles.avatarImg} />
-                        : (
-                            <LinearGradient
-                                colors={chat.isGroup ? ['#6C63FF', '#3CA5FF'] : [Colors.primary + '30', Colors.primary + '10']}
-                                style={[styles.avatar, { justifyContent: 'center', alignItems: 'center' }]}
-                            >
-                                <Text style={{ fontSize: 20 }}>{chat.isGroup ? '👥' : '👤'}</Text>
-                            </LinearGradient>
-                        )}
-                </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                    <Text style={[styles.chatName, { color: Colors.textPrimary, fontSize: FontSize.md, fontWeight: FontWeight.bold }]}>
-                        {chat.participantName}
-                    </Text>
-                    <Text style={[{ color: Colors.textMuted, fontSize: FontSize.xs, marginTop: 2 }]}>
-                        {chat.isGroup ? `Invite to join group` : 'Wants to start a conversation'}
-                    </Text>
-                    {chat.isGroup && (
-                        <Text style={{ color: Colors.primary, fontSize: 11, fontWeight: '700', marginTop: 4 }}>
-                            {chat.participantsCount || 2} members
-                        </Text>
+                <View style={[styles.avatarContainer, { width: 50, height: 50 }]}>
+                    {chat.participantAvatar ? (
+                        <Image source={{ uri: chat.participantAvatar }} style={styles.avatar50} />
+                    ) : (
+                        <LinearGradient
+                            colors={chat.isGroup ? ['#6C63FF', '#3CA5FF'] : [Colors.primary + '60', Colors.primary + '30']}
+                            style={styles.avatar50}
+                        >
+                            <Text style={styles.initialsText}>{getInitials(chat.participantName)}</Text>
+                        </LinearGradient>
                     )}
                 </View>
-                <View style={[styles.pendingBadge, { backgroundColor: chat.isGroup ? Colors.primary + '20' : Colors.warning + '20' }]}>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={[styles.chatName, { color: Colors.textPrimary, fontWeight: '700', fontSize: 15 }]} numberOfLines={1}>
+                        {chat.participantName}
+                    </Text>
+                    <Text style={{ color: Colors.textMuted, fontSize: 13, marginTop: 2 }}>
+                        {chat.isGroup ? 'Invite to join group' : 'Wants to start a conversation'}
+                    </Text>
+                </View>
+                <View style={[styles.pendingBadge, {
+                    backgroundColor: chat.isGroup ? Colors.primary + '20' : Colors.warning + '20',
+                }]}>
                     <Text style={{ fontSize: 10, color: chat.isGroup ? Colors.primary : Colors.warning, fontWeight: '700' }}>
-                        {chat.isGroup ? 'GROUP INVITE' : 'REQUEST'}
+                        {chat.isGroup ? 'GROUP' : 'REQUEST'}
                     </Text>
                 </View>
             </View>
             <View style={styles.pendingActions}>
                 <TouchableOpacity
-                    style={[styles.actionBtn, { backgroundColor: Colors.success, flex: 1 }]}
+                    style={[styles.pendingBtn, { backgroundColor: Colors.success }]}
                     onPress={() => acceptRequest(chat.id)}
                 >
                     <Ionicons name="checkmark" size={16} color="#FFF" />
-                    <Text style={styles.actionBtnText}>Accept</Text>
+                    <Text style={[styles.pendingBtnText, { color: '#FFF' }]}>Accept</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={[styles.actionBtn, { backgroundColor: Colors.backgroundElevated, flex: 1, borderWidth: 1, borderColor: Colors.border }]}
+                    style={[styles.pendingBtn, { backgroundColor: Colors.backgroundElevated, borderWidth: 1, borderColor: Colors.border }]}
                     onPress={() => deleteRequest(chat.id, myId)}
                 >
                     <Ionicons name="trash-outline" size={16} color={Colors.textMuted} />
-                    <Text style={[styles.actionBtnText, { color: Colors.textMuted }]}>Delete Request</Text>
+                    <Text style={[styles.pendingBtnText, { color: Colors.textMuted }]}>Delete</Text>
                 </TouchableOpacity>
             </View>
         </View>
     );
 
-    // ── Regular chat row ──────────────────────────────────────────────
-    // ── Regular chat row ──────────────────────────────────────────────
-    const renderChatItem = ({ item: chat }: { item: any }) => (
-        <TouchableOpacity
-            style={[styles.chatItem, { paddingHorizontal: 12, paddingVertical: Spacing.md }]}
-            onPress={() => handleOpenChat(chat)}
-            activeOpacity={0.75}
-        >
-            <View style={styles.avatarWrap}>
-                {chat.participantAvatar
-                    ? <Image source={{ uri: chat.participantAvatar }} style={styles.avatarImg2} />
-                    : (
+    // ── Regular chat row (Instagram DM style) ─────────────────────────────────
+    const renderChatItem = ({ item: chat }: { item: any }) => {
+        const hasUnread = chat.unreadCount > 0;
+        const isPending = chat.status === 'pending' && chat.initiatedByMe;
+
+        return (
+            <TouchableOpacity
+                style={styles.chatRow}
+                onPress={() => handleOpenChat(chat)}
+                activeOpacity={0.7}
+            >
+                {/* Avatar */}
+                <View style={styles.avatarContainer}>
+                    {chat.participantAvatar ? (
+                        <Image source={{ uri: chat.participantAvatar }} style={styles.avatar56} />
+                    ) : (
                         <LinearGradient
                             colors={chat.isGroup ? ['#6C63FF', '#3CA5FF'] : ['#FF6B35', '#FF3CAC']}
-                            style={styles.avatarGrad}
+                            style={styles.avatar56}
                         >
-                            <Text style={{ fontSize: 22 }}>{chat.isGroup ? '👥' : '👤'}</Text>
-                        </LinearGradient>
-                    )
-                }
-                {/* Status dot */}
-                <View style={[
-                    styles.statusDot,
-                    { backgroundColor: chat.status === 'pending' ? Colors.warning : Colors.success, borderColor: Colors.background }
-                ]} />
-            </View>
-
-            <View style={styles.chatContent}>
-                <View style={[styles.chatHeader, { alignItems: 'flex-start' }]}>
-                    <View style={{ flex: 1, marginRight: 8 }}>
-                        <Text style={[styles.chatName, { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: chat.unreadCount > 0 ? Colors.textPrimary : Colors.textSecondary }]} numberOfLines={1}>
-                            {chat.participantName}
-                        </Text>
-                        {chat.isGroup && (
-                            <Text style={{ fontSize: 11, color: Colors.primary, fontWeight: '700', marginTop: 2 }}>
-                                Group · {chat.participantsCount || 2} members
+                            <Text style={[styles.initialsText, { fontSize: 18 }]}>
+                                {getInitials(chat.participantName)}
                             </Text>
-                        )}
-                    </View>
-                    <Text style={[{ fontSize: FontSize.xs, color: chat.unreadCount > 0 ? Colors.primary : Colors.textMuted, fontWeight: chat.unreadCount > 0 ? '700' : '400' }]}>
-                        {formatTime(chat.lastMessageAt)}
-                    </Text>
+                        </LinearGradient>
+                    )}
+                    {/* Online dot */}
+                    <View style={[styles.onlineDot, {
+                        backgroundColor: isPending ? Colors.warning : Colors.success,
+                        borderColor: Colors.background,
+                    }]} />
                 </View>
-                {chat.status === 'pending' && chat.initiatedByMe ? (
-                    <Text style={{ fontSize: FontSize.xs, color: Colors.warning, fontWeight: '600', marginTop: 4 }}>
-                        ⏳ Request sent – waiting for response
-                    </Text>
-                ) : (
-                    <View style={styles.chatBottom}>
+
+                {/* Content */}
+                <View style={styles.chatContent}>
+                    {/* Name + time */}
+                    <View style={styles.chatTopRow}>
                         <Text
-                            style={[{ fontSize: FontSize.sm, flex: 1, color: chat.unreadCount > 0 ? Colors.textPrimary : Colors.textMuted, fontWeight: chat.unreadCount > 0 ? '600' : '400', marginTop: 2 }]}
+                            style={[
+                                styles.chatName,
+                                {
+                                    color: Colors.textPrimary,
+                                    fontWeight: hasUnread ? '700' : '600',
+                                    fontSize: 15,
+                                }
+                            ]}
                             numberOfLines={1}
                         >
-                            {chat.lastMessage || 'Start a conversation…'}
+                            {chat.participantName}
                         </Text>
-                        {chat.unreadCount > 0 && (
+                        <Text style={[
+                            styles.chatTime,
+                            {
+                                color: hasUnread ? Colors.primary : Colors.textMuted,
+                                fontWeight: hasUnread ? '600' : '400',
+                            }
+                        ]}>
+                            {formatTime(chat.lastMessageAt)}
+                        </Text>
+                    </View>
+
+                    {/* Sub-label for group */}
+                    {chat.isGroup && (
+                        <Text style={{ fontSize: 11, color: Colors.primary, fontWeight: '700', marginBottom: 1 }}>
+                            Group · {chat.participantsCount || 2} members
+                        </Text>
+                    )}
+
+                    {/* Last message or pending notice */}
+                    <View style={styles.chatBottomRow}>
+                        {isPending ? (
+                            <Text style={{ fontSize: 13, color: Colors.warning, fontWeight: '600', flex: 1 }}>
+                                ⏳ Waiting for response…
+                            </Text>
+                        ) : (
+                            <Text
+                                style={[
+                                    styles.lastMsg,
+                                    {
+                                        color: hasUnread ? Colors.textPrimary : Colors.textMuted,
+                                        fontWeight: hasUnread ? '500' : '400',
+                                    }
+                                ]}
+                                numberOfLines={1}
+                            >
+                                {chat.lastMessage || 'Start a conversation…'}
+                            </Text>
+                        )}
+
+                        {/* Unread badge */}
+                        {hasUnread && !isPending && (
                             <View style={[styles.unreadBadge, { backgroundColor: Colors.primary }]}>
-                                <Text style={{ fontSize: 10, color: '#FFF', fontWeight: '800' }}>{chat.unreadCount}</Text>
+                                <Text style={[styles.unreadText, { color: isDarkMode ? '#111014' : '#FFF' }]}>
+                                    {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+                                </Text>
                             </View>
                         )}
                     </View>
-                )}
-            </View>
-        </TouchableOpacity>
-    );
+                </View>
+            </TouchableOpacity>
+        );
+    };
+
+    const allData = [
+        ...pendingIncoming.map(c => ({ ...c, _isPending: true })),
+        ...activeChats.map(c => ({ ...c, _isPending: false })),
+    ];
 
     return (
         <View style={[styles.safeArea, { backgroundColor: Colors.background }]}>
             <BrandBar />
-            {/* Header */}
-            <View style={{ backgroundColor: Platform.OS === 'ios' ? 'transparent' : Colors.background, borderBottomWidth: 1, borderBottomColor: Colors.border, overflow: 'hidden' }}>
+
+            {/* Header — Instagram DM style */}
+            <View style={{
+                backgroundColor: Platform.OS === 'ios' ? 'transparent' : Colors.background,
+                borderBottomWidth: StyleSheet.hairlineWidth,
+                borderBottomColor: Colors.border,
+                overflow: 'hidden',
+            }}>
                 {Platform.OS === 'ios' && (
                     <BlurView intensity={80} tint={isDarkMode ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
                 )}
-                <View style={[styles.header, { borderBottomWidth: 0, paddingHorizontal: 12, paddingVertical: 14 }]}>
-                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                <View style={[styles.header, { paddingHorizontal: 16, paddingVertical: 12 }]}>
+                    {/* Back + Title */}
+                    <TouchableOpacity
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                        onPress={() => navigation.goBack()}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                        <Ionicons name="chevron-back" size={26} color={Colors.textPrimary} />
+                        <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>
+                            {user?.name || 'Messages'}
+                        </Text>
+                    </TouchableOpacity>
+
+                    {/* Right icons */}
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
                         <TouchableOpacity
-                            style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
-                            onPress={() => navigation.goBack()}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                            <Ionicons name="arrow-back" size={24} color={'#ffb534'} />
-                            <Text style={{ fontSize: 14, fontWeight: '500', color: '#FFFFFF' }}>Messages</Text>
-                        </TouchableOpacity>
-                    </View>
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
-                        <TouchableOpacity
-                            style={[styles.newChatBtn, { backgroundColor: Colors.primary + '15' }]}
+                            style={[styles.headerIconBtn, { backgroundColor: Colors.backgroundCard }]}
                             onPress={() => navigation.navigate('CreateGroupChat' as any)}
                         >
-                            <Ionicons name="people-outline" size={22} color={Colors.primary} />
+                            <Ionicons name="people-outline" size={22} color={Colors.textPrimary} />
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={[styles.newChatBtn, { backgroundColor: Colors.primary + '15' }]}
+                            style={[styles.headerIconBtn, { backgroundColor: Colors.backgroundCard }]}
                             onPress={() => setNewChatVisible(true)}
                         >
-                            <Ionicons name="chatbubble-ellipses-outline" size={22} color={Colors.primary} />
+                            <Ionicons name="create-outline" size={22} color={Colors.textPrimary} />
                         </TouchableOpacity>
                     </View>
                 </View>
             </View>
 
+            {/* Chat List */}
             <FlatList
-                data={[...pendingIncoming.map(c => ({ ...c, _isPending: true })), ...activeChats.map(c => ({ ...c, _isPending: false }))]}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (item as any)._isPending
-                    ? renderPendingCard({ item })
-                    : renderChatItem({ item })
+                data={allData}
+                keyExtractor={item => item.id}
+                renderItem={({ item }) =>
+                    (item as any)._isPending
+                        ? renderPendingCard({ item })
+                        : renderChatItem({ item })
                 }
-                contentContainerStyle={[styles.list, activeChats.length === 0 && pendingIncoming.length === 0 && styles.listEmpty]}
+                contentContainerStyle={[
+                    styles.list,
+                    allData.length === 0 && styles.listEmpty,
+                ]}
                 showsVerticalScrollIndicator={false}
-                ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: Colors.border }]} />}
+                ItemSeparatorComponent={({ leadingItem }) =>
+                    (leadingItem as any)?._isPending ? null : (
+                        <View style={[styles.separator, { backgroundColor: Colors.border }]} />
+                    )
+                }
                 ListEmptyComponent={
                     <View style={styles.emptyState}>
                         <View style={[styles.emptyIcon, { backgroundColor: Colors.backgroundCard }]}>
                             <Text style={{ fontSize: 40 }}>💬</Text>
                         </View>
-                        <Text style={[{ fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.textPrimary }]}>
+                        <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.textPrimary }}>
                             No messages yet
                         </Text>
-                        <Text style={[{ fontSize: FontSize.sm, color: Colors.textMuted, textAlign: 'center' }]}>
-                            Tap the compose button to start a conversation with someone
+                        <Text style={{ fontSize: 14, color: Colors.textMuted, textAlign: 'center', lineHeight: 20 }}>
+                            Tap the compose button to start a conversation
                         </Text>
                         <TouchableOpacity
                             style={[styles.emptyBtn, { backgroundColor: Colors.primary }]}
                             onPress={() => setNewChatVisible(true)}
                         >
-                            <Ionicons name="create-outline" size={18} color="#FFF" />
-                            <Text style={{ color: '#FFF', fontWeight: '700', fontSize: FontSize.md }}>New Message</Text>
+                            <Ionicons name="create-outline" size={18} color={isDarkMode ? '#111014' : '#FFF'} />
+                            <Text style={{ color: isDarkMode ? '#111014' : '#FFF', fontWeight: '700', fontSize: 15 }}>
+                                New Message
+                            </Text>
                         </TouchableOpacity>
                     </View>
                 }
             />
 
-            {/* New chat modal */}
-            <Modal visible={newChatVisible} animationType="slide" onRequestClose={() => setNewChatVisible(false)} statusBarTranslucent>
-                <SafeAreaView style={[styles.modalContainer, { backgroundColor: Colors.background }]}>
-                    {/* Modal Header */}
+            {/* New chat modal — Instagram "New message" style */}
+            <Modal visible={newChatVisible} animationType="slide" onRequestClose={() => { setNewChatVisible(false); setSearch(''); }} presentationStyle="pageSheet">
+                <SafeAreaView style={[styles.modalContainer, { backgroundColor: Colors.background }]} edges={['top']}>
+
+                    {/* Instagram-style header: Cancel | New message (centered) */}
                     <View style={[styles.modalHeader, { borderBottomColor: Colors.border }]}>
-                        <TouchableOpacity onPress={() => { setNewChatVisible(false); setSearch(''); }}>
-                            <Ionicons name="close" size={24} color={Colors.textPrimary} />
+                        <TouchableOpacity
+                            onPress={() => { setNewChatVisible(false); setSearch(''); }}
+                            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                        >
+                            <Text style={[styles.modalCancelText, { color: Colors.primary }]}>Cancel</Text>
                         </TouchableOpacity>
-                        <Text style={[styles.modalTitle, { color: Colors.textPrimary }]}>New Message</Text>
-                        <View style={{ width: 24 }} />
+                        <Text style={[styles.modalTitle, { color: Colors.textPrimary }]}>New message</Text>
+                        {/* Spacer to keep title centered */}
+                        <View style={{ width: 56 }} />
                     </View>
 
-                    {/* Search */}
-                    <View style={[styles.searchBar, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
-                        <Ionicons name="search-outline" size={18} color={Colors.textMuted} />
+                    {/* "To:" search row — Instagram style */}
+                    <View style={[styles.toRow, { borderBottomColor: Colors.border }]}>
+                        <Text style={[styles.toLabel, { color: Colors.textPrimary }]}>To:</Text>
                         <TextInput
-                            style={[styles.searchInput, { color: Colors.textPrimary }]}
-                            placeholder="Search people..."
+                            style={[styles.toInput, { color: Colors.textPrimary }]}
+                            placeholder="Search..."
                             placeholderTextColor={Colors.textMuted}
                             value={search}
                             onChangeText={setSearch}
                             autoFocus
+                            returnKeyType="search"
                         />
+                        {search.length > 0 && (
+                            <TouchableOpacity onPress={() => setSearch('')} style={{ padding: 4 }}>
+                                <View style={[styles.clearBtn, { backgroundColor: Colors.textMuted }]}>
+                                    <Ionicons name="close" size={10} color={Colors.background} />
+                                </View>
+                            </TouchableOpacity>
+                        )}
                     </View>
 
+                    {/* Suggested label */}
+                    {search.length === 0 && (
+                        <Text style={[styles.suggestedLabel, { color: Colors.textPrimary }]}>Suggested</Text>
+                    )}
 
-                    {/* Results */}
                     <FlatList
                         data={searchResults}
                         keyExtractor={u => u.id}
-                        contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
+                        contentContainerStyle={{ paddingBottom: 40 }}
+                        showsVerticalScrollIndicator={false}
+                        ItemSeparatorComponent={() => (
+                            <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: Colors.border, marginLeft: 78 }} />
+                        )}
                         ListEmptyComponent={
-                            <View style={{ alignItems: 'center', paddingTop: 60, gap: 8 }}>
-                                <Text style={{ fontSize: 36 }}>🔍</Text>
-                                <Text style={[{ color: Colors.textMuted, fontSize: FontSize.md }]}>No users found</Text>
+                            <View style={{ alignItems: 'center', paddingTop: 48, gap: 8 }}>
+                                <Text style={{ fontSize: 15, color: Colors.textMuted }}>
+                                    {search.length > 0 ? `No results for "${search}"` : 'No suggestions'}
+                                </Text>
                             </View>
                         }
                         renderItem={({ item: u }) => (
                             <TouchableOpacity
-                                style={[styles.userRow, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}
+                                style={styles.userRow}
                                 onPress={() => handleStartChat(u)}
-                                activeOpacity={0.8}
+                                activeOpacity={0.7}
                             >
-                                <Image source={{ uri: u.photoURL || `https://i.pravatar.cc/80?u=${u.id}` }} style={styles.userAvatar} />
+                                {/* Avatar */}
+                                <View style={styles.modalAvatarWrap}>
+                                    <Image
+                                        source={{ uri: u.photoURL || `https://i.pravatar.cc/80?u=${u.id}` }}
+                                        style={styles.userAvatar}
+                                    />
+                                </View>
+                                {/* Info */}
                                 <View style={{ flex: 1 }}>
-                                    <Text style={[{ color: Colors.textPrimary, fontSize: FontSize.md, fontWeight: 'bold' }]}>
+                                    <Text style={{ color: Colors.textPrimary, fontSize: 15, fontWeight: '700' }} numberOfLines={1}>
                                         {u.name}
                                     </Text>
-                                    <Text style={[{ color: Colors.textMuted, fontSize: FontSize.xs, marginTop: 2 }]}>
-                                        {u.profession || u.city || ''}
+                                    <Text style={{ color: Colors.textMuted, fontSize: 13, marginTop: 1 }} numberOfLines={1}>
+                                        {u.profession || u.city || 'BiteBuddy user'}
                                     </Text>
                                 </View>
-                                <View style={[styles.startChatBtn, { backgroundColor: Colors.primary + '15' }]}>
-                                    <Ionicons name="chatbubble-outline" size={16} color={Colors.primary} />
-                                </View>
+                                {/* Unselected circle (Instagram style) */}
+                                <View style={[styles.selectCircle, { borderColor: Colors.border }]} />
                             </TouchableOpacity>
                         )}
                     />
@@ -344,48 +441,138 @@ export default function ChatListScreen() {
 
 const styles = StyleSheet.create({
     safeArea: { flex: 1 },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1 },
-    headerTitle: {},
-    newChatBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-    list: { paddingVertical: 8 },
+
+    // Header
+    header: {
+        flexDirection: 'row', alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    headerTitle: { fontSize: 18, fontWeight: '800' },
+    headerIconBtn: {
+        width: 38, height: 38, borderRadius: 19,
+        justifyContent: 'center', alignItems: 'center',
+    },
+
+    // List
+    list: { paddingTop: 8, paddingBottom: 100 },
     listEmpty: { flex: 1 },
+    separator: { height: StyleSheet.hairlineWidth, marginLeft: 86 },
 
     // Pending card
-    pendingCard: { margin: 12, borderRadius: 20, borderWidth: 1.5, padding: 16, gap: 14 },
-    pendingTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    pendingCard: {
+        borderRadius: 16, borderWidth: 1.5,
+        padding: 14, gap: 12, marginBottom: 4,
+    },
+    pendingTop: { flexDirection: 'row', alignItems: 'center' },
     pendingBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
     pendingActions: { flexDirection: 'row', gap: 8 },
-    actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 12 },
-    actionBtnText: { fontSize: 13, fontWeight: '700', color: '#FFF' },
+    pendingBtn: {
+        flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        gap: 6, paddingVertical: 10, borderRadius: 10,
+    },
+    pendingBtnText: { fontSize: 13, fontWeight: '700' },
 
-    // Chat item
-    chatItem: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-    avatarWrap: { position: 'relative', width: 54, height: 54 },
-    avatarImg2: { width: 54, height: 54, borderRadius: 27 },
-    avatarGrad: { width: 54, height: 54, borderRadius: 27, justifyContent: 'center', alignItems: 'center' },
-    avatar: { width: 54, height: 54, borderRadius: 27, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
-    avatarImg: { width: '100%', height: '100%' },
-    statusDot: { position: 'absolute', bottom: 1, right: 1, width: 12, height: 12, borderRadius: 6, borderWidth: 2 },
+    // Chat row
+    chatRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        gap: 14,
+    },
+    avatarContainer: { position: 'relative', width: 56, height: 56 },
+    avatar56: {
+        width: 56, height: 56, borderRadius: 28,
+        justifyContent: 'center', alignItems: 'center',
+    },
+    avatar50: {
+        width: 50, height: 50, borderRadius: 25,
+        justifyContent: 'center', alignItems: 'center',
+    },
+    initialsText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+    onlineDot: {
+        position: 'absolute', bottom: 1, right: 1,
+        width: 13, height: 13, borderRadius: 6.5, borderWidth: 2,
+    },
     chatContent: { flex: 1 },
-    chatHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-    chatName: { flex: 1 },
-    chatBottom: { flexDirection: 'row', alignItems: 'center' },
-    unreadBadge: { width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-    separator: { height: 1, marginLeft: 82 },
+    chatTopRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 2,
+    },
+    chatName: { flex: 1, marginRight: 8 },
+    chatTime: { fontSize: 12, flexShrink: 0 },
+    chatBottomRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    lastMsg: { flex: 1, fontSize: 13, lineHeight: 18 },
+    unreadBadge: {
+        minWidth: 20, height: 20, borderRadius: 10,
+        justifyContent: 'center', alignItems: 'center',
+        paddingHorizontal: 5, marginLeft: 8,
+    },
+    unreadText: { fontSize: 11, fontWeight: '800' },
 
-    // Empty state
-    emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 12 },
-    emptyIcon: { width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center' },
-    emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 28, marginTop: 8 },
+    // Empty
+    emptyState: {
+        flex: 1, alignItems: 'center', justifyContent: 'center',
+        padding: 40, gap: 12,
+    },
+    emptyIcon: {
+        width: 80, height: 80, borderRadius: 40,
+        justifyContent: 'center', alignItems: 'center',
+    },
+    emptyBtn: {
+        flexDirection: 'row', alignItems: 'center', gap: 8,
+        paddingHorizontal: 28, paddingVertical: 14,
+        borderRadius: 28, marginTop: 8,
+    },
 
-    // New chat modal
+    // New message modal
     modalContainer: { flex: 1 },
-    modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 16, borderBottomWidth: 1 },
-    modalTitle: { fontSize: 17, fontWeight: '800' },
-    searchBar: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 12, marginTop: 16, marginBottom: 8, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, borderWidth: 1 },
-    messageBar: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 12, marginBottom: 16, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, borderWidth: 1 },
-    searchInput: { flex: 1, fontSize: 15 },
-    userRow: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 18, borderWidth: 1 },
-    userAvatar: { width: 48, height: 48, borderRadius: 24 },
-    startChatBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+    modalHeader: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        paddingHorizontal: 16, paddingVertical: 12,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    modalCancelText: { fontSize: 16, fontWeight: '500' },
+    modalTitle: { fontSize: 16, fontWeight: '800' },
+
+    // "To:" search row
+    toRow: {
+        flexDirection: 'row', alignItems: 'center',
+        paddingHorizontal: 16, paddingVertical: 12,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        gap: 10,
+    },
+    toLabel: { fontSize: 16, fontWeight: '600' },
+    toInput: { flex: 1, fontSize: 16, paddingVertical: 0 },
+    clearBtn: {
+        width: 16, height: 16, borderRadius: 8,
+        justifyContent: 'center', alignItems: 'center',
+    },
+
+    // Suggested label
+    suggestedLabel: {
+        fontSize: 15, fontWeight: '700',
+        paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8,
+    },
+
+    // User rows
+    userRow: {
+        flexDirection: 'row', alignItems: 'center', gap: 14,
+        paddingHorizontal: 16, paddingVertical: 10,
+    },
+    modalAvatarWrap: { width: 54, height: 54 },
+    userAvatar: { width: 54, height: 54, borderRadius: 27 },
+    selectCircle: {
+        width: 24, height: 24, borderRadius: 12,
+        borderWidth: 1.5,
+    },
+    startChatIcon: {
+        width: 36, height: 36, borderRadius: 18,
+        justifyContent: 'center', alignItems: 'center',
+    },
 });

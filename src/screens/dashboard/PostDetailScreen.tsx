@@ -22,6 +22,7 @@ import { TEST_USERS } from '../../data/testUsers';
 import { handleDiningPlanShare } from '../../utils/diningPlanShareUtils';
 import { ClosedDiningReviews } from '../../components/dining/ClosedDiningReviews';
 import BrandBar from '../../components/common/BrandBar';
+import { TastePointsBadge } from '../../components/dining/TastePointsBadge';
 
 // Map post.extras values to display labels (without emoji, uppercase per design)
 const EXTRA_LABELS: Record<string, string> = {
@@ -330,132 +331,114 @@ export default function PostDetailScreen() {
         return { label: 'JOIN NOW', disabled: false, color: Colors.primary, onPress: handleJoin };
     })();
 
-    // ── Info row component (realistic Material icons matching Figma) ──
-    const InfoRow = ({ icon, label, children }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; children: React.ReactNode }) => (
-        <View style={styles.infoRow}>
-            <View style={styles.infoIconCol}>
-                <MaterialCommunityIcons name={icon} size={20} color={'#ffb534'} />
-            </View>
-            <View style={{ flex: 1 }}>
-                <Text style={styles.infoLabel}>{label}</Text>
-                <View style={{ marginTop: 2 }}>{children}</View>
-            </View>
-        </View>
-    );
 
     return (
-        <View style={[styles.container, { backgroundColor: '#000000' }]}>
+        <View style={[styles.container, { backgroundColor: Colors.background }]}>
             {/* Shared brand bar — matches listing/dashboard top padding */}
             <BrandBar />
 
             {/* Header row (back, share, menu) */}
             <View style={styles.headerRow}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Ionicons name="arrow-back" size={24} color={'#ffb534'} />
-                    <Text style={styles.backText}>Event Details</Text>
+                    <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+                    <Text style={[styles.backText, { color: Colors.textPrimary }]}>Back</Text>
                 </TouchableOpacity>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                     <TouchableOpacity onPress={() => handleDiningPlanShare(post)} style={styles.iconBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Ionicons name="share-outline" size={20} color={'#FFFFFF'} />
+                        <Ionicons name="share-outline" size={20} color={Colors.textPrimary} />
                     </TouchableOpacity>
                     {isHost && !isCompleted && (
                         <TouchableOpacity onPress={() => navigation.navigate('EditPost' as any, { postId: post.id })} style={styles.iconBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                            <Svg width="18" height="18" viewBox="0 0 494.936 494.936" fill="#FFFFFF">
-                                <Path d="M389.844,182.85c-6.743,0-12.21,5.467-12.21,12.21v222.968c0,23.562-19.174,42.735-42.736,42.735H67.157 c-23.562,0-42.736-19.174-42.736-42.735V150.285c0-23.562,19.174-42.735,42.736-42.735h267.741c6.743,0,12.21-5.467,12.21-12.21 s-5.467-12.21-12.21-12.21H67.157C30.126,83.13,0,113.255,0,150.285v267.743c0,37.029,30.126,67.155,67.157,67.155h267.741 c37.03,0,67.156-30.126,67.156-67.155V195.061C402.054,188.318,396.587,182.85,389.844,182.85z" fill="#FFFFFF" />
-                                <Path d="M483.876,20.791c-14.72-14.72-38.669-14.714-53.377,0L221.352,229.944c-0.28,0.28-3.434,3.559-4.251,5.396l-28.963,65.069 c-2.057,4.619-1.056,10.027,2.521,13.6c2.337,2.336,5.461,3.576,8.639,3.576c1.675,0,3.362-0.346,4.96-1.057l65.07-28.963 c1.83-0.815,5.114-3.97,5.396-4.25L483.876,74.169c7.131-7.131,11.06-16.61,11.06-26.692 C494.936,37.396,491.007,27.915,483.876,20.791z M466.61,56.897L257.457,266.05c-0.035,0.036-0.055,0.078-0.089,0.107 l-33.989,15.131L238.51,247.3c0.03-0.036,0.071-0.055,0.107-0.09L447.765,38.058c5.038-5.039,13.819-5.033,18.846,0.005 c2.518,2.51,3.905,5.855,3.905,9.414C470.516,51.036,469.127,54.38,466.61,56.897z" fill="#FFFFFF" />
+                            <Svg width="18" height="18" viewBox="0 0 494.936 494.936" fill={Colors.textPrimary}>
+                                <Path d="M389.844,182.85c-6.743,0-12.21,5.467-12.21,12.21v222.968c0,23.562-19.174,42.735-42.736,42.735H67.157 c-23.562,0-42.736-19.174-42.736-42.735V150.285c0-23.562,19.174-42.735,42.736-42.735h267.741c6.743,0,12.21-5.467,12.21-12.21 s-5.467-12.21-12.21-12.21H67.157C30.126,83.13,0,113.255,0,150.285v267.743c0,37.029,30.126,67.155,67.157,67.155h267.741 c37.03,0,67.156-30.126,67.156-67.155V195.061C402.054,188.318,396.587,182.85,389.844,182.85z" fill={Colors.textPrimary} />
+                                <Path d="M483.876,20.791c-14.72-14.72-38.669-14.714-53.377,0L221.352,229.944c-0.28,0.28-3.434,3.559-4.251,5.396l-28.963,65.069 c-2.057,4.619-1.056,10.027,2.521,13.6c2.337,2.336,5.461,3.576,8.639,3.576c1.675,0,3.362-0.346,4.96-1.057l65.07-28.963 c1.83-0.815,5.114-3.97,5.396-4.25L483.876,74.169c7.131-7.131,11.06-16.61,11.06-26.692 C494.936,37.396,491.007,27.915,483.876,20.791z M466.61,56.897L257.457,266.05c-0.035,0.036-0.055,0.078-0.089,0.107 l-33.989,15.131L238.51,247.3c0.03-0.036,0.071-0.055,0.107-0.09L447.765,38.058c5.038-5.039,13.819-5.033,18.846,0.005 c2.518,2.51,3.905,5.855,3.905,9.414C470.516,51.036,469.127,54.38,466.61,56.897z" fill={Colors.textPrimary} />
                             </Svg>
                         </TouchableOpacity>
                     )}
                 </View>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}>
                 <View style={styles.body}>
                     {/* Title + location */}
-                    <Text style={styles.title}>{post.title}</Text>
+                    <Text style={[styles.title, { color: Colors.textPrimary }]}>{post.title}</Text>
                     <View style={styles.locationRow}>
-                        <Ionicons name="location-outline" size={12} color={'#938f99'} />
-                        <Text style={styles.locationText} numberOfLines={1}>
+                        <Ionicons name="location-outline" size={12} color={Colors.textMuted} />
+                        <Text style={[styles.locationText, { color: Colors.textMuted }]} numberOfLines={1}>
                             {(post.restaurantName || 'Restaurant') + ' • ' + post.area}
                         </Text>
                     </View>
 
-                    {/* Host card */}
-                    <View style={styles.hostCard}>
-                        <TouchableOpacity onPress={() => navigation.navigate('UserProfile' as any, { userId: post.hostId })} style={styles.hostAvatarWrap}>
-                            {hostParticipant.photoURL ? (
-                                <Image source={{ uri: hostParticipant.photoURL }} style={styles.hostAvatar} />
-                            ) : (
-                                <View style={[styles.hostAvatar, { backgroundColor: Colors.backgroundElevated, justifyContent: 'center', alignItems: 'center' }]}>
-                                    <Text style={{ fontSize: 28 }}>👤</Text>
-                                </View>
-                            )}
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => navigation.navigate('UserProfile' as any, { userId: post.hostId })} style={{ flex: 1, marginLeft: 14 }}>
-                            <Text style={styles.hostLabel}>HOSTED BY</Text>
-                            <Text style={styles.hostName}>{hostParticipant.name || 'Host'}</Text>
-                        </TouchableOpacity>
-                        <View style={styles.ratingPill}>
-                            <Svg width="14" height="13" viewBox="0 0 14 13" fill="none">
-                                <Path d="M2.55 12.6667L3.63333 7.98333L0 4.83333L4.8 4.41667L6.66667 0L8.53333 4.41667L13.3333 4.83333L9.7 7.98333L10.7833 12.6667L6.66667 10.1833L2.55 12.6667Z" fill="#00FF41" />
-                            </Svg>
-                            <Text style={styles.ratingText}>{hostRating.toFixed(1)}</Text>
-                        </View>
-                    </View>
 
-                    {/* Post-dining review prompt — shown only to joined participants on completed dining who haven't reviewed */}
+                    {/* Post-dining review prompt — flat row, no card border */}
                     {isCompleted && isJoined && !hasReviewed && (
                         <TouchableOpacity
                             activeOpacity={0.9}
                             onPress={() => navigation.navigate('DiningReview', { postId: post.id })}
-                            style={[styles.reviewPrompt, { backgroundColor: Colors.primary + '15', borderColor: Colors.primary }]}
+                            style={styles.reviewPrompt}
                         >
-                            <View style={[styles.reviewPromptIcon, { backgroundColor: Colors.primary }]}>
-                                <Text style={{ fontSize: 18 }}>🍽️</Text>
+                            <View style={styles.reviewPromptIcon}>
+                                <Svg width={45} height={42} viewBox="0 0 45 42" fill="none">
+                                    <Path d="M0 40.787C0.468274 39.9322 1.31865 40.4461 2.04282 40.1809L5.12577 33.3241H3.4755V22.9107C4.26582 22.8428 5.05962 23.3959 5.19192 24.1899C5.51397 26.1125 4.97693 28.7779 5.2102 30.7666C5.26068 31.1945 5.62103 31.5423 6.03534 31.591C8.09557 31.8354 10.5823 31.3727 12.6878 31.6275C13.4772 31.8493 13.9577 32.5058 13.8994 33.325H13.0299V40.267H18.2418C18.2192 39.5765 18.1426 38.8365 18.912 38.5495C20.9139 38.6556 23.1813 38.346 25.1528 38.5269C26.1276 38.6165 26.1024 39.4843 26.0606 40.267H31.2725V33.3241H30.403C30.3368 32.5519 30.8364 31.7867 31.6146 31.6267C33.4494 31.2501 36.3095 31.8223 38.267 31.5901C38.6813 31.5414 39.0417 31.1936 39.0922 30.7658C39.3263 28.777 38.7884 26.1117 39.1104 24.189C39.2471 23.3716 40.0191 22.8472 40.8269 22.9098V33.3232H39.1766L42.2595 40.18C42.6112 40.4922 43.9002 39.9 44.2362 40.7218C44.4799 41.3192 44.144 41.667 43.694 42.001H0V40.7861V40.787ZM11.2934 33.3241H6.95012L3.99687 40.267H11.2943V33.3241H11.2934ZM37.354 33.3241H33.0107V40.267H40.3081L37.3549 33.3241H37.354Z" fill="#FFB534" />
+                                    <Path d="M33.011 29.4188H11.2937V27.7265C11.2937 27.0709 12.279 26.1047 12.9213 25.9682C19.0759 25.803 25.301 25.7639 31.4504 25.9882C32.0649 26.143 33.011 27.0926 33.011 27.7265V29.4188Z" fill="#FFB534" />
+                                    <Path d="M18.8251 4.70479C20.0855 4.41695 19.8914 5.5283 20.0924 6.26572C20.2935 7.00314 21.0586 7.79099 21.8202 8.011C22.4181 8.18405 23.3956 8.02057 23.46 8.89625C23.5427 10.0328 22.3372 9.80324 21.6583 10.0502C20.9794 10.2972 20.4197 10.8668 20.1742 11.5181C19.9288 12.1694 20.0916 13.3303 19.1541 13.3703C18.1236 13.4138 18.2924 12.1103 18.0261 11.4555C17.7598 10.8007 17.1574 10.2459 16.5038 10.0259C15.8501 9.80585 14.8335 10.0267 14.7638 9.06756C14.6846 7.97883 15.9337 8.19449 16.6517 7.91187C17.2689 7.66925 17.9138 6.96922 18.1131 6.33442C18.2863 5.78222 18.1036 4.87001 18.8269 4.70479H18.8251Z" fill="#FFB534" />
+                                    <Path d="M35.3305 5.57268C36.5908 5.28484 36.3967 6.39619 36.5978 7.13361C36.7989 7.87103 37.5639 8.65888 38.3255 8.87889C38.9235 9.05194 39.901 8.88846 39.9654 9.76414C40.048 10.9007 38.8425 10.6711 38.1636 10.9181C37.4847 11.1651 36.9251 11.7346 36.6796 12.386C36.4342 13.0373 36.5969 14.1982 35.6595 14.2382C34.629 14.2817 34.7978 12.9782 34.5315 12.3234C34.2651 11.6686 33.6628 11.1138 33.0091 10.8937C32.3555 10.6737 31.3389 10.8946 31.2692 9.93545C31.19 8.84672 32.439 9.06238 33.1571 8.77976C33.7742 8.53714 34.4192 7.83711 34.6185 7.20231C34.7917 6.65011 34.6089 5.7379 35.3322 5.57268H35.3305Z" fill="#FFB534" />
+                                    <Path d="M26.8432 24.2125H17.4612C17.8511 22.3733 19.4553 21.1245 21.2448 20.7462C21.4493 19.9358 20.8192 17.9288 22.11 17.8705C23.4965 17.8087 22.8594 19.934 23.0587 20.7462C24.8561 21.1184 26.4463 22.3707 26.8423 24.2125H26.8432Z" fill="#FFB534" />
+                                    <Path opacity="0.3" d="M7.36112 10.3476C10.1777 9.865 10.9411 13.7373 8.51266 14.5347C5.57071 15.5017 4.50099 10.8372 7.36112 10.3476Z" fill="#FFB534" />
+                                    <Path opacity="0.3" d="M30.9917 0.0228827C33.71 -0.33974 34.1373 3.72824 31.6567 4.07086C28.7539 4.47175 28.3831 0.370722 30.9917 0.0228827Z" fill="#FFB534" />
+                                    <Path opacity="0.3" d="M23.0205 30.8945H21.2832V36.9695H23.0205V30.8945Z" fill="#FFB534" />
+                                </Svg>
                             </View>
                             <View style={{ flex: 1 }}>
-                                <Text style={[styles.reviewPromptTitle, { color: Colors.textPrimary }]}>How was your dining?</Text>
-                                <Text style={[styles.reviewPromptSub, { color: Colors.textSecondary }]}>
+                                <Text style={styles.reviewPromptTitle}>How was your dining?</Text>
+                                <Text style={styles.reviewPromptSub}>
                                     Share your experience and award Taste Points to the host.
                                 </Text>
                             </View>
                             <Ionicons name="chevron-forward" size={20} color={Colors.primary} />
                         </TouchableOpacity>
                     )}
+                    {/* Divider below review prompt */}
+                    {isCompleted && isJoined && !hasReviewed && (
+                        <View style={styles.reviewPromptDivider} />
+                    )}
 
                     {/* Info list */}
                     <View style={styles.infoList}>
-                        <InfoRow icon="calendar-blank-outline" label="DATE & TIME">
-                            <Text style={styles.infoValue}>
+                        <View style={styles.infoRow}>
+                            <View style={styles.infoIconCol}>
+                                <MaterialCommunityIcons name="calendar-blank-outline" size={20} color={'#ffb534'} />
+                            </View>
+                            <Text style={[styles.infoValue, { color: Colors.textPrimary }]}>
                                 {post.isImmediate ? 'Right Now! 🔥' : formatDate(post.dateTime)}
                             </Text>
-                        </InfoRow>
+                        </View>
                         <View style={styles.divider} />
-                        <InfoRow icon="account-multiple-outline" label="PARTICIPANTS">
-                            <Text style={styles.infoValue}>
-                                {participants.length} / {post.maxGroupSize} joined
-                            </Text>
-                        </InfoRow>
-                        <View style={styles.divider} />
-                        <InfoRow icon="cash-multiple" label="BUDGET">
-                            <Text style={styles.infoValue}>
+                        <View style={styles.infoRow}>
+                            <View style={styles.infoIconCol}>
+                                <MaterialCommunityIcons name="cash-multiple" size={20} color={'#ffb534'} />
+                            </View>
+                            <Text style={[styles.infoValue, { color: Colors.textPrimary }]}>
                                 ₹{BUDGET_LABELS[post.budgetRange]}
                             </Text>
-                        </InfoRow>
+                        </View>
                         <View style={styles.divider} />
-                        <InfoRow icon="room-service-outline" label="CUISINES & DISHES">
-                            <Text style={styles.infoValue}>
+                        <View style={styles.infoRow}>
+                            <View style={styles.infoIconCol}>
+                                <MaterialCommunityIcons name="room-service-outline" size={20} color={'#ffb534'} />
+                            </View>
+                            <Text style={[styles.infoValue, { color: Colors.textPrimary }]}>
                                 <Text style={{ fontWeight: 'bold' }}>{post.cuisineTypes.join(', ')}:</Text>
                                 {(() => {
                                     const dishes = (post.foodItems && post.foodItems.length > 0)
                                         ? post.foodItems
                                         : (post.selectedFoodOptions || []).map(o => o.name);
                                     return dishes.length > 0 ? (
-                                        <Text style={{ color: '#938f99', fontWeight: 'normal' }}>{` ${dishes.join(', ')}`}</Text>
+                                        <Text style={{ color: Colors.textMuted, fontWeight: 'normal' }}>{` ${dishes.join(', ')}`}</Text>
                                     ) : null;
                                 })()}
                             </Text>
-                        </InfoRow>
+                        </View>
                     </View>
 
                     {/* Join Request Status Banner */}
@@ -530,11 +513,40 @@ export default function PostDetailScreen() {
                         </View>
                     )}
 
-                    {/* Meeting With */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Meeting With</Text>
+                    {/* HOSTED BY section */}
+                    <View style={styles.hostedBySection}>
+                        <Text style={[styles.hostedByLabel, { color: Colors.textMuted }]}>HOSTED BY</Text>
+                        <View style={styles.hostRow}>
+                            <TouchableOpacity onPress={() => navigation.navigate('UserProfile' as any, { userId: post.hostId })} style={[styles.hostAvatarWrap, { borderColor: Colors.border }]}>
+                                {hostParticipant.photoURL ? (
+                                    <Image source={{ uri: hostParticipant.photoURL }} style={styles.hostAvatar} />
+                                ) : (
+                                    <View style={[styles.hostAvatar, { backgroundColor: Colors.backgroundElevated, justifyContent: 'center', alignItems: 'center' }]}>
+                                        <Text style={{ fontSize: 24 }}>👤</Text>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
+                            <View style={styles.hostMetaCol}>
+                                <TouchableOpacity onPress={() => navigation.navigate('UserProfile' as any, { userId: post.hostId })}>
+                                    <Text style={[styles.hostName, { color: Colors.textPrimary }]}>{hostParticipant.name || 'Host'}</Text>
+                                </TouchableOpacity>
+                                <View style={styles.hostRepRow}>
+                                    <View style={[styles.ratingPill, { backgroundColor: 'rgba(255, 255, 255, 0.08)', borderColor: 'rgba(255, 255, 255, 0.15)' }]}>
+                                        <Ionicons name="star" size={12} color="#FFFFFF" />
+                                        <Text style={[styles.ratingText, { color: '#FFFFFF' }]}>{hostRating.toFixed(1)}</Text>
+                                    </View>
+                                    <TastePointsBadge points={hostReputation?.totalTastePoints ?? hostUser?.points ?? 100} tier={hostReputation?.tier} size="sm" showTier={false} />
+                                </View>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* MEET WITH section */}
+                    <View style={styles.meetWithSection}>
+                        <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Meet With</Text>
                         <View style={styles.avatarRow}>
-                            {participants.map((p) => {
+                            {/* Other participants (excluding host) */}
+                            {participants.filter(p => p.id !== post.hostId).map((p) => {
                                 const resolvedUser = p.id === user?.id
                                     ? user
                                     : Object.values(TEST_USERS).map(t => t.user).find(u => u.id === p.id);
@@ -542,7 +554,7 @@ export default function PostDetailScreen() {
                                 const name = resolvedUser?.name || p.name;
                                 return (
                                     <TouchableOpacity key={p.id} onPress={() => navigation.navigate('UserProfile' as any, { userId: p.id })} style={styles.avatarSlot}>
-                                        <View style={styles.participantAvatarWrap}>
+                                        <View style={[styles.participantAvatarWrap, { borderColor: Colors.border, borderWidth: 2 }]}>
                                             {photo ? (
                                                 <Image source={{ uri: photo }} style={styles.participantAvatar} />
                                             ) : (
@@ -551,29 +563,32 @@ export default function PostDetailScreen() {
                                                 </View>
                                             )}
                                         </View>
-                                        <Text style={styles.avatarName} numberOfLines={1}>{name.split(' ')[0]}</Text>
+                                        <Text style={[styles.avatarName, { color: Colors.textPrimary }]} numberOfLines={1}>{name.split(' ')[0]}</Text>
                                     </TouchableOpacity>
                                 );
                             })}
+                            {/* Waiting slots */}
                             {Array.from({ length: Math.max(0, post.maxGroupSize - participants.length) }).map((_, i) => (
                                 <View key={`empty-${i}`} style={styles.avatarSlot}>
                                     <View style={[styles.participantAvatarWrap, styles.waitingAvatar]}>
-                                        <Ionicons name="person-add" size={22} color="#FFF" />
+                                        <Ionicons name="person-add" size={22} color="#888" />
                                     </View>
-                                    <Text style={styles.avatarName}>Waiting</Text>
+                                    <Text style={[styles.avatarName, { color: Colors.textMuted }]}>Waiting</Text>
                                 </View>
                             ))}
                         </View>
 
-                        {/* Create Group Chat button — visible to joined participants */}
+                        {/* Create Group Chat button — full-width solid yellow, visible to joined participants */}
                         {isJoined && participants.length >= 2 && (
                             <TouchableOpacity
-                                style={[styles.createGroupBtn, { borderColor: Colors.primary + '40', backgroundColor: Colors.primary + '10' }]}
+                                style={styles.createGroupBtn}
                                 onPress={handleCreateGroupChat}
                                 disabled={creatingGroup}
                             >
-                                <Ionicons name="chatbubbles" size={18} color={Colors.primary} />
-                                <Text style={[styles.createGroupText, { color: Colors.primary }]}>
+                                <Svg width={20} height={20} viewBox="0 0 20 20" fill="none">
+                                    <Path d="M17.5 12.5C17.5 13.4205 16.7538 14.1667 15.8333 14.1667H5.83333L2.5 17.5V4.16667C2.5 3.24619 3.24619 2.5 4.16667 2.5H15.8333C16.7538 2.5 17.5 3.24619 17.5 4.16667V12.5Z" fill="black"/>
+                                </Svg>
+                                <Text style={styles.createGroupText}>
                                     {creatingGroup ? 'Creating...' : 'Create Group Chat'}
                                 </Text>
                             </TouchableOpacity>
@@ -583,9 +598,9 @@ export default function PostDetailScreen() {
                     {/* I prefer */}
                     {personalityTags.length > 0 && (
                         <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>I prefer</Text>
+                            <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>I prefer</Text>
                             <Text style={styles.hashtagText}>
-                                {personalityTags.map(toHashtag).join(' ')}
+                                {personalityTags.map(toHashtag).join('  ')}
                             </Text>
                         </View>
                     )}
@@ -593,11 +608,11 @@ export default function PostDetailScreen() {
                     {/* Others */}
                     {post.extras && post.extras.length > 0 && (
                         <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Others</Text>
+                            <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>Others</Text>
                             <View style={styles.othersRow}>
                                 {post.extras.map((val, idx) => (
-                                    <View key={`${val}-${idx}`} style={styles.otherChip}>
-                                        <Text style={styles.otherChipText}>{formatExtraLabel(val)}</Text>
+                                    <View key={`${val}-${idx}`} style={[styles.otherChip, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
+                                        <Text style={[styles.otherChipText, { color: Colors.textPrimary }]}>{formatExtraLabel(val)}</Text>
                                     </View>
                                 ))}
                             </View>
@@ -606,7 +621,7 @@ export default function PostDetailScreen() {
 
                     {/* About the Meal */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>About the Meal</Text>
+                        <Text style={[styles.sectionTitle, { color: Colors.textPrimary }]}>About the Meal</Text>
                         <Text style={styles.descriptionText}>
                             {post.description || 'No additional details provided by the host.'}
                         </Text>
@@ -625,7 +640,7 @@ export default function PostDetailScreen() {
             {/* Bottom CTA + Tab bar */}
             <View style={[styles.footer, { backgroundColor: Colors.background }]}>
                 {ctaConfig && (
-                    <View style={styles.ctaWrap}>
+                    <View style={[styles.ctaWrap, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
                         <TouchableOpacity
                             style={[styles.mainBtn, { backgroundColor: ctaConfig.color, opacity: ctaConfig.disabled ? 0.7 : 1 }]}
                             disabled={ctaConfig.disabled}
@@ -666,7 +681,7 @@ const styles = StyleSheet.create({
         paddingBottom: 4,
     },
     backBtn: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    backText: { fontSize: 14, fontWeight: '500', color: '#FFFFFF' },
+    backText: { fontSize: 14, fontWeight: '500' },
     iconBtn: { padding: 6 },
     menuPopover: {
         position: 'absolute',
@@ -686,9 +701,9 @@ const styles = StyleSheet.create({
     body: { paddingHorizontal: 12, paddingTop: 8 },
 
     // Title + location
-    title: { fontSize: 25, fontWeight: 'bold', lineHeight: 28, letterSpacing: -0.5, color: '#FFFFFF' },
+    title: { fontSize: 25, fontWeight: 'bold', lineHeight: 28, letterSpacing: -0.5 },
     locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
-    locationText: { fontSize: 12, fontWeight: 'normal', color: '#938f99', flexShrink: 1 },
+    locationText: { fontSize: 12, fontWeight: 'normal', flexShrink: 1 },
 
     // Host card
     hostCard: {
@@ -697,38 +712,48 @@ const styles = StyleSheet.create({
         marginTop: 22,
         paddingBottom: 8,
     },
-    hostAvatarWrap: { width: 62, height: 62, borderRadius: 31, overflow: 'hidden', borderWidth: 1, borderColor: '#FFFFFF' },
+    hostAvatarWrap: { width: 62, height: 62, borderRadius: 31, overflow: 'hidden', borderWidth: 1 },
     hostAvatar: { width: 60, height: 60, borderRadius: 30 },
-    hostLabel: { fontSize: 12, fontWeight: '300', letterSpacing: 0.55, color: '#FFFFFF', textTransform: 'uppercase' },
-    hostName: { fontSize: 16, fontWeight: 'bold', marginTop: 2, color: '#FFFFFF' },
-    ratingPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 3.3, backgroundColor: '#353534' },
-    ratingText: { fontSize: 15, fontWeight: '700', color: '#EBFFE2', lineHeight: 19.7 },
+    hostName: { fontSize: 16, fontWeight: 'bold' },
 
-    // Post-dining review prompt
+    // Post-dining review prompt — flat, no card border
     reviewPrompt: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
-        padding: 14,
-        borderRadius: 16,
-        borderWidth: 1,
-        marginTop: 8,
-        marginBottom: 6,
+        gap: 14,
+        paddingVertical: 16,
+        paddingHorizontal: 0,
+        marginTop: 20,
+    },
+    reviewPromptDivider: {
+        height: 1,
+        backgroundColor: 'rgba(128,128,128,0.2)',
+        marginBottom: 4,
     },
     reviewPromptIcon: {
-        width: 40, height: 40, borderRadius: 20,
+        width: 52, height: 48,
         justifyContent: 'center', alignItems: 'center',
     },
-    reviewPromptTitle: { fontSize: 15, fontWeight: '900' },
-    reviewPromptSub: { fontSize: 12, marginTop: 2, lineHeight: 16 },
+    reviewPromptTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#FFFFFF',
+        lineHeight: 20,
+    },
+    reviewPromptSub: {
+        fontSize: 12,
+        fontWeight: '400',
+        color: '#9CA3AF',
+        lineHeight: 15,
+        marginTop: 2,
+    },
 
     // Info list
     infoList: { marginTop: 4 },
-    infoRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 14 },
-    infoIconCol: { width: 32, alignItems: 'flex-start', paddingTop: 2 },
-    infoLabel: { fontSize: 12, fontWeight: 'normal', letterSpacing: 1, color: '#fff2dc', textTransform: 'uppercase' },
-    infoValue: { fontSize: 16, fontWeight: 'bold', lineHeight: 26, color: '#FFFFFF' },
-    divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)', width: '100%', marginVertical: 0 },
+    infoRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
+    infoIconCol: { width: 32, alignItems: 'flex-start' },
+    infoValue: { fontSize: 16, fontWeight: 'bold', lineHeight: 26, flex: 1 },
+    divider: { height: 1, backgroundColor: 'rgba(128,128,128,0.15)', width: '100%', marginVertical: 0 },
 
     // Banner
     banner: {
@@ -743,33 +768,89 @@ const styles = StyleSheet.create({
 
     // Section
     section: { marginTop: 28 },
-    sectionTitle: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: '500',
+        color: '#FFFFFF',
+        lineHeight: 28,
+    },
 
-    // Avatar row (Meeting With)
-    avatarRow: { flexDirection: 'row', gap: 18, marginTop: 16, flexWrap: 'wrap' },
-    avatarSlot: { alignItems: 'center', width: 64 },
-    participantAvatarWrap: { width: 62, height: 62, borderRadius: 31, overflow: 'hidden', borderWidth: 1, borderColor: '#FFFFFF', backgroundColor: '#353534' },
-    participantAvatar: { width: 60, height: 60, borderRadius: 30 },
-    waitingAvatar: { justifyContent: 'center', alignItems: 'center', backgroundColor: '#ffb534' },
-    avatarName: { fontSize: 12, fontWeight: '500', marginTop: 6, textAlign: 'center', color: '#FFFFFF' },
+    // HOSTED BY section
+    hostedBySection: { marginTop: 20 },
+    hostedByLabel: { fontSize: 11, fontWeight: '500', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 },
+    hostRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 10,
+    },
+    hostMetaCol: {
+        flex: 1,
+        marginLeft: 14,
+        justifyContent: 'center',
+        gap: 6,
+    },
+    hostRepRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    ratingPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 12,
+        borderWidth: 1,
+    },
+    ratingText: {
+        fontSize: 12,
+        fontWeight: '700',
+    },
 
-    // Create group chat button
+    // MEET WITH section
+    meetWithSection: { marginTop: 24 },
+
+    // Avatar row (HOSTED BY)
+    avatarRow: { flexDirection: 'row', gap: 14, marginTop: 12, flexWrap: 'wrap' },
+    avatarSlot: { alignItems: 'center', width: 60 },
+    participantAvatarWrap: { width: 58, height: 58, borderRadius: 29, overflow: 'hidden' },
+    participantAvatar: { width: 58, height: 58, borderRadius: 29 },
+    waitingAvatar: { justifyContent: 'center', alignItems: 'center', backgroundColor: '#2A2A2A', borderWidth: 2, borderColor: '#444', borderStyle: 'dashed' },
+    avatarName: { fontSize: 12, fontWeight: '500', marginTop: 6, textAlign: 'center' },
+
+    // Create group chat button — full-width solid yellow pill
     createGroupBtn: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-        gap: 8, paddingVertical: 12, borderRadius: 14, borderWidth: 1, marginTop: 18,
+        gap: 10, paddingVertical: 17, borderRadius: 10, marginTop: 20,
+        backgroundColor: '#FFB534',
     },
-    createGroupText: { fontSize: 14, fontWeight: '700' },
+    createGroupText: { fontSize: 15, fontWeight: '700', color: '#000' },
 
     // Hashtags
-    hashtagText: { fontSize: 15, fontWeight: '300', marginTop: 14, lineHeight: 18, color: '#ffb534' },
+    hashtagText: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginTop: 14,
+        lineHeight: 24,
+        color: '#FFB800',
+        fontFamily: 'System',
+    },
 
     // Others chips
     othersRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14 },
-    otherChip: { paddingVertical: 9, paddingHorizontal: 17, borderRadius: 4, borderWidth: 1, borderColor: 'rgba(59,75,55,0.2)', backgroundColor: '#1c1b1b' },
-    otherChipText: { fontSize: 10, fontWeight: '600', letterSpacing: 0.5, textTransform: 'uppercase', color: '#FFFFFF' },
+    otherChip: { paddingVertical: 9, paddingHorizontal: 17, borderRadius: 4, borderWidth: 1 },
+    otherChipText: { fontSize: 10, fontWeight: '600', letterSpacing: 0.5, textTransform: 'uppercase' },
 
     // About the meal
-    descriptionText: { fontSize: 12, lineHeight: 18, marginTop: 12, color: '#FFFFFF', opacity: 0.8, fontWeight: '300' },
+    descriptionText: {
+        fontSize: 16,
+        fontWeight: '400',
+        lineHeight: 26,
+        color: '#9CA3AF',
+        marginTop: 12,
+        fontFamily: 'System',
+    },
 
     // Pending request items (host)
     requestItem: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 16, borderWidth: 1, justifyContent: 'space-between' },

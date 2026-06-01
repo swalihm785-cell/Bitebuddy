@@ -43,7 +43,7 @@ const GROUP_SIZE_OPTIONS = [2, 3, 4] as const;
 
 const Section = ({ title, subtitle, children, colors, style }: { title: string, subtitle?: string, children: React.ReactNode, icon?: string, colors: any, isDarkMode?: boolean, style?: any }) => (
     <View style={[styles.section, style]}>
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{title}</Text>
         {subtitle && <Text style={[styles.sectionSubtitle, { color: colors.textMuted }]}>{subtitle}</Text>}
         <View style={styles.sectionContent}>
             {children}
@@ -497,14 +497,14 @@ export default function CreatePostScreen() {
                 paddingTop: Platform.OS === 'ios' ? 16 : Math.max(insets.top, 10),
                 backgroundColor: Colors.backgroundElevated,
             }]}>
-                <FudioLogo width={74} height={26} />
+                <FudioLogo width={74} height={26} color={Colors.textPrimary} />
             </View>
 
             {/* Header row */}
             <View style={styles.headerRow}>
                 <TouchableOpacity onPress={() => safeGoBack()} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Ionicons name="arrow-back" size={24} color={'#ffb534'} />
-                    <Text style={{ fontSize: 14, fontWeight: '500', color: '#FFFFFF' }}>Create Dining Plan</Text>
+                    <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+                    <Text style={{ fontSize: 14, fontWeight: '500', color: Colors.textPrimary }}>Create Dining Plan</Text>
                 </TouchableOpacity>
             </View>
 
@@ -515,30 +515,30 @@ export default function CreatePostScreen() {
             >
                 <Section title="Name Your Feast" colors={Colors} isDarkMode={isDarkMode}>
                     {/* Input row with AI button */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#1D1B22', borderRadius: 6, paddingHorizontal: 14, height: 50 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.backgroundInput, borderRadius: 6, paddingHorizontal: 14, height: 50 }}>
                         <TextInput
                             style={{ flex: 1, fontSize: 14, fontWeight: '400', color: Colors.textPrimary }}
                             placeholder="Catchy title (e.g. Best Ramen in Town)"
-                            placeholderTextColor="#938F99"
+                            placeholderTextColor={Colors.textMuted}
                             value={title}
                             onChangeText={setTitle}
                         />
                         {/* Divider */}
-                        <View style={{ width: 1, height: 24, backgroundColor: 'rgba(255,255,255,0.12)', marginHorizontal: 10 }} />
+                        <View style={{ width: 1, height: 24, backgroundColor: Colors.border, marginHorizontal: 10 }} />
                         {/* AI Icon Button */}
                         <TouchableOpacity
                             onPress={() => {/* AI title generation */}}
-                            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }}
+                            style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' }}
                         >
                             <Svg width={18} height={18} viewBox="0 0 18 18" fill="none">
-                                <Path d="M14.7273 6.54545L13.7045 4.29545L11.4545 3.27273L13.7045 2.25L14.7273 0L15.75 2.25L18 3.27273L15.75 4.29545L14.7273 6.54545ZM14.7273 18L13.7045 15.75L11.4545 14.7273L13.7045 13.7045L14.7273 11.4545L15.75 13.7045L18 14.7273L15.75 15.75L14.7273 18ZM6.54545 15.5455L4.5 11.0455L0 9L4.5 6.95455L6.54545 2.45455L8.59091 6.95455L13.0909 9L8.59091 11.0455L6.54545 15.5455ZM6.54545 11.5773L7.36364 9.81818L9.12273 9L7.36364 8.18182L6.54545 6.42273L5.72727 8.18182L3.96818 9L5.72727 9.81818L6.54545 11.5773Z" fill="#FFB534" />
+                                <Path d="M14.7273 6.54545L13.7045 4.29545L11.4545 3.27273L13.7045 2.25L14.7273 0L15.75 2.25L18 3.27273L15.75 4.29545L14.7273 6.54545ZM14.7273 18L13.7045 15.75L11.4545 14.7273L13.7045 13.7045L14.7273 11.4545L15.75 13.7045L18 14.7273L15.75 15.75L14.7273 18ZM6.54545 15.5455L4.5 11.0455L0 9L4.5 6.95455L6.54545 2.45455L8.59091 6.95455L13.0909 9L8.59091 11.0455L6.54545 15.5455ZM6.54545 11.5773L7.36364 9.81818L9.12273 9L7.36364 8.18182L6.54545 6.42273L5.72727 8.18182L3.96818 9L5.72727 9.81818L6.54545 11.5773Z" fill={Colors.primary} />
                             </Svg>
                         </TouchableOpacity>
                     </View>
                     {/* AI hint */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 }}>
-                        <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#FFB534', opacity: 0.5 }} />
-                        <Text style={{ fontSize: 12, fontWeight: '500', fontFamily: 'Inter', color: '#FFB534', letterSpacing: -0.25, lineHeight: 17, opacity: 0.5 }}>
+                        <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: isDarkMode ? Colors.primary : Colors.primaryDark }} />
+                        <Text style={{ fontSize: 12, fontWeight: '500', fontFamily: 'Inter', color: isDarkMode ? Colors.primary : Colors.primaryDark, letterSpacing: -0.25, lineHeight: 17 }}>
                             AI can help you write a catchy title
                         </Text>
                     </View>
@@ -557,11 +557,11 @@ export default function CreatePostScreen() {
                                             styles.chip,
                                             isSelected
                                                 ? { backgroundColor: Colors.primary }
-                                                : { backgroundColor: '#353534' },
+                                                : { backgroundColor: Colors.backgroundInput },
                                         ]}
                                         onPress={() => toggleCuisine(c)}
                                     >
-                                        <Text style={[styles.chipText, { color: isSelected ? '#000' : '#B9CCB2' }]}>
+                                        <Text style={[styles.chipText, { color: isSelected ? '#000' : Colors.textMuted }]}>
                                             {c}
                                         </Text>
                                     </TouchableOpacity>
@@ -592,7 +592,7 @@ export default function CreatePostScreen() {
                                             <Text style={{
                                                 fontSize: 13,
                                                 fontWeight: isActive ? '700' : '500',
-                                                color: isActive ? Colors.primary : '#B9CCB2',
+                                                color: isActive ? Colors.primary : Colors.textMuted,
                                                 textTransform: 'capitalize',
                                                 letterSpacing: 0.3,
                                             }}>
@@ -602,7 +602,7 @@ export default function CreatePostScreen() {
                                                 onPress={() => toggleCuisine(c)}
                                                 hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                                             >
-                                                <Ionicons name="close" size={14} color={isActive ? Colors.primary : '#B9CCB2'} />
+                                                <Ionicons name="close" size={14} color={isActive ? Colors.primary : Colors.textMuted} />
                                             </TouchableOpacity>
                                         </TouchableOpacity>
                                     );
@@ -613,7 +613,7 @@ export default function CreatePostScreen() {
                                 <>
                                     {/* Search bar */}
                                     {!foodLoading && foodOptions.length > 0 && (
-                                        <View style={[styles.searchRow, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', borderColor: glassBorder }]}>
+                                        <View style={[styles.searchRow, { backgroundColor: Colors.backgroundInput, borderColor: Colors.border }]}>
                                             <Ionicons name="search" size={18} color={Colors.textMuted} />
                                             <TextInput
                                                 style={[styles.searchInput, { color: Colors.textPrimary }]}
@@ -665,7 +665,7 @@ export default function CreatePostScreen() {
                                                             activeOpacity={0.8}
                                                             style={[
                                                                 styles.foodCard,
-                                                                { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : '#fff', borderColor: isSelected ? Colors.primary : Colors.border },
+                                                                { backgroundColor: Colors.backgroundCard, borderColor: isSelected ? Colors.primary : Colors.border },
                                                                 isSelected && { borderWidth: 2 },
                                                             ]}
                                                         >
@@ -694,9 +694,9 @@ export default function CreatePostScreen() {
                                     })() : null}
 
                                     {/* Custom food input */}
-                                    <View style={[styles.customFoodRow, { marginTop: foodOptions.length > 0 ? 16 : 5, marginBottom: 8 }]}>
+                                    <View style={[styles.customFoodRow, { marginTop: foodOptions.length > 0 ? 16 : 5, marginBottom: 8, backgroundColor: Colors.backgroundInput }]}>
                                         <TextInput
-                                            style={[styles.input, { flex: 1, color: Colors.textPrimary, height: 40 }]}
+                                            style={[styles.input, { flex: 1, color: Colors.textPrimary, height: 40, backgroundColor: 'transparent' }]}
                                             placeholder="Add new dish"
                                             placeholderTextColor={Colors.textMuted}
                                             value={customFoodName}
@@ -736,7 +736,7 @@ export default function CreatePostScreen() {
                     )}
 
                     <TextInput
-                        style={[styles.textArea, { color: Colors.textPrimary, marginTop: -11, backgroundColor: '#0E0E0E', borderRadius: 8 }]}
+                        style={[styles.textArea, { color: Colors.textPrimary, marginTop: -11, backgroundColor: Colors.backgroundInput, borderRadius: 8 }]}
                         placeholder="Add a craving description... (e.g. I prefer Biryani, but open to other suggestions.)"
                         placeholderTextColor={Colors.textMuted}
                         multiline
@@ -755,14 +755,14 @@ export default function CreatePostScreen() {
                     style={{ zIndex: 1000, overflow: 'visible' }}
                 >
                     {/* Restaurant Name Field with custom icon */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#1D1B22', borderRadius: 6, paddingHorizontal: 14, height: 50, gap: 10 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.backgroundInput, borderRadius: 6, paddingHorizontal: 14, height: 50, gap: 10 }}>
                         <Svg width={15} height={20} viewBox="0 0 9 12" fill="none">
-                            <Path d="M1.75 11.6667V6.32917C1.25417 6.19306 0.838542 5.92083 0.503125 5.5125C0.167708 5.10417 0 4.62778 0 4.08333V0H1.16667V4.08333H1.75V0H2.91667V4.08333H3.5V0H4.66667V4.08333C4.66667 4.62778 4.49896 5.10417 4.16354 5.5125C3.82812 5.92083 3.4125 6.19306 2.91667 6.32917V11.6667H1.75ZM7.58333 11.6667V7H5.83333V2.91667C5.83333 2.10972 6.11771 1.42188 6.68646 0.853125C7.25521 0.284375 7.94306 0 8.75 0V11.6667H7.58333Z" fill="#C6C6C7" fillOpacity="0.5" />
+                            <Path d="M1.75 11.6667V6.32917C1.25417 6.19306 0.838542 5.92083 0.503125 5.5125C0.167708 5.10417 0 4.62778 0 4.08333V0H1.16667V4.08333H1.75V0H2.91667V4.08333H3.5V0H4.66667V4.08333C4.66667 4.62778 4.49896 5.10417 4.16354 5.5125C3.82812 5.92083 3.4125 6.19306 2.91667 6.32917V11.6667H1.75ZM7.58333 11.6667V7H5.83333V2.91667C5.83333 2.10972 6.11771 1.42188 6.68646 0.853125C7.25521 0.284375 7.94306 0 8.75 0V11.6667H7.58333Z" fill={Colors.textMuted} fillOpacity="0.5" />
                         </Svg>
                         <TextInput
                             style={{ flex: 1, fontSize: 14, fontWeight: '400', color: Colors.textPrimary }}
                             placeholder="Restaurant Name (optional)"
-                            placeholderTextColor="#938F99"
+                            placeholderTextColor={Colors.textMuted}
                             value={restaurant}
                             onChangeText={setRestaurant}
                         />
@@ -770,14 +770,14 @@ export default function CreatePostScreen() {
 
                     {/* Location Field with custom icon */}
                     <View style={{ marginTop: 4, zIndex: 1001 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#1D1B22', borderRadius: 6, paddingHorizontal: 14, height: 50, gap: 10 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.backgroundInput, borderRadius: 6, paddingHorizontal: 14, height: 50, gap: 10 }}>
                             <Svg width={16} height={20} viewBox="0 0 10 12" fill="none">
-                                <Path d="M4.66667 5.83333C4.9875 5.83333 5.26215 5.7191 5.49062 5.49062C5.7191 5.26215 5.83333 4.9875 5.83333 4.66667C5.83333 4.34583 5.7191 4.07118 5.49062 3.84271C5.26215 3.61424 4.9875 3.5 4.66667 3.5C4.34583 3.5 4.07118 3.61424 3.84271 3.84271C3.61424 4.07118 3.5 4.34583 3.5 4.66667C3.5 4.9875 3.61424 5.26215 3.84271 5.49062C4.07118 5.7191 4.34583 5.83333 4.66667 5.83333ZM4.66667 10.1208C5.85278 9.03194 6.73264 8.04271 7.30625 7.15312C7.87986 6.26354 8.16667 5.47361 8.16667 4.78333C8.16667 3.72361 7.82882 2.8559 7.15312 2.18021C6.47743 1.50451 5.64861 1.16667 4.66667 1.16667C3.68472 1.16667 2.8559 1.50451 2.18021 2.18021C1.50451 2.8559 1.16667 3.72361 1.16667 4.78333C1.16667 5.47361 1.45347 6.26354 2.02708 7.15312C2.60069 8.04271 3.48056 9.03194 4.66667 10.1208ZM4.66667 11.6667C3.10139 10.3347 1.93229 9.09757 1.15937 7.95521C0.386458 6.81285 0 5.75556 0 4.78333C0 3.325 0.469097 2.16319 1.40729 1.29792C2.34549 0.432639 3.43194 0 4.66667 0C5.90139 0 6.98785 0.432639 7.92604 1.29792C8.86424 2.16319 9.33333 3.325 9.33333 4.78333C9.33333 5.75556 8.94688 6.81285 8.17396 7.95521C7.40104 9.09757 6.23194 10.3347 4.66667 11.6667Z" fill="#C6C6C7" fillOpacity="0.5" />
+                                <Path d="M4.66667 5.83333C4.9875 5.83333 5.26215 5.7191 5.49062 5.49062C5.7191 5.26215 5.83333 4.9875 5.83333 4.66667C5.83333 4.34583 5.7191 4.07118 5.49062 3.84271C5.26215 3.61424 4.9875 3.5 4.66667 3.5C4.34583 3.5 4.07118 3.61424 3.84271 3.84271C3.61424 4.07118 3.5 4.34583 3.5 4.66667C3.5 4.9875 3.61424 5.26215 3.84271 5.49062C4.07118 5.7191 4.34583 5.83333 4.66667 5.83333ZM4.66667 10.1208C5.85278 9.03194 6.73264 8.04271 7.30625 7.15312C7.87986 6.26354 8.16667 5.47361 8.16667 4.78333C8.16667 3.72361 7.82882 2.8559 7.15312 2.18021C6.47743 1.50451 5.64861 1.16667 4.66667 1.16667C3.68472 1.16667 2.8559 1.50451 2.18021 2.18021C1.50451 2.8559 1.16667 3.72361 1.16667 4.78333C1.16667 5.47361 1.45347 6.26354 2.02708 7.15312C2.60069 8.04271 3.48056 9.03194 4.66667 10.1208ZM4.66667 11.6667C3.10139 10.3347 1.93229 9.09757 1.15937 7.95521C0.386458 6.81285 0 5.75556 0 4.78333C0 3.325 0.469097 2.16319 1.40729 1.29792C2.34549 0.432639 3.43194 0 4.66667 0C5.90139 0 6.98785 0.432639 7.92604 1.29792C8.86424 2.16319 9.33333 3.325 9.33333 4.78333C9.33333 5.75556 8.94688 6.81285 8.17396 7.95521C7.40104 9.09757 6.23194 10.3347 4.66667 11.6667Z" fill={Colors.textMuted} fillOpacity="0.5" />
                             </Svg>
                             <TextInput
                                 style={{ flex: 1, fontSize: 14, fontWeight: '400', color: Colors.textPrimary }}
                                 placeholder="Search Location / Address *"
-                                placeholderTextColor="#938F99"
+                                placeholderTextColor={Colors.textMuted}
                                 value={area}
                                 onChangeText={fetchPlaceSuggestions}
                                 onFocus={() => { if (placeSuggestions.length > 0) setShowPlaceSuggestions(true); }}
@@ -872,7 +872,7 @@ export default function CreatePostScreen() {
                                         styles.groupSizeChip,
                                         selected
                                             ? { backgroundColor: Colors.primary, borderColor: Colors.primary }
-                                            : { backgroundColor: '#1C1B1B', borderColor: 'rgba(73,69,79,0.2)' },
+                                            : { backgroundColor: Colors.backgroundInput, borderColor: Colors.border },
                                     ]}
                                     onPress={() => {
                                         setMaxSize(size);
@@ -896,20 +896,20 @@ export default function CreatePostScreen() {
                     {/* Date & Time box */}
                     <TouchableOpacity
                         onPress={() => setCustomPickerVisible(true)}
-                        style={{ backgroundColor: '#1C1B1B', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 14 }}
+                        style={{ backgroundColor: Colors.backgroundInput, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 14 }}
                     >
                         <Svg width={18} height={20} viewBox="0 0 18 20" fill="none">
-                            <Path d="M2 20C1.45 20 0.979167 19.8042 0.5875 19.4125C0.195833 19.0208 0 18.55 0 18V4C0 3.45 0.195833 2.97917 0.5875 2.5875C0.979167 2.19583 1.45 2 2 2H3V0H5V2H13V0H15V2H16C16.55 2 17.0208 2.19583 17.4125 2.5875C17.8042 2.97917 18 3.45 18 4V18C18 18.55 17.8042 19.0208 17.4125 19.4125C17.0208 19.8042 16.55 20 16 20H2ZM2 18H16V8H2V18ZM2 6H16V4H2V6ZM2 6V4V6Z" fill="#FFB534" />
+                            <Path d="M2 20C1.45 20 0.979167 19.8042 0.5875 19.4125C0.195833 19.0208 0 18.55 0 18V4C0 3.45 0.195833 2.97917 0.5875 2.5875C0.979167 2.19583 1.45 2 2 2H3V0H5V2H13V0H15V2H16C16.55 2 17.0208 2.19583 17.4125 2.5875C17.8042 2.97917 18 3.45 18 4V18C18 18.55 17.8042 19.0208 17.4125 19.4125C17.0208 19.8042 16.55 20 16 20H2ZM2 18H16V8H2V18ZM2 6H16V4H2V6ZM2 6V4V6Z" fill={Colors.primary} />
                         </Svg>
                         <View style={{ flex: 1 }}>
-                            <Text style={{ color: 'rgba(198,198,199,0.60)', fontFamily: 'Inter', fontSize: 14, fontWeight: '700', lineHeight: 18, letterSpacing: 1.2, textTransform: 'capitalize' }}>
+                            <Text style={{ color: Colors.textSecondary, fontFamily: 'Inter', fontSize: 14, fontWeight: '700', lineHeight: 18, letterSpacing: 1.2, textTransform: 'capitalize' }}>
                                 Date & Time
                             </Text>
-                            <Text style={styles.dateTimeValue}>
+                            <Text style={[styles.dateTimeValue, { color: Colors.textPrimary }]}>
                                 {isImmediate ? 'Now' : `${dateTime.toLocaleDateString([], { day: 'numeric', month: 'short' })}, ${dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
                             </Text>
                         </View>
-                        <Ionicons name="chevron-forward" size={18} color="rgba(198,198,199,0.4)" />
+                        <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
                     </TouchableOpacity>
 
                     {/* Urgent request — flat row, no box */}
@@ -932,7 +932,7 @@ export default function CreatePostScreen() {
                                     setDateTime(new Date(Date.now() + 30 * 60 * 1000));
                                 }
                             }}
-                            trackColor={{ false: '#767577', true: Colors.error }}
+                            trackColor={{ false: Colors.border, true: Colors.error }}
                             thumbColor={Platform.OS === 'ios' ? '#FFF' : isUrgent ? Colors.error : '#f4f3f4'}
                         />
                     </View>
@@ -959,15 +959,15 @@ export default function CreatePostScreen() {
                             ]}
                         >
                             <View style={{ flex: 1, gap: 4 }}>
-                                <Text style={{ color: '#00FF41', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif', fontSize: 22, fontWeight: '600', lineHeight: 30 }}>
+                                <Text style={{ color: isDarkMode ? '#00FF41' : Colors.success, fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif', fontSize: 22, fontWeight: '600', lineHeight: 30 }}>
                                     Free — It's on me!
                                 </Text>
-                                <Text style={{ color: '#B9CCB2', fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif', fontSize: 14, fontWeight: '400', lineHeight: 18 }}>
+                                <Text style={{ color: Colors.textMuted, fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif', fontSize: 14, fontWeight: '400', lineHeight: 18 }}>
                                     I'm hosting and paying for this meal.
                                 </Text>
                             </View>
-                            <View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: selectedBudget === 'free' ? '#FFB534' : Colors.textMuted, justifyContent: 'center', alignItems: 'center' }}>
-                                {selectedBudget === 'free' && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#FFB534' }} />}
+                            <View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: selectedBudget === 'free' ? Colors.primary : Colors.textMuted, justifyContent: 'center', alignItems: 'center' }}>
+                                {selectedBudget === 'free' && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: Colors.primary }} />}
                             </View>
                         </LinearGradient>
                     </TouchableOpacity>
@@ -984,11 +984,11 @@ export default function CreatePostScreen() {
                                         key={opt.value}
                                         style={[
                                             styles.budgetChip,
-                                            { width: '66.2%', color: isSelected ? Colors.primary : '#FFF', textAlign: 'center', fontSize: 12, fontWeight: '600', paddingHorizontal: 0 },
+                                            { width: '66.2%', color: isSelected ? Colors.primary : Colors.textPrimary, textAlign: 'center', fontSize: 12, fontWeight: '600', paddingHorizontal: 0, backgroundColor: Colors.backgroundInput },
                                             isSelected && { borderColor: Colors.primary, backgroundColor: Colors.primary + '18' }
                                         ]}
                                         placeholder="Custom"
-                                        placeholderTextColor="rgba(198, 198, 199, 0.4)"
+                                        placeholderTextColor={Colors.textMuted}
                                         keyboardType="numeric"
                                         value={selectedBudget === 'custom' ? budgetMin : ''}
                                         onChangeText={(val) => {
@@ -1005,7 +1005,7 @@ export default function CreatePostScreen() {
                                     key={opt.value}
                                     style={[
                                         styles.budgetChip,
-                                        { width: '31.3%' },
+                                        { width: '31.3%', backgroundColor: Colors.backgroundInput },
                                         isSelected && { borderColor: Colors.primary, backgroundColor: Colors.primary + '18' }
                                     ]}
                                     onPress={() => {
@@ -1014,7 +1014,7 @@ export default function CreatePostScreen() {
                                         setBudgetMax('');
                                     }}
                                 >
-                                    <Text style={[styles.budgetText, isSelected && { color: Colors.primary }]}>
+                                    <Text style={[styles.budgetText, { color: Colors.textPrimary }, isSelected && { color: Colors.primary }]}>
                                         ₹{opt.label}
                                     </Text>
                                 </TouchableOpacity>
@@ -1022,7 +1022,7 @@ export default function CreatePostScreen() {
                         })}
                     </View>
                     <TextInput
-                        style={[styles.textArea, { marginTop: 3, color: Colors.textPrimary, backgroundColor: '#0E0E0E', borderRadius: 8 }]}
+                        style={[styles.textArea, { marginTop: 3, color: Colors.textPrimary, backgroundColor: Colors.backgroundInput, borderRadius: 8 }]}
                         placeholder="Add details... (e.g. Payment method, preferred people like 'food lovers and punctual people')"
                         placeholderTextColor={Colors.textMuted}
                         multiline
@@ -1041,11 +1041,12 @@ export default function CreatePostScreen() {
                                     key={opt.value}
                                     style={[
                                         styles.otherChip,
+                                        { backgroundColor: Colors.backgroundInput },
                                         isSelected && { borderColor: Colors.secondary, backgroundColor: Colors.secondary + '30' }
                                     ]}
                                     onPress={() => toggleOther(opt.value)}
                                 >
-                                    <Text style={styles.otherChipText}>
+                                    <Text style={[styles.otherChipText, { color: Colors.textPrimary }]}>
                                         {opt.label}
                                     </Text>
                                 </TouchableOpacity>
@@ -1054,11 +1055,11 @@ export default function CreatePostScreen() {
                     </View>
 
                     {/* Custom other input */}
-                    <View style={styles.customFoodRow}>
+                    <View style={[styles.customFoodRow, { backgroundColor: Colors.backgroundInput }]}>
                         <TextInput
                             style={{ flex: 1, color: Colors.textPrimary, fontSize: 14, fontWeight: '400' }}
                             placeholder="Add a custom extra"
-                            placeholderTextColor="rgba(198, 198, 199, 0.4)"
+                            placeholderTextColor={Colors.textMuted}
                             value={customOtherName}
                             onChangeText={setCustomOtherName}
                             onSubmitEditing={addCustomOther}
@@ -1098,12 +1099,12 @@ export default function CreatePostScreen() {
                 {/* Invite Food Buddies */}
                 {foodBuddies.length > 0 && (
                     <Section title="Invite Food Buddies" subtitle="Personally invite your buddies to this plan" icon="people-outline" colors={Colors} isDarkMode={isDarkMode}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#0E0E0E', borderRadius: 8, paddingHorizontal: 14, height: 54, gap: 10, marginTop: 4, marginBottom: 7 }}>
-                            <Ionicons name="search" size={18} color="rgba(198, 198, 199, 0.4)" />
+                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.backgroundInput, borderRadius: 8, paddingHorizontal: 14, height: 54, gap: 10, marginTop: 4, marginBottom: 7 }}>
+                            <Ionicons name="search" size={18} color={Colors.textMuted} />
                             <TextInput
                                 style={{ flex: 1, color: Colors.textPrimary, fontSize: 14 }}
                                 placeholder="Search buddies..."
-                                placeholderTextColor="rgba(198, 198, 199, 0.4)"
+                                placeholderTextColor={Colors.textMuted}
                                 value={buddySearch}
                                 onChangeText={setBuddySearch}
                             />
@@ -1129,8 +1130,8 @@ export default function CreatePostScreen() {
                                                 }} 
                                                 style={{ alignItems: 'center', width: 66 }}
                                             >
-                                                <Image source={{ uri: buddy.photoURL }} style={{ width: 66, height: 66, borderRadius: 33, borderWidth: invited ? 2 : 0, borderColor: '#FFF' }} />
-                                                <Text numberOfLines={1} style={{ color: invited ? Colors.primary : '#FFF', fontSize: 15, fontWeight: '500', marginTop: 10, width: '100%', textAlign: 'center' }}>
+                                                <Image source={{ uri: buddy.photoURL }} style={{ width: 66, height: 66, borderRadius: 33, borderWidth: invited ? 2 : 0, borderColor: Colors.primary }} />
+                                                <Text numberOfLines={1} style={{ color: invited ? Colors.primary : Colors.textPrimary, fontSize: 15, fontWeight: '500', marginTop: 10, width: '100%', textAlign: 'center' }}>
                                                     {buddy.name.split(' ')[0]}
                                                 </Text>
                                             </TouchableOpacity>
@@ -1144,8 +1145,8 @@ export default function CreatePostScreen() {
                                         if (!buddy) return null;
                                         return (
                                             <TouchableOpacity key={id} onPress={() => setInvitedBuddies(invitedBuddies.filter(i => i !== id))} style={{ alignItems: 'center', width: 66 }}>
-                                                <Image source={{ uri: buddy.photoURL }} style={{ width: 66, height: 66, borderRadius: 33, borderWidth: 2, borderColor: '#FFF' }} />
-                                                <Text numberOfLines={1} style={{ color: '#FFF', fontSize: 15, fontWeight: '500', marginTop: 10, width: '100%', textAlign: 'center' }}>
+                                                <Image source={{ uri: buddy.photoURL }} style={{ width: 66, height: 66, borderRadius: 33, borderWidth: 2, borderColor: Colors.primary }} />
+                                                <Text numberOfLines={1} style={{ color: Colors.textPrimary, fontSize: 15, fontWeight: '500', marginTop: 10, width: '100%', textAlign: 'center' }}>
                                                     {buddy.name.split(' ')[0]}
                                                 </Text>
                                             </TouchableOpacity>
@@ -1156,7 +1157,7 @@ export default function CreatePostScreen() {
                                             <View style={{ width: 66, height: 66, borderRadius: 33, backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center' }}>
                                                 <Ionicons name="person-add" size={28} color="rgba(0,0,0,0.4)" />
                                             </View>
-                                            <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '500', marginTop: 10 }}>Waiting</Text>
+                                            <Text style={{ color: Colors.textPrimary, fontSize: 15, fontWeight: '500', marginTop: 10 }}>Waiting</Text>
                                         </View>
                                     ))}
                                 </>
@@ -1174,7 +1175,7 @@ export default function CreatePostScreen() {
                     <View style={{ flex: 1 }}>
                         <Text 
                             style={{ 
-                                color: '#B9CCB2', 
+                                color: Colors.textPrimary, 
                                 fontFamily: Platform.OS === 'ios' ? 'Inter' : 'sans-serif', 
                                 fontSize: 15, 
                                 fontWeight: '700', 
@@ -1190,7 +1191,7 @@ export default function CreatePostScreen() {
                     <Switch
                         value={autoApprove}
                         onValueChange={setAutoApprove}
-                        trackColor={{ false: '#333', true: Colors.primary }}
+                        trackColor={{ false: Colors.border, true: Colors.primary }}
                         thumbColor="#FFF"
                     />
                 </View>

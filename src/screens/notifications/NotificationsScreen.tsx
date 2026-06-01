@@ -1,11 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-    View, Text, StyleSheet, FlatList, TouchableOpacity,
+    View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
-import { Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useThemeStore } from '../../store/useThemeStore';
@@ -15,38 +13,110 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { CustomAlert } from '../../components/common/CustomAlert';
 import { RootStackParamList } from '../../types';
 
-// Icon + accent color per notification type
-const TYPE_CONFIG: Record<string, { icon: string; color: string; emoji: string }> = {
-    join_request: { icon: 'person-add-outline', color: '#FF6B35', emoji: '📨' },
-    request_accepted: { icon: 'checkmark-circle-outline', color: '#22C55E', emoji: '✅' },
-    request_rejected: { icon: 'close-circle-outline', color: '#EF4444', emoji: '❌' },
-    participant_left: { icon: 'exit-outline', color: '#EF4444', emoji: '👋' },
-    new_message: { icon: 'chatbubble-outline', color: '#6C63FF', emoji: '💬' },
-    review: { icon: 'star-outline', color: '#F59E0B', emoji: '⭐' },
-    event: { icon: 'location-outline', color: '#FF3CAC', emoji: '📍' },
-    follow_request: { icon: 'person-outline', color: '#3CA5FF', emoji: '👤' },
-    follow_accepted: { icon: 'people-outline', color: '#22C55E', emoji: '🤝' },
-    new_meal: { icon: 'restaurant-outline', color: '#FF6B35', emoji: '🍽️' },
-    invite_received: { icon: 'mail-outline', color: '#6C63FF', emoji: '📨' },
-    invite_accepted: { icon: 'checkmark-circle-outline', color: '#22C55E', emoji: '✅' },
-    invite_rejected: { icon: 'close-circle-outline', color: '#EF4444', emoji: '❌' },
-    report: { icon: 'flag-outline', color: '#EF4444', emoji: '🚩' },
-    welcome: { icon: 'heart-outline', color: '#FF3CAC', emoji: '👋' },
-    system: { icon: 'information-circle-outline', color: '#6C63FF', emoji: 'ℹ️' },
+// ── Filter tabs ───────────────────────────────────────────────────────────────
+const FILTER_TABS = ['All', 'Reminders', 'Payment', 'Booking'];
+
+// ── Per-type icon + category ──────────────────────────────────────────────────
+// Icon background is always the same warm soft tint — only the icon glyph changes
+const TYPE_CONFIG: Record<string, { icon: string; category: string }> = {
+    join_request:     { icon: 'bookmark-outline',      category: 'Booking'   },
+    request_accepted: { icon: 'bookmark-outline',      category: 'Booking'   },
+    request_rejected: { icon: 'bookmark-outline',      category: 'Booking'   },
+    participant_left: { icon: 'bookmark-outline',      category: 'Booking'   },
+    new_meal:         { icon: 'bookmark-outline',      category: 'Booking'   },
+    invite_received:  { icon: 'bookmark-outline',      category: 'Booking'   },
+    invite_accepted:  { icon: 'bookmark-outline',      category: 'Booking'   },
+    invite_rejected:  { icon: 'bookmark-outline',      category: 'Booking'   },
+    new_message:      { icon: 'chatbubble-outline',    category: 'Reminders' },
+    review:           { icon: 'star-outline',          category: 'Reminders' },
+    event:            { icon: 'notifications-outline', category: 'Reminders' },
+    follow_request:   { icon: 'person-outline',        category: 'Reminders' },
+    follow_accepted:  { icon: 'people-outline',        category: 'Reminders' },
+    report:           { icon: 'flag-outline',          category: 'Reminders' },
+    welcome:          { icon: 'heart-outline',         category: 'Reminders' },
+    system:           { icon: 'notifications-outline', category: 'Reminders' },
+    payment_success:  { icon: 'card-outline',          category: 'Payment'   },
+    payment_saved:    { icon: 'card-outline',          category: 'Payment'   },
+    goal_achieved:    { icon: 'trophy-outline',        category: 'Reminders' },
+};
+const DEFAULT_CONFIG = { icon: 'notifications-outline', category: 'Reminders' };
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const isToday = (date: Date) => {
+    const now = new Date();
+    const d = new Date(date);
+    return d.getDate() === now.getDate() &&
+        d.getMonth() === now.getMonth() &&
+        d.getFullYear() === now.getFullYear();
 };
 
-const DEFAULT_CONFIG = { icon: 'notifications-outline', color: '#6C63FF', emoji: '🔔' };
+const isWithinLast7Days = (date: Date) => {
+    const now = new Date();
+    const d = new Date(date);
+    const diffTime = Math.abs(now.getTime() - d.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 7 && !isToday(date);
+};
 
+const isWithinLastMonth = (date: Date) => {
+    const now = new Date();
+    const d = new Date(date);
+    const diffTime = Math.abs(now.getTime() - d.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 30 && !isToday(date) && !isWithinLast7Days(date);
+};
+
+const isEarlier = (date: Date) => {
+    return !isToday(date) && !isWithinLast7Days(date) && !isWithinLastMonth(date);
+};
+
+const formatTime = (date: Date) => {
+    const d = new Date(date);
+    let h = d.getHours();
+    const m = d.getMinutes();
+    const ampm = h >= 12 ? 'pm' : 'am';
+    h = h % 12 || 12;
+    return `${h}:${m.toString().padStart(2, '0')} ${ampm}`;
+};
+
+const getCategoryFromTitle = (title: string): string => {
+    const t = title.toLowerCase();
+    if (t.includes('payment') || t.includes('paid') || t.includes('method')) return 'Payment';
+    if (t.includes('booking') || t.includes('session') || t.includes('slot') ||
+        t.includes('cancel') || t.includes('confirm')) return 'Booking';
+    return 'Reminders';
+};
+
+// ── Main Component ────────────────────────────────────────────────────────────
 export default function NotificationsScreen() {
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
     const { currentTheme, isDarkMode } = useThemeStore();
-    const { Colors, FontSize, FontWeight, Spacing } = currentTheme;
+    const { Colors } = currentTheme;
     const { notifications, markAsRead, markAllAsRead, addNotification } = useNotificationStore();
     const { acceptFollowRequest, rejectFollowRequest, updateUser, user } = useAuthStore();
     const { posts } = usePostStore();
 
+    const [activeTab, setActiveTab] = useState('All');
     const [popupNotif, setPopupNotif] = React.useState<typeof notifications[0] | null>(null);
     const [fallbackAlert, setFallbackAlert] = React.useState(false);
+
+    // Icon palette — unified warm tint matching screenshot
+    // Light mode: blush pink bg, medium salmon icon
+    // Dark mode:  muted warm tint bg, warm icon
+    const iconBg   = isDarkMode ? 'rgba(255,180,150,0.12)' : '#FFF0EC';
+    const iconColor = isDarkMode ? '#E0A090' : '#C07060';
+
+    const filteredNotifs = notifications.filter(n => {
+        if (activeTab === 'All') return true;
+        const cfg = TYPE_CONFIG[n.type] || DEFAULT_CONFIG;
+        const cat = cfg.category || getCategoryFromTitle(n.title);
+        return cat === activeTab;
+    });
+
+    const todayNotifs     = filteredNotifs.filter(n => isToday(n.createdAt));
+    const last7DaysNotifs = filteredNotifs.filter(n => isWithinLast7Days(n.createdAt));
+    const lastMonthNotifs = filteredNotifs.filter(n => isWithinLastMonth(n.createdAt));
+    const earlierNotifs   = filteredNotifs.filter(n => isEarlier(n.createdAt));
 
     const handlePress = (notif: typeof notifications[0]) => {
         markAsRead(notif.id);
@@ -58,7 +128,6 @@ export default function NotificationsScreen() {
         setTimeout(() => {
             const postId = notif.data?.postId;
             const userId = notif.data?.userId;
-
             switch (notif.type) {
                 case 'join_request':
                 case 'request_accepted':
@@ -69,16 +138,14 @@ export default function NotificationsScreen() {
                 case 'invite_accepted':
                 case 'invite_rejected': {
                     if (!postId) { setFallbackAlert(true); return; }
-                    const postExists = posts.find(p => p.id === postId);
-                    if (!postExists) { setFallbackAlert(true); return; }
+                    if (!posts.find(p => p.id === postId)) { setFallbackAlert(true); return; }
                     navigation.navigate('PostDetail', { postId });
                     break;
                 }
                 case 'new_message': {
                     const chatId = notif.data?.chatId;
-                    const chatName = notif.data?.chatName || 'Chat';
                     if (!chatId) { setFallbackAlert(true); return; }
-                    navigation.navigate('ChatDetail', { chatId, chatName, isGroup: false });
+                    navigation.navigate('ChatDetail', { chatId, chatName: notif.data?.chatName || 'Chat', isGroup: false });
                     break;
                 }
                 case 'follow_request':
@@ -92,130 +159,229 @@ export default function NotificationsScreen() {
         }, 100);
     };
 
-    const unreadCount = notifications.filter(n => !n.isRead).length;
-
-    const formatTime = (date: Date) => {
-        const now = new Date();
-        const diff = now.getTime() - new Date(date).getTime();
-        const mins = Math.floor(diff / 60000);
-        if (mins < 1) return 'Just now';
-        if (mins < 60) return `${mins}m ago`;
-        const hrs = Math.floor(mins / 60);
-        if (hrs < 24) return `${hrs}h ago`;
-        return `${Math.floor(hrs / 24)}d ago`;
-    };
-
-    const NotifItem = ({ notif }: { notif: typeof notifications[0] }) => {
-        const cfg = TYPE_CONFIG[notif.type] || DEFAULT_CONFIG;
-        return (
-            <TouchableOpacity
-                style={[
-                    styles.item,
-                    {
-                        paddingHorizontal: 12,
-                        paddingVertical: 18,
-                        backgroundColor: notif.isRead ? 'transparent' : (isDarkMode ? Colors.primary + '10' : Colors.primary + '08'),
-                    },
-                ]}
-                onPress={() => handlePress(notif)}
-                activeOpacity={0.7}
-            >
-                <View style={[styles.iconCircle, { backgroundColor: cfg.color + (isDarkMode ? '25' : '15') }]}>
-                    <Ionicons name={cfg.icon as any} size={22} color={cfg.color} />
-                </View>
-
-                <View style={styles.content}>
-                    <View style={styles.topRow}>
-                        <Text style={[styles.title, { color: Colors.textPrimary, fontWeight: notif.isRead ? '600' : '800' }]} numberOfLines={1}>
-                            {notif.title}
-                        </Text>
-                        <Text style={[styles.time, { color: Colors.textMuted }]}>
-                            {formatTime(notif.createdAt)}
-                        </Text>
-                    </View>
-                    <Text style={[styles.body, { color: Colors.textSecondary }]} numberOfLines={2}>
-                        {notif.body}
-                    </Text>
-                </View>
-
-                {!notif.isRead && (
-                    <View style={[styles.unreadBadge, { backgroundColor: Colors.primary }]} />
-                )}
-            </TouchableOpacity>
-        );
-    };
-
     const getActionBtnText = (type: string) => {
-        if (['join_request', 'request_accepted', 'request_rejected', 'participant_left', 'new_meal', 'invite_received', 'invite_accepted', 'invite_rejected'].includes(type)) return 'View Post';
+        if (['join_request', 'request_accepted', 'request_rejected', 'participant_left',
+            'new_meal', 'invite_received', 'invite_accepted', 'invite_rejected'].includes(type)) return 'View Post';
         if (type === 'new_message') return 'View Chat';
         if (['follow_request', 'follow_accepted', 'review'].includes(type)) return 'View Profile';
         return null;
     };
 
-    return (
-        <SafeAreaView style={[styles.safe, { backgroundColor: Colors.background }]} edges={['top']}>
-            {/* Header */}
-            <View style={[styles.header, { borderBottomColor: Colors.border, paddingHorizontal: 12, paddingVertical: 14, backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'transparent' }]}>
-                {Platform.OS === 'ios' && (
-                    <BlurView intensity={80} tint={isDarkMode ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
-                )}
-                <View style={{ flex: 1 }}>
-                    <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>
-                        Notifications
-                    </Text>
-                    {unreadCount > 0 && (
-                        <Text style={[styles.headerSub, { color: Colors.textMuted }]}>
-                            {unreadCount} new alert{unreadCount !== 1 ? 's' : ''}
-                        </Text>
-                    )}
-                </View>
-                {unreadCount > 0 && (
-                    <TouchableOpacity onPress={markAllAsRead} style={styles.markAllBtn}>
-                        <Ionicons name="checkmark-done" size={20} color={Colors.primary} />
-                    </TouchableOpacity>
-                )}
-                <TouchableOpacity onPress={() => {
-                    addNotification({ type: 'join_request', title: 'New Join Request', body: 'Roshan wants to join Pizza Night', data: { postId: '1' }, userId: 'swalih' });
-                    addNotification({ type: 'request_accepted', title: 'Request Accepted', body: 'Your request for Sushi Date was approved!', data: { postId: '1' }, userId: 'swalih' });
-                }} style={styles.testBtn}>
-                    <Text style={{ fontSize: 16 }}>🧪</Text>
-                </TouchableOpacity>
-            </View>
+    const unreadCount = notifications.filter(n => !n.isRead).length;
 
-            <FlatList
-                data={notifications}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => <NotifItem notif={item} />}
-                contentContainerStyle={styles.list}
-                showsVerticalScrollIndicator={false}
-                ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: Colors.border }]} />}
-                ListEmptyComponent={
-                    <View style={styles.empty}>
-                        <View style={[styles.emptyIconWrap, { backgroundColor: Colors.backgroundCard }]}>
-                            <Text style={{ fontSize: 40 }}>🔔</Text>
-                        </View>
-                        <Text style={[styles.emptyTitle, { color: Colors.textPrimary, fontSize: FontSize.lg, fontWeight: FontWeight.bold }]}>
-                            All caught up!
+    // ── Notification Row ──────────────────────────────────────────────────────
+    const NotifRow = ({ notif }: { notif: typeof notifications[0] }) => {
+        const cfg = TYPE_CONFIG[notif.type] || DEFAULT_CONFIG;
+        const isUnread = !notif.isRead;
+
+        return (
+            <TouchableOpacity
+                style={styles.row}
+                onPress={() => handlePress(notif)}
+                activeOpacity={0.65}
+            >
+                {/* Unified warm icon circle */}
+                <View style={[styles.iconCircle, { backgroundColor: iconBg }]}>
+                    <Ionicons name={cfg.icon as any} size={22} color={iconColor} />
+                </View>
+
+                {/* Content */}
+                <View style={styles.rowContent}>
+                    {/* Title + Time on same row */}
+                    <View style={styles.rowTop}>
+                        <Text
+                            style={[
+                                styles.rowTitle,
+                                {
+                                    color: Colors.textPrimary,
+                                    fontWeight: isUnread ? '700' : '600',
+                                }
+                            ]}
+                            numberOfLines={1}
+                        >
+                            {notif.title}
                         </Text>
-                        <Text style={[styles.emptySub, { color: Colors.textMuted, fontSize: FontSize.sm }]}>
-                            No notifications yet. Join a dining plan to get started.
+                        <Text style={[styles.rowTime, { color: Colors.textMuted }]}>
+                            {formatTime(notif.createdAt)}
                         </Text>
                     </View>
-                }
-            />
 
-            {/* Notification Detail Popup */}
+                    {/* Body — 2 lines */}
+                    <Text
+                        style={[styles.rowBody, { color: isDarkMode ? Colors.textSecondary : '#5A5A6E' }]}
+                        numberOfLines={2}
+                    >
+                        {notif.body}
+                    </Text>
+                </View>
+
+                {/* Unread dot */}
+                {isUnread && (
+                    <View style={[styles.unreadDot, { backgroundColor: Colors.primary }]} />
+                )}
+            </TouchableOpacity>
+        );
+    };
+
+    // ── Section (Today / Earlier) ─────────────────────────────────────────────
+    // "Today," gets a trailing comma; "Earlier" does not
+    const Section = ({ label, data }: { label: string; data: typeof notifications }) => {
+        if (data.length === 0) return null;
+        const displayLabel = label === 'Today' ? 'Today,' : label;
+        return (
+            <View>
+                <Text style={[styles.sectionLabel, { color: Colors.textPrimary }]}>
+                    {displayLabel}
+                </Text>
+                {data.map((n) => (
+                    <View key={n.id}>
+                        <NotifRow notif={n} />
+                        <View style={[styles.separator, { backgroundColor: isDarkMode ? Colors.border : '#E8E8F0' }]} />
+                    </View>
+                ))}
+            </View>
+        );
+    };
+
+    // ── Tab styles — selected = textPrimary bg (dark), unselected = card bg + border ──
+    const getTabStyle = (tab: string) => {
+        const isActive = tab === activeTab;
+        return {
+            container: {
+                backgroundColor: isActive
+                    ? Colors.textPrimary               // dark bg when selected (matches screenshot)
+                    : Colors.backgroundCard,
+                borderColor: isActive
+                    ? Colors.textPrimary
+                    : isDarkMode ? Colors.border : '#D8D8E4',
+            },
+            text: {
+                color: isActive
+                    ? (isDarkMode ? '#0F0F14' : '#FFFFFF') // inverse text on dark bg
+                    : Colors.textSecondary,
+                fontWeight: (isActive ? '600' : '400') as '600' | '400',
+            },
+        };
+    };
+
+    return (
+        <SafeAreaView style={[styles.safe, { backgroundColor: Colors.background }]} edges={['top']}>
+
+            {/* ── Header ─────────────────────────────────────────────────────── */}
+            <View style={styles.header}>
+                <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>
+                    Notifications
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {unreadCount > 0 && (
+                        <TouchableOpacity
+                            onPress={markAllAsRead}
+                            style={[styles.iconBtn, { backgroundColor: Colors.backgroundCard }]}
+                        >
+                            <Ionicons name="checkmark-done" size={20} color={Colors.primary} />
+                        </TouchableOpacity>
+                    )}
+                    {/* Dev test button — remove in production */}
+                    <TouchableOpacity
+                        style={[styles.iconBtn, { backgroundColor: Colors.backgroundCard }]}
+                        onPress={() => {
+                            addNotification({ type: 'join_request',   title: 'Booking confirmed!',     body: 'Your booking for Slot-02 is confirmed for 23. Please view details for more info',                         data: { postId: '1' }, userId: 'swalih', createdAt: new Date() });
+                            addNotification({ type: 'payment_saved',  title: 'Payment Method Saved',   body: 'Your payment method has been securely saved and is now ready to use for future transactions',              data: {}, userId: 'swalih', createdAt: new Date(Date.now() - 3 * 24 * 3600 * 1000) }); // 3 days ago
+                            addNotification({ type: 'event',          title: 'Session reminder',       body: "You have an upcoming session. Don't forget to show up on time!",                                          data: {}, userId: 'swalih', createdAt: new Date(Date.now() - 5 * 24 * 3600 * 1000) }); // 5 days ago
+                            addNotification({ type: 'request_rejected', title: 'Session cancelled',    body: 'Your booking has been cancelled. You can reschedule anytime',                                              data: {}, userId: 'swalih', createdAt: new Date(Date.now() - 15 * 24 * 3600 * 1000) }); // 15 days ago
+                            addNotification({ type: 'payment_success', title: 'Payment successful',    body: 'Thank you for your purchase! A confirmation email has been sent to your address.',                         data: {}, userId: 'swalih', createdAt: new Date(Date.now() - 25 * 24 * 3600 * 1000) }); // 25 days ago
+                            addNotification({ type: 'goal_achieved',  title: 'Goal Achieved',          body: "Great job! You've attended your 30th class in your journey",                                               data: {}, userId: 'swalih', createdAt: new Date(Date.now() - 45 * 24 * 3600 * 1000) }); // 45 days ago
+                        }}
+                    >
+                        <Text style={{ fontSize: 14 }}>🧪</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            {/* ── Filter Tabs ────────────────────────────────────────────────── */}
+            <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.tabsContainer}
+                style={{ flexGrow: 0, maxHeight: 70 }}
+            >
+                {FILTER_TABS.map(tab => {
+                    const ts = getTabStyle(tab);
+                    return (
+                        <TouchableOpacity
+                            key={tab}
+                            style={[styles.tab, {
+                                backgroundColor: ts.container.backgroundColor,
+                                borderColor: ts.container.borderColor,
+                            }]}
+                            onPress={() => setActiveTab(tab)}
+                            activeOpacity={0.75}
+                        >
+                            <Text style={[styles.tabText, { color: ts.text.color, fontWeight: ts.text.fontWeight }]}>
+                                {tab}
+                            </Text>
+                        </TouchableOpacity>
+                    );
+                })}
+            </ScrollView>
+
+            {/* ── Notification List ──────────────────────────────────────────── */}
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={[
+                    styles.listContent,
+                    filteredNotifs.length === 0 && { flex: 1 },
+                ]}
+            >
+                {filteredNotifs.length === 0 ? (
+                    <View style={styles.empty}>
+                        <View style={[styles.emptyIconWrap, { backgroundColor: iconBg }]}>
+                            <Ionicons name="notifications-outline" size={32} color={iconColor} />
+                        </View>
+                        <Text style={[styles.emptyTitle, { color: Colors.textPrimary }]}>
+                            All caught up!
+                        </Text>
+                        <Text style={[styles.emptySub, { color: Colors.textMuted }]}>
+                            {activeTab === 'All'
+                                ? 'No notifications yet.'
+                                : `No ${activeTab.toLowerCase()} notifications yet.`}
+                        </Text>
+                    </View>
+                ) : (
+                    <>
+                        <Section label="Today" data={todayNotifs} />
+                        <Section label="Last 7 days" data={last7DaysNotifs} />
+                        <Section label="Last month" data={lastMonthNotifs} />
+                        <Section label="Earlier" data={earlierNotifs} />
+                    </>
+                )}
+            </ScrollView>
+
+            {/* ── Detail Popup ───────────────────────────────────────────────── */}
             {popupNotif && (
                 <View style={styles.overlay}>
-                    <View style={[styles.popup, { backgroundColor: Colors.backgroundCard, shadowColor: Colors.textPrimary }]}>
-                        <View style={[styles.popupIconWrap, { backgroundColor: (TYPE_CONFIG[popupNotif.type] || DEFAULT_CONFIG).color + '15' }]}>
-                            <Ionicons name={(TYPE_CONFIG[popupNotif.type] || DEFAULT_CONFIG).icon as any} size={28} color={(TYPE_CONFIG[popupNotif.type] || DEFAULT_CONFIG).color} />
+                    <View style={[styles.popup, {
+                        backgroundColor: Colors.backgroundCard,
+                        shadowColor: isDarkMode ? '#000' : '#888',
+                    }]}>
+                        <View style={[styles.popupIconWrap, { backgroundColor: iconBg }]}>
+                            <Ionicons
+                                name={(TYPE_CONFIG[popupNotif.type] || DEFAULT_CONFIG).icon as any}
+                                size={28}
+                                color={iconColor}
+                            />
                         </View>
-                        <Text style={[styles.popupTitle, { color: Colors.textPrimary }]}>{popupNotif.title}</Text>
-                        <Text style={[styles.popupTime, { color: Colors.textMuted }]}>{new Date(popupNotif.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</Text>
+                        <Text style={[styles.popupTitle, { color: Colors.textPrimary }]}>
+                            {popupNotif.title}
+                        </Text>
+                        <Text style={[styles.popupTime, { color: Colors.textMuted }]}>
+                            {new Date(popupNotif.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                        </Text>
 
-                        <View style={[styles.popupBodyWrap, { backgroundColor: Colors.backgroundElevated }]}>
-                            <Text style={[styles.popupBody, { color: Colors.textSecondary }]}>{popupNotif.body}</Text>
+                        <View style={[styles.popupBodyWrap, { backgroundColor: isDarkMode ? Colors.backgroundElevated : '#F8F8FB' }]}>
+                            <Text style={[styles.popupBody, { color: Colors.textSecondary }]}>
+                                {popupNotif.body}
+                            </Text>
                         </View>
 
                         <View style={styles.popupFooter}>
@@ -224,23 +390,14 @@ export default function NotificationsScreen() {
                                     <TouchableOpacity
                                         style={[styles.actionBtn, { backgroundColor: '#22C55E' }]}
                                         onPress={() => {
-                                            const requesterId = popupNotif.data?.userId;
-                                            if (!requesterId || !user) return;
-                                            // Add requester to followRequests so acceptFollowRequest can process it
-                                            if (!user.followRequests.includes(requesterId)) {
-                                                updateUser({ followRequests: [...user.followRequests, requesterId] });
+                                            const rid = popupNotif.data?.userId;
+                                            if (!rid || !user) return;
+                                            if (!user.followRequests.includes(rid)) {
+                                                updateUser({ followRequests: [...user.followRequests, rid] });
                                             }
-                                            // Short delay to let state update
                                             setTimeout(() => {
-                                                acceptFollowRequest(requesterId);
-                                                // Send acceptance notification back to requester
-                                                addNotification({
-                                                    userId: requesterId,
-                                                    type: 'follow_accepted',
-                                                    title: 'Buddy Request Accepted! 🎉',
-                                                    body: `${user.name} accepted your buddy request. You are now food buddies!`,
-                                                    data: { userId: user.id }
-                                                });
+                                                acceptFollowRequest(rid);
+                                                addNotification({ userId: rid, type: 'follow_accepted', title: 'Buddy Request Accepted! 🎉', body: `${user.name} accepted your buddy request.`, data: { userId: user.id } });
                                                 markAsRead(popupNotif.id);
                                                 setPopupNotif(null);
                                             }, 50);
@@ -250,17 +407,15 @@ export default function NotificationsScreen() {
                                         <Text style={styles.actionBtnText}>Accept</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity
-                                        style={[styles.actionBtn, { backgroundColor: Colors.error || '#EF4444' }]}
+                                        style={[styles.actionBtn, { backgroundColor: '#EF4444' }]}
                                         onPress={() => {
-                                            const requesterId = popupNotif.data?.userId;
-                                            if (!requesterId || !user) return;
-                                            // Add to followRequests first if not present, then reject
-                                            if (!user.followRequests.includes(requesterId)) {
-                                                updateUser({ followRequests: [...user.followRequests, requesterId] });
+                                            const rid = popupNotif.data?.userId;
+                                            if (!rid || !user) return;
+                                            if (!user.followRequests.includes(rid)) {
+                                                updateUser({ followRequests: [...user.followRequests, rid] });
                                             }
                                             setTimeout(() => {
-                                                rejectFollowRequest(requesterId);
-                                                // No notification sent for decline
+                                                rejectFollowRequest(rid);
                                                 markAsRead(popupNotif.id);
                                                 setPopupNotif(null);
                                             }, 50);
@@ -273,14 +428,22 @@ export default function NotificationsScreen() {
                             ) : (
                                 <>
                                     {getActionBtnText(popupNotif.type) && (
-                                        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: Colors.primary }]} onPress={() => handleAction(popupNotif)}>
-                                            <Text style={styles.actionBtnText}>{getActionBtnText(popupNotif.type)}</Text>
-                                            <Ionicons name="arrow-forward" size={16} color="#FFF" />
+                                        <TouchableOpacity
+                                            style={[styles.actionBtn, { backgroundColor: Colors.primary }]}
+                                            onPress={() => handleAction(popupNotif)}
+                                        >
+                                            <Text style={[styles.actionBtnText, { color: isDarkMode ? '#0F0F14' : '#FFF' }]}>
+                                                {getActionBtnText(popupNotif.type)}
+                                            </Text>
+                                            <Ionicons name="arrow-forward" size={16} color={isDarkMode ? '#0F0F14' : '#FFF'} />
                                         </TouchableOpacity>
                                     )}
                                 </>
                             )}
-                            <TouchableOpacity style={[styles.closeBtn, { borderColor: Colors.border }]} onPress={() => setPopupNotif(null)}>
+                            <TouchableOpacity
+                                style={[styles.closeBtn, { borderColor: Colors.border }]}
+                                onPress={() => setPopupNotif(null)}
+                            >
                                 <Text style={[styles.closeBtnText, { color: Colors.textMuted }]}>Dismiss</Text>
                             </TouchableOpacity>
                         </View>
@@ -291,7 +454,7 @@ export default function NotificationsScreen() {
             <CustomAlert
                 visible={fallbackAlert}
                 title="Content Unavailable"
-                message="This content is no longer available. It may have been deleted or removed."
+                message="This content is no longer available."
                 type="warning"
                 confirmText="OK"
                 onConfirm={() => setFallbackAlert(false)}
@@ -301,40 +464,167 @@ export default function NotificationsScreen() {
     );
 }
 
+// ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
     safe: { flex: 1 },
-    header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', borderBottomWidth: 1 },
-    headerTitle: { fontSize: 24, fontWeight: '900' },
-    headerSub: { fontSize: 13, marginTop: 4 },
-    markAllBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(150,150,150,0.1)', justifyContent: 'center', alignItems: 'center' },
-    testBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(150,150,150,0.1)', justifyContent: 'center', alignItems: 'center', marginLeft: 12 },
-    markAllText: {},
-    list: { paddingBottom: 100 },
-    item: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-    iconCircle: { width: 48, height: 48, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-    content: { flex: 1 },
-    topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-    title: { fontSize: 16 },
-    time: { fontSize: 11 },
-    body: { fontSize: 14, lineHeight: 20 },
-    unreadBadge: { width: 10, height: 10, borderRadius: 5 },
-    dot: { width: 10, height: 10, borderRadius: 5, marginLeft: 8 },
-    separator: { height: 1, marginHorizontal: 12, opacity: 0.5 },
-    empty: { alignItems: 'center', paddingTop: 80, gap: 12 },
-    emptyIconWrap: { width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-    emptyTitle: {},
-    emptySub: { textAlign: 'center', paddingHorizontal: 40, lineHeight: 22 },
 
-    overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
-    popup: { width: '85%', borderRadius: 24, padding: 24, paddingBottom: 28, alignItems: 'center', elevation: 12, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 20 },
-    popupIconWrap: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-    popupTitle: { fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
-    popupTime: { fontSize: 13, fontWeight: '600', marginBottom: 20 },
-    popupBodyWrap: { width: '100%', padding: 16, borderRadius: 16, marginBottom: 24 },
-    popupBody: { fontSize: 15, lineHeight: 24, textAlign: 'center' },
-    popupFooter: { width: '100%', gap: 12 },
-    actionBtn: { width: '100%', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, paddingVertical: 14, borderRadius: 16 },
-    actionBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
-    closeBtn: { width: '100%', alignItems: 'center', paddingVertical: 14, borderRadius: 16, borderWidth: 1 },
-    closeBtnText: { fontSize: 15, fontWeight: '700' },
+    // Header
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 8,
+    },
+    headerTitle: {
+        fontSize: 24,
+        fontWeight: '800',
+        letterSpacing: -0.4,
+    },
+    iconBtn: {
+        width: 36, height: 36, borderRadius: 18,
+        justifyContent: 'center', alignItems: 'center',
+    },
+
+    // Tabs — pill shape, 1px border, matches screenshot exactly
+    tabsContainer: {
+        paddingHorizontal: 16,
+        paddingTop: 8,
+        paddingBottom: 8,
+        gap: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    tab: {
+        paddingHorizontal: 18,
+        height: 36,
+        borderRadius: 18,
+        borderWidth: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    tabText: { fontSize: 14, lineHeight: 20 },
+
+    // List
+    listContent: { paddingBottom: 110 },
+
+    // Section label — "Today," / "Earlier"
+    sectionLabel: {
+        fontSize: 17,
+        fontWeight: '700',
+        paddingHorizontal: 16,
+        paddingTop: 16,
+        paddingBottom: 6,
+        letterSpacing: -0.2,
+    },
+
+    // Row — matches screenshot layout exactly
+    row: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        paddingHorizontal: 16,
+        paddingVertical: 13,
+        gap: 14,
+    },
+
+    // Unified soft warm icon circle
+    iconCircle: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexShrink: 0,
+    },
+
+    rowContent: { flex: 1, paddingTop: 1 },
+
+    rowTop: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        marginBottom: 4,
+        gap: 8,
+    },
+    rowTitle: {
+        fontSize: 15,
+        flex: 1,
+        lineHeight: 20,
+    },
+    rowTime: {
+        fontSize: 12,
+        flexShrink: 0,
+        marginTop: 1,
+    },
+    rowBody: {
+        fontSize: 13,
+        lineHeight: 19,
+    },
+
+    // Unread indicator dot
+    unreadDot: {
+        width: 9, height: 9, borderRadius: 4.5,
+        alignSelf: 'center',
+        marginLeft: 2,
+        flexShrink: 0,
+    },
+
+    // Hairline separator — starts at content left edge (after icon)
+    separator: {
+        height: StyleSheet.hairlineWidth,
+        marginLeft: 80,      // icon width 50 + gap 14 + row padding 16
+        marginRight: 0,
+    },
+
+    // Empty state
+    empty: {
+        flex: 1, alignItems: 'center', justifyContent: 'center',
+        gap: 10, paddingTop: 80,
+    },
+    emptyIconWrap: {
+        width: 72, height: 72, borderRadius: 36,
+        justifyContent: 'center', alignItems: 'center',
+        marginBottom: 4,
+    },
+    emptyTitle: { fontSize: 17, fontWeight: '700' },
+    emptySub: { fontSize: 14, textAlign: 'center', paddingHorizontal: 40, lineHeight: 20 },
+
+    // Detail popup
+    overlay: {
+        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.45)',
+        justifyContent: 'center', alignItems: 'center',
+        zIndex: 1000,
+    },
+    popup: {
+        width: '88%',
+        borderRadius: 24, padding: 24, paddingBottom: 28,
+        alignItems: 'center',
+        elevation: 12,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.18,
+        shadowRadius: 20,
+    },
+    popupIconWrap: {
+        width: 64, height: 64, borderRadius: 32,
+        justifyContent: 'center', alignItems: 'center',
+        marginBottom: 14,
+    },
+    popupTitle: { fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 5 },
+    popupTime: { fontSize: 12, fontWeight: '500', marginBottom: 16 },
+    popupBodyWrap: { width: '100%', padding: 14, borderRadius: 14, marginBottom: 20 },
+    popupBody: { fontSize: 14, lineHeight: 22, textAlign: 'center' },
+    popupFooter: { width: '100%', gap: 10 },
+    actionBtn: {
+        width: '100%', flexDirection: 'row',
+        justifyContent: 'center', alignItems: 'center',
+        gap: 8, paddingVertical: 14, borderRadius: 14,
+    },
+    actionBtnText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
+    closeBtn: {
+        width: '100%', alignItems: 'center',
+        paddingVertical: 13, borderRadius: 14, borderWidth: 1,
+    },
+    closeBtnText: { fontSize: 14, fontWeight: '600' },
 });

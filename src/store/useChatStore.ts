@@ -30,6 +30,13 @@ export interface ChatMessage {
     contactData?: { label: string; value: string };
     type: MessageType;
     time: string;
+    status?: 'sent' | 'delivered' | 'read';
+    replyTo?: {
+        id: string;
+        text: string;
+        senderName: string;
+        isMe: boolean;
+    };
 }
 
 export interface ChatConversation {

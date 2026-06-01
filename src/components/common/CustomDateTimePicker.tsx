@@ -171,7 +171,7 @@ export const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
                             >
                                 <Text style={[
                                     styles.dayText,
-                                    { color: isSelected ? '#FFF' : (isInRange ? Colors.primary : Colors.textPrimary) },
+                                    { color: isSelected ? '#000' : (isInRange ? Colors.primary : Colors.textPrimary) },
                                     !selectable && { color: Colors.textMuted }
                                 ]}>
                                     {d.getDate()}
@@ -200,7 +200,7 @@ export const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
                             onPress={() => setHour(h)}
                             style={[styles.timeChip, hour === h && { backgroundColor: Colors.primary, borderColor: Colors.primary }]}
                         >
-                            <Text style={[styles.timeChipText, { color: hour === h ? '#FFF' : Colors.textPrimary }]}>{h}</Text>
+                            <Text style={[styles.timeChipText, { color: hour === h ? '#000' : Colors.textPrimary }]}>{h}</Text>
                         </TouchableOpacity>
                     ))}
                 </View>
@@ -215,7 +215,7 @@ export const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
                             onPress={() => setMinute(m)}
                             style={[styles.timeChip, minute === m && { backgroundColor: Colors.primary, borderColor: Colors.primary }]}
                         >
-                            <Text style={[styles.timeChipText, { color: minute === m ? '#FFF' : Colors.textPrimary }]}>{m.toString().padStart(2, '0')}</Text>
+                            <Text style={[styles.timeChipText, { color: minute === m ? '#000' : Colors.textPrimary }]}>{m.toString().padStart(2, '0')}</Text>
                         </TouchableOpacity>
                     ))}
                 </View>
@@ -225,12 +225,12 @@ export const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
                     <TouchableOpacity
                         onPress={() => setAmpm('AM')}
                         style={[styles.ampmBtn, ampm === 'AM' && { backgroundColor: Colors.primary }]}>
-                        <Text style={[styles.ampmText, { color: ampm === 'AM' ? '#FFF' : Colors.textPrimary }]}>AM</Text>
+                        <Text style={[styles.ampmText, { color: ampm === 'AM' ? '#000' : Colors.textPrimary }]}>AM</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => setAmpm('PM')}
                         style={[styles.ampmBtn, ampm === 'PM' && { backgroundColor: Colors.primary }]}>
-                        <Text style={[styles.ampmText, { color: ampm === 'PM' ? '#FFF' : Colors.textPrimary }]}>PM</Text>
+                        <Text style={[styles.ampmText, { color: ampm === 'PM' ? '#000' : Colors.textPrimary }]}>PM</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -238,7 +238,7 @@ export const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
     };
 
     return (
-        <Modal transparent visible={visible} animationType="slide">
+        <Modal transparent visible={visible} animationType="slide" statusBarTranslucent>
             <View style={styles.overlay}>
                 <View style={[styles.container, { backgroundColor: Colors.background, borderColor: Colors.border }]}>
                     <View style={styles.header}>

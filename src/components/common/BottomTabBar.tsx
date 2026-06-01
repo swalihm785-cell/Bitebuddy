@@ -45,7 +45,7 @@ export const BottomTabBar: React.FC<Props> = ({ active = 'None' }) => {
             paddingBottom: insets.bottom > 0 ? insets.bottom - 10 : 14,
             borderTopColor: Colors.border,
             height: 76 + insets.bottom,
-            backgroundColor: '#000000',
+            backgroundColor: Colors.background,
         }]}>
 
             {/* Explore — food-themed (plate/restaurant) */}

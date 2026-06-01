@@ -73,7 +73,7 @@ import ChatDetailScreen from './src/screens/messaging/ChatDetailScreen';
 import ChatListScreen from './src/screens/messaging/ChatListScreen';
 import EditProfileScreen from './src/screens/profile/EditProfileScreen';
 import UserProfileScreen from './src/screens/profile/UserProfileScreen';
-import NotificationsScreen from './src/screens/dashboard/NotificationsScreen';
+import NotificationsScreen from './src/screens/notifications/NotificationsScreen';
 import SettingsScreen from './src/screens/settings/SettingsScreen';
 import PlanScreen from './src/screens/profile/PlanScreen';
 import ManageSubscriptionScreen from './src/screens/settings/ManageSubscriptionScreen';
@@ -172,8 +172,8 @@ function RootNavigator() {
 }
 
 export default function App() {
-  const { isDarkMode, hasSetInitialTheme, setInitialTheme } = useThemeStore();
-  
+  const { isDarkMode, setSystemTheme } = useThemeStore();
+
   const [fontsLoaded] = useFonts({
     'SF-Pro': SF_Pro_Text_Regular,
     'SF-Pro-Medium': SF_Pro_Text_Medium,
@@ -182,14 +182,23 @@ export default function App() {
   });
 
   React.useEffect(() => {
-    if (!hasSetInitialTheme) {
-      const isSystemDark = Appearance.getColorScheme() === 'dark';
-      setInitialTheme(isSystemDark);
-    }
+    // Sync with system theme on mount
+    const isSystemDark = Appearance.getColorScheme() === 'dark';
+    setSystemTheme(isSystemDark);
+
+    // React to OS theme changes in real time
+    const sub = Appearance.addChangeListener(({ colorScheme }) => {
+      setSystemTheme(colorScheme === 'dark');
+    });
+
+    return () => sub.remove();
+  }, []);
+
+  React.useEffect(() => {
     if (Platform.OS === 'android') {
       NavigationBar.setButtonStyleAsync(isDarkMode ? 'light' : 'dark');
     }
-  }, [isDarkMode, hasSetInitialTheme]);
+  }, [isDarkMode]);
 
   if (!fontsLoaded) return null;
 
@@ -203,7 +212,12 @@ export default function App() {
             backgroundColor="transparent"
           />
           <RootNavigator />
-          <FlashMessage position="top" />
+          <FlashMessage
+            position="top"
+            floating={true}
+            statusBarHeight={0}
+            style={{ marginTop: 30, marginHorizontal: 20, borderRadius: 12 }}
+          />
         </NavigationContainer>
       </SafeAreaProvider>
     </GestureHandlerRootView>

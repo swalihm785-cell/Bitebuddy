@@ -309,8 +309,8 @@ export default function EditPostScreen() {
         <View style={[styles.container, { backgroundColor: Colors.background }]}>
             <SafeAreaView edges={['top']} style={[styles.customHeader, { borderBottomColor: Colors.border, justifyContent: 'flex-start' }]}>
                 <TouchableOpacity onPress={() => safeGoBack()} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Ionicons name="arrow-back" size={24} color={'#ffb534'} />
-                    <Text style={{ fontSize: 14, fontWeight: '500', color: '#FFFFFF' }}>Edit Dining Plan</Text>
+                    <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+                    <Text style={{ fontSize: 14, fontWeight: '500', color: Colors.textPrimary }}>Edit Dining Plan</Text>
                 </TouchableOpacity>
             </SafeAreaView>
 

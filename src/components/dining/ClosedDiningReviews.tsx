@@ -103,7 +103,7 @@ export function ClosedDiningReviews({ postId }: ClosedDiningReviewsProps) {
 }
 
 const styles = StyleSheet.create({
-    wrapper: { marginTop: 28, marginBottom: 36 },
+    wrapper: { marginTop: 28, marginBottom: 8 },
     header: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
     title: { fontSize: 16, fontWeight: '600' },
     avgRating: { fontSize: 12, fontWeight: '600', marginTop: 2 },

@@ -95,10 +95,10 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
     const postDate = post.dateTime instanceof Date ? post.dateTime : new Date(post.dateTime);
     const isInactive = post.status !== 'open' || postDate.getTime() < Date.now();
 
-    const cardBg = '#1d1b22';
-    const cardBorder = 'rgba(73,69,79,0.1)';
-    const textColor = '#FFFFFF';
-    const textMuted = '#938f99';
+    const cardBg = Colors.backgroundCard;
+    const cardBorder = Colors.border;
+    const textColor = Colors.textPrimary;
+    const textMuted = Colors.textMuted;
 
     // Format Meet At Time
     const postDateObj = post.dateTime instanceof Date ? post.dateTime : new Date(post.dateTime);
@@ -118,7 +118,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
                 {/* Top Row: Host & Date/Time */}
                 <View style={styles.topRow}>
                     <View style={styles.hostInfo}>
-                        <Image source={{ uri: hostInfo.photoURL }} style={styles.hostAvatar} />
+                        <Image source={{ uri: hostInfo.photoURL }} style={[styles.hostAvatar, { borderColor: Colors.border }]} />
                         <View style={styles.hostTextCol}>
                             <Text style={[styles.hostLabel, { color: textMuted }]}>Hosted</Text>
                             <Text style={[styles.hostName, { color: textColor }]} numberOfLines={1}>
@@ -127,8 +127,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
                         </View>
                     </View>
                     <View style={styles.dateInfo}>
-                        <View style={styles.dateBadge}>
-                            <Text style={styles.dateText}>{meetDateStr}</Text>
+                        <View style={[styles.dateBadge, { backgroundColor: Colors.background }]}>
+                            <Text style={[styles.dateText, { color: Colors.textMuted }]}>{meetDateStr}</Text>
                         </View>
                         <View style={styles.meetAtChip}>
                             <Ionicons name="time" size={12} color="#000" style={{ marginRight: 4 }} />
@@ -159,7 +159,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
                         <Text style={[styles.joinedText, { color: textColor }]}>
                             {participantsCount}/{post.maxGroupSize} joined
                         </Text>
-                        <View style={styles.progressBarBg}>
+                        <View style={[styles.progressBarBg, { backgroundColor: isDarkMode ? '#332f3c' : Colors.border }]}>
                             <View style={[styles.progressBarFill, { width: `${Math.min((participantsCount / post.maxGroupSize) * 100, 100)}%` }]} />
                         </View>
                         <Text style={[styles.timeAgoText, { color: textMuted }]}>
@@ -173,7 +173,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onPress }) => {
                         </View>
                     ) : (
                         <TouchableOpacity style={styles.joinBtn} onPress={onPress}>
-                            <Text style={styles.joinBtnText}>JOIN NOW</Text>
+                            <Text style={[styles.joinBtnText, { color: Colors.textPrimary }]}>JOIN NOW</Text>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -214,7 +214,6 @@ const styles = StyleSheet.create({
         height: 38,
         borderRadius: 19,
         borderWidth: 1,
-        borderColor: '#FFF',
     },
     hostLabel: {
         fontSize: 10,
@@ -233,7 +232,7 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     dateBadge: {
-        backgroundColor: '#141218',
+        backgroundColor: undefined,
         borderRadius: 4,
         height: 26,
         paddingHorizontal: 8,
@@ -244,7 +243,6 @@ const styles = StyleSheet.create({
     dateText: {
         fontSize: 11,
         fontWeight: '700',
-        color: '#938F99',
         textTransform: 'uppercase',
     },
     meetAtChip: {
@@ -297,7 +295,6 @@ const styles = StyleSheet.create({
     },
     progressBarBg: {
         height: 6,
-        backgroundColor: '#332f3c',
         borderRadius: 3,
         width: 100,
         marginBottom: 6,
@@ -320,7 +317,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
     joinBtnText: {
-        color: '#FFF',
         fontSize: 10,
         fontWeight: '800',
         letterSpacing: 1.2,

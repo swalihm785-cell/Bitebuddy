@@ -52,6 +52,7 @@ export const CustomAlert: React.FC<CustomAlertProps> = ({
             visible={visible}
             animationType="fade"
             onRequestClose={onClose}
+            statusBarTranslucent
         >
             <View style={styles.overlay}>
                 <View style={[styles.container, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
