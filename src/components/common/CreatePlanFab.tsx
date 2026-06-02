@@ -68,7 +68,7 @@ export const CreatePlanFab: React.FC<CreatePlanFabProps> = ({
         // Rise from below (fillAnim: 0 → 1) then navigate, then silently reset
         Animated.timing(fillAnim, {
             toValue: 1,
-            duration: 650,
+            duration: 150,
             easing: Easing.out(Easing.sin),
             useNativeDriver: true,
         }).start(() => {

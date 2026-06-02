@@ -68,6 +68,20 @@ const DEFAULT_FILTERS: FilterState = {
     dateRangeMin: '', dateRangeMax: '', timeRangeMin: '', timeRangeMax: ''
 };
 
+const BUDGET_FILTER_OPTIONS = [
+    { label: 'Any', value: 'any' },
+    { label: '₹100-250', value: 'range1' },
+    { label: '₹250-300', value: 'range2' },
+    { label: '₹300-500', value: 'range3' },
+    { label: '₹500+', value: 'range4' },
+    { label: 'Free', value: 'free' },
+];
+
+const getBudgetLabel = (val: string) => {
+    const option = BUDGET_FILTER_OPTIONS.find(o => o.value === val);
+    return option ? option.label : val;
+};
+
 const POPULAR_AREAS = [
     { place_id: '1', description: 'Indiranagar, Bangalore' },
     { place_id: '2', description: 'Koramangala, Bangalore' },
@@ -808,7 +822,7 @@ export default function DashboardScreen() {
                                 </TouchableOpacity>
                                 {appliedFilters.budget !== 'any' && (
                                     <View style={[s.activeBadge, { backgroundColor: Colors.primary + '15' }]}>
-                                        <Text style={[s.activeBadgeText, { color: Colors.primary }]}>💰 {appliedFilters.budget}</Text>
+                                        <Text style={[s.activeBadgeText, { color: Colors.primary }]}>💰 {getBudgetLabel(appliedFilters.budget)}</Text>
                                     </View>
                                 )}
                                 {appliedFilters.timing !== 'any' && (
@@ -978,9 +992,9 @@ export default function DashboardScreen() {
                                 <SectionHeader icon={<Ionicons name="wallet-outline" size={18} color={Colors.primary} />} title="Budget" />
 
                                 <View style={s.chipWrap}>
-                                    {['Any', '$100-250', '$250-300', '$300-500', '$500+', 'Free'].map(b => (
-                                        <TouchableOpacity key={b} style={[s.budgetChip, { backgroundColor: isDarkMode ? '#131313' : Colors.backgroundInput, borderColor: Colors.border }, filters.budget === b && [s.budgetChipActive, { borderColor: Colors.primary }]]} onPress={() => setFilters(f => ({ ...f, budget: b }))}>
-                                            <Text style={[s.budgetChipText, { color: Colors.textMuted }, filters.budget === b && [s.budgetChipTextActive, { color: Colors.primary }]]}>{b}</Text>
+                                    {BUDGET_FILTER_OPTIONS.map(opt => (
+                                        <TouchableOpacity key={opt.value} style={[s.budgetChip, { backgroundColor: isDarkMode ? '#131313' : Colors.backgroundInput, borderColor: Colors.border }, filters.budget === opt.value && [s.budgetChipActive, { borderColor: Colors.primary }]]} onPress={() => setFilters(f => ({ ...f, budget: opt.value }))}>
+                                            <Text style={[s.budgetChipText, { color: Colors.textMuted }, filters.budget === opt.value && [s.budgetChipTextActive, { color: Colors.primary }]]}>{opt.label}</Text>
                                         </TouchableOpacity>
                                     ))}
                                 </View>
@@ -1084,6 +1098,7 @@ const styles = StyleSheet.create({
     promoContent: {
         flex: 1,
         justifyContent: 'space-between',
+        marginRight: 20,
     },
     promoText: {
         fontSize: Platform.select({ ios: 14, android: 13 }),

@@ -335,7 +335,7 @@ export default function PostDetailScreen() {
     return (
         <View style={[styles.container, { backgroundColor: Colors.background }]}>
             {/* Shared brand bar — matches listing/dashboard top padding */}
-            <BrandBar />
+            <BrandBar isModal />
 
             {/* Header row (back, share, menu) */}
             <View style={styles.headerRow}>

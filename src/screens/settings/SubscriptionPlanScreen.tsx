@@ -50,7 +50,7 @@ export default function SubscriptionPlanScreen() {
                     {/* Free Plan */}
                     <View style={[styles.planCard, { backgroundColor: Colors.backgroundCard, borderColor: Colors.border }]}>
                         <Text style={[styles.planName, { color: Colors.textPrimary }]}>Free</Text>
-                        <Text style={[styles.planPrice, { color: Colors.textSecondary }]}>$0/mo</Text>
+                        <Text style={[styles.planPrice, { color: Colors.textSecondary }]}>₹0/mo</Text>
                         {user?.plan === 'free' && (
                             <View style={[styles.currentPlanTag, { backgroundColor: Colors.border }]}>
                                 <Text style={[styles.currentPlanText, { color: Colors.textSecondary }]}>Current Plan</Text>
@@ -62,7 +62,7 @@ export default function SubscriptionPlanScreen() {
                     <View style={[styles.planCard, { backgroundColor: Colors.backgroundCard, borderColor: Colors.primary, borderWidth: 2 }]}>
                         <LinearGradient colors={['#FF6B3520', '#FF3CAC20']} style={StyleSheet.absoluteFill} />
                         <Text style={[styles.planName, { color: Colors.primary }]}>Pro</Text>
-                        <Text style={[styles.planPrice, { color: Colors.textPrimary }]}>$9.99/mo</Text>
+                        <Text style={[styles.planPrice, { color: Colors.textPrimary }]}>₹499/mo</Text>
                         {user?.plan === 'pro' ? (
                             <View style={[styles.currentPlanTag, { backgroundColor: Colors.primary }]}>
                                 <Text style={[styles.currentPlanText, { color: '#FFF' }]}>Current Plan</Text>

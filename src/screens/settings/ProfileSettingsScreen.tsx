@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -33,7 +33,7 @@ export default function ProfileSettingsScreen() {
     return (
         <View style={[styles.safeArea, { backgroundColor: Colors.background }]}>
             {/* Brand bar */}
-            <View style={[styles.brandBar, { paddingTop: Math.max(insets.top, 10), backgroundColor: Colors.backgroundElevated }]}>
+            <View style={[styles.brandBar, { paddingTop: Platform.OS === 'ios' ? Math.max(insets.top, 16) : Math.max(insets.top, 10), backgroundColor: Colors.backgroundElevated }]}>
                 <FudioLogo width={74} height={26} color={Colors.textPrimary} />
             </View>
 

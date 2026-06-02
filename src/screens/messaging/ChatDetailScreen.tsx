@@ -5,7 +5,7 @@ import {
     Linking, ScrollView, Clipboard, Animated, PanResponder,
 } from 'react-native';
 
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets, initialWindowMetrics } from 'react-native-safe-area-context';
 import BrandBar from '../../components/common/BrandBar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -69,6 +69,7 @@ export default function ChatDetailScreen() {
     const { posts } = usePostStore();
 
     const insets = useSafeAreaInsets();
+    const bottomInset = insets.bottom || initialWindowMetrics?.insets?.bottom || 0;
 
     const chat = conversations.find(c => c.id === chatId);
     const isBlocked = chat?.status === 'blocked';
@@ -585,8 +586,12 @@ export default function ChatDetailScreen() {
             {/* Header — Instagram DM style */}
             <View style={[styles.header, { borderBottomColor: Colors.border }]}>
                 {/* Back button */}
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="chevron-back" size={26} color={Colors.textPrimary} />
+                <TouchableOpacity
+                    onPress={() => navigation.isFocused() && navigation.goBack()}
+                    style={styles.backBtn}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                    <Ionicons name="arrow-back" size={24} color={Colors.primary} />
                 </TouchableOpacity>
 
                 {/* Center: avatar + name + status */}
@@ -660,11 +665,11 @@ export default function ChatDetailScreen() {
 
             {/* Input / Actions */}
             {isBlocked ? (
-                <View style={[styles.inputArea, { backgroundColor: Colors.backgroundCard, borderTopColor: Colors.border, justifyContent: 'center', paddingBottom: Math.max(insets.bottom, 20), paddingTop: 16 }]}>
+                <View style={[styles.inputArea, { backgroundColor: Colors.backgroundCard, borderTopColor: Colors.border, justifyContent: 'center', paddingBottom: Math.max(bottomInset, 20), paddingTop: 16 }]}>
                     <Text style={{ color: Colors.error, fontWeight: '600' }}>You cannot reply to this conversation.</Text>
                 </View>
             ) : isPending && chat && !chat.initiatedByMe ? (
-                <View style={[styles.inputArea, { backgroundColor: Colors.backgroundCard, borderTopColor: Colors.border, flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: Math.max(insets.bottom, 20), paddingTop: 16 }]}>
+                <View style={[styles.inputArea, { backgroundColor: Colors.backgroundCard, borderTopColor: Colors.border, flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: Math.max(bottomInset, 20), paddingTop: 16 }]}>
                     <TouchableOpacity style={{ flex: 1, backgroundColor: Colors.success, padding: 14, borderRadius: 16, alignItems: 'center' }} onPress={() => acceptRequest(chat.id)}>
                         <Text style={{ color: '#FFF', fontWeight: 'bold' }}>Accept</Text>
                     </TouchableOpacity>
@@ -676,11 +681,11 @@ export default function ChatDetailScreen() {
                     </TouchableOpacity>
                 </View>
             ) : isPending ? (
-                <View style={[styles.inputArea, { backgroundColor: Colors.backgroundCard, borderTopColor: Colors.border, justifyContent: 'center', paddingBottom: Math.max(insets.bottom, 20), paddingTop: 16 }]}>
+                <View style={[styles.inputArea, { backgroundColor: Colors.backgroundCard, borderTopColor: Colors.border, justifyContent: 'center', paddingBottom: Math.max(bottomInset, 20), paddingTop: 16 }]}>
                     <Text style={{ color: Colors.warning, fontWeight: '600' }}>Waiting for user to accept request...</Text>
                 </View>
             ) : (
-                <View style={[styles.inputArea, { backgroundColor: Colors.background, borderTopColor: Colors.border, paddingBottom: Math.max(insets.bottom, 8) }]}>
+                <View style={[styles.inputArea, { backgroundColor: Colors.background, borderTopColor: Colors.border, paddingBottom: Math.max(bottomInset, 8) }]}>
                     {/* Reply preview bar + pill input */}
                     <View style={{ flex: 1 }}>
                         {replyTo && (

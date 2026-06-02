@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
-import { TEST_USERS } from '../data/testUsers';
+import { GoogleUser } from '../hooks/useGoogleAuth';
 
 interface AuthState {
     user: User | null;
@@ -15,6 +15,8 @@ interface AuthState {
     setLoading: (isLoading: boolean) => void;
     setOnboardingComplete: () => void;
     setProfileComplete: () => void;
+    loginWithEmail: (user: User) => void;
+    loginWithGoogle: (googleUser: GoogleUser) => void;
     toggleFollow: (userId: string) => void;
     sendBuddyRequest: (userId: string) => void;
     cancelBuddyRequest: (userId: string) => void;
@@ -32,11 +34,11 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
     persist(
         (set) => ({
-            isAuthenticated: true,
+            isAuthenticated: false,
             isLoading: false,
             hasCompletedOnboarding: true,
-            hasCompletedProfile: true,
-            user: TEST_USERS['swalih@gmail.com'].user,
+            hasCompletedProfile: false,
+            user: null,
 
             setUser: (user) => set({
                 user,
@@ -49,6 +51,48 @@ export const useAuthStore = create<AuthState>()(
             setOnboardingComplete: () => set({ hasCompletedOnboarding: true }),
 
             setProfileComplete: () => set({ hasCompletedProfile: true }),
+
+            loginWithEmail: (user) => set({
+                user,
+                isAuthenticated: true,
+                isLoading: false,
+                hasCompletedOnboarding: true,
+                hasCompletedProfile: true,
+            }),
+
+            loginWithGoogle: (googleUser: GoogleUser) => {
+                const user: User = {
+                    id: `google_${googleUser.id}`,
+                    name: googleUser.name,
+                    email: googleUser.email,
+                    photoURL: googleUser.photo ?? undefined,
+                    cuisineInterests: [],
+                    dietaryRestrictions: [],
+                    personalityTags: [],
+                    reputationScore: 0,
+                    badges: [],
+                    points: 0,
+                    isVerified: false,
+                    isPremium: false,
+                    role: 'user',
+                    plan: 'free',
+                    followersCount: 0,
+                    followingCount: 0,
+                    followers: [],
+                    following: [],
+                    followRequests: [],
+                    sentBuddyRequests: [],
+                    blockedUsers: [],
+                    createdAt: new Date(),
+                };
+                set({
+                    user,
+                    isAuthenticated: true,
+                    isLoading: false,
+                    hasCompletedOnboarding: true,
+                    hasCompletedProfile: false, // Push them to profile setup
+                });
+            },
 
             toggleFollow: (userId) => set((state) => {
                 if (!state.user) return state;
@@ -193,6 +237,7 @@ export const useAuthStore = create<AuthState>()(
             logout: () => set({
                 user: null,
                 isAuthenticated: false,
+                hasCompletedProfile: false,
             }),
         }),
         {

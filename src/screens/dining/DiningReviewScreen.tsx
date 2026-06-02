@@ -132,7 +132,7 @@ export default function DiningReviewScreen() {
     return (
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View style={styles.container}>
-                <BrandBar />
+                <BrandBar isModal style={{ backgroundColor: '#111111' }} />
 
                 {/* Header Row */}
                 <View style={styles.headerRow}>

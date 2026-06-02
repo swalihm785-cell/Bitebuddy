@@ -278,12 +278,12 @@ export default function ChatListScreen() {
                     {/* Back + Title */}
                     <TouchableOpacity
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-                        onPress={() => navigation.goBack()}
+                        onPress={() => navigation.isFocused() && navigation.goBack()}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                        <Ionicons name="chevron-back" size={26} color={Colors.textPrimary} />
+                        <Ionicons name="arrow-back" size={24} color={Colors.primary} />
                         <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>
-                            {user?.name || 'Messages'}
+                            Messages
                         </Text>
                     </TouchableOpacity>
 

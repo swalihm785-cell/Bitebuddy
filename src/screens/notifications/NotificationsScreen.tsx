@@ -269,9 +269,18 @@ export default function NotificationsScreen() {
 
             {/* ── Header ─────────────────────────────────────────────────────── */}
             <View style={styles.header}>
-                <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>
-                    Notifications
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <TouchableOpacity
+                        onPress={() => navigation.isFocused() && navigation.goBack()}
+                        style={styles.backBtn}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                        <Ionicons name="arrow-back" size={24} color={Colors.primary} />
+                    </TouchableOpacity>
+                    <Text style={[styles.headerTitle, { color: Colors.textPrimary }]}>
+                        Notifications
+                    </Text>
+                </View>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                     {unreadCount > 0 && (
                         <TouchableOpacity
@@ -281,20 +290,6 @@ export default function NotificationsScreen() {
                             <Ionicons name="checkmark-done" size={20} color={Colors.primary} />
                         </TouchableOpacity>
                     )}
-                    {/* Dev test button — remove in production */}
-                    <TouchableOpacity
-                        style={[styles.iconBtn, { backgroundColor: Colors.backgroundCard }]}
-                        onPress={() => {
-                            addNotification({ type: 'join_request',   title: 'Booking confirmed!',     body: 'Your booking for Slot-02 is confirmed for 23. Please view details for more info',                         data: { postId: '1' }, userId: 'swalih', createdAt: new Date() });
-                            addNotification({ type: 'payment_saved',  title: 'Payment Method Saved',   body: 'Your payment method has been securely saved and is now ready to use for future transactions',              data: {}, userId: 'swalih', createdAt: new Date(Date.now() - 3 * 24 * 3600 * 1000) }); // 3 days ago
-                            addNotification({ type: 'event',          title: 'Session reminder',       body: "You have an upcoming session. Don't forget to show up on time!",                                          data: {}, userId: 'swalih', createdAt: new Date(Date.now() - 5 * 24 * 3600 * 1000) }); // 5 days ago
-                            addNotification({ type: 'request_rejected', title: 'Session cancelled',    body: 'Your booking has been cancelled. You can reschedule anytime',                                              data: {}, userId: 'swalih', createdAt: new Date(Date.now() - 15 * 24 * 3600 * 1000) }); // 15 days ago
-                            addNotification({ type: 'payment_success', title: 'Payment successful',    body: 'Thank you for your purchase! A confirmation email has been sent to your address.',                         data: {}, userId: 'swalih', createdAt: new Date(Date.now() - 25 * 24 * 3600 * 1000) }); // 25 days ago
-                            addNotification({ type: 'goal_achieved',  title: 'Goal Achieved',          body: "Great job! You've attended your 30th class in your journey",                                               data: {}, userId: 'swalih', createdAt: new Date(Date.now() - 45 * 24 * 3600 * 1000) }); // 45 days ago
-                        }}
-                    >
-                        <Text style={{ fontSize: 14 }}>🧪</Text>
-                    </TouchableOpacity>
                 </View>
             </View>
 
@@ -481,6 +476,9 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: '800',
         letterSpacing: -0.4,
+    },
+    backBtn: {
+        padding: 4,
     },
     iconBtn: {
         width: 36, height: 36, borderRadius: 18,

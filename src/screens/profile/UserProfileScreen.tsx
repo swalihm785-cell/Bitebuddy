@@ -21,9 +21,56 @@ import { isCurrentlyPro } from '../../utils/authUtils';
 import { showMessage } from 'react-native-flash-message';
 import { TastePointsBadge } from '../../components/dining/TastePointsBadge';
 import { TEST_USERS } from '../../data/testUsers';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Defs, RadialGradient, Stop, Circle } from 'react-native-svg';
 
 const { width } = Dimensions.get('window');
+
+function GoldStarIcon({ width = 12, height = 12, color = '#FFCC00' }: any) {
+  return (
+    <Svg width={width} height={height} viewBox="0 0 12 12" fill="none">
+      <Path d="M2.23125 11.0833L3.17917 6.98542L0 4.22917L4.2 3.86458L5.83333 0L7.46667 3.86458L11.6667 4.22917L8.4875 6.98542L9.43542 11.0833L5.83333 8.91042L2.23125 11.0833Z" fill={color}/>
+    </Svg>
+  );
+}
+
+function MedalRibbonIcon({ width = 15, height = 30, color = '#FFCC00' }: any) {
+  return (
+    <Svg width={width} height={height} viewBox="0 0 15 30" fill="none">
+      <Path d="M0 0H15V11.775C15 12.35 14.875 12.8625 14.625 13.3125C14.375 13.7625 14.025 14.125 13.575 14.4L8.25 17.55L9.3 21H15L10.35 24.3L12.15 30L7.5 26.475L2.85 30L4.65 24.3L0 21H5.7L6.75 17.55L1.425 14.4C0.975 14.125 0.625 13.7625 0.375 13.3125C0.125 12.8625 0 12.35 0 11.775V0ZM3 3V11.775L6 13.575V3H3ZM12 3H9V13.575L12 11.775V3Z" fill={color} fillOpacity={0.78}/>
+    </Svg>
+  );
+}
+
+const RadialGlow = () => (
+  <View style={StyleSheet.absoluteFill}>
+    <Svg height="100%" width="100%">
+      <Defs>
+        <RadialGradient
+          id="glow"
+          cx="85%"
+          cy="50%"
+          rx="45%"
+          ry="60%"
+          fx="85%"
+          fy="50%"
+          gradientUnits="userSpaceOnUse"
+        >
+          <Stop offset="0%" stopColor="#FFCC00" stopOpacity="0.25" />
+          <Stop offset="50%" stopColor="#FFCC00" stopOpacity="0.08" />
+          <Stop offset="100%" stopColor="#FFCC00" stopOpacity="0" />
+        </RadialGradient>
+      </Defs>
+      <Circle cx="85%" cy="50%" r="150" fill="url(#glow)" />
+    </Svg>
+  </View>
+);
+
+const getLevelTitle = (points: number) => {
+  if (points >= 1000) return 'ELITE LEVEL';
+  if (points >= 500) return 'PLATINUM LEVEL';
+  if (points >= 100) return 'GOLD LEVEL';
+  return 'BRONZE LEVEL';
+};
 
 const REPORT_REASONS: { label: string; value: ReportReason }[] = [
     { label: 'Spam', value: 'spam' },
@@ -395,7 +442,7 @@ export default function UserProfileScreen() {
                     </View>
 
                     {/* Divider line below the top row */}
-                    <View style={{ height: 1, backgroundColor: Colors.border + '40', marginVertical: 16 }} />
+                    <View style={{ height: 1, backgroundColor: Colors.border + '40', marginTop: 16, marginBottom: 6 }} />
 
                     {/* Slogan / Caption field */}
                     <Text style={{ color: Colors.textPrimary, fontSize: 14, fontWeight: '500', lineHeight: 20 }}>
@@ -404,7 +451,7 @@ export default function UserProfileScreen() {
 
                     {/* Action buttons side-by-side */}
                     {isMe ? (
-                        <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
+                        <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
                             <TouchableOpacity
                                 style={{
                                     flex: 1,
@@ -440,7 +487,7 @@ export default function UserProfileScreen() {
                             </TouchableOpacity>
                         </View>
                     ) : (
-                        <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
+                        <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
                             <TouchableOpacity
                                 style={{
                                     flex: 1,
@@ -507,11 +554,11 @@ export default function UserProfileScreen() {
 
                 {/* About Section */}
                 <View style={styles.content}>
-                    <Text style={[styles.sectionTitle, { color: Colors.textPrimary, fontSize: 16, fontWeight: '700', marginBottom: 16 }]}>About</Text>
+                    <Text style={[styles.sectionTitle, { color: Colors.textPrimary, fontSize: 16, fontWeight: '700', marginBottom: 4 }]}>About</Text>
                     
                     {/* User Bio / About Us text */}
                     {user?.bio ? (
-                        <View style={{ marginBottom: 24 }}>
+                        <View style={{ marginBottom: 16 }}>
                             <Text style={{
                                 color: '#E5E2E1',
                                 fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'sans-serif',
@@ -561,8 +608,8 @@ export default function UserProfileScreen() {
                             <Text style={[styles.sectionTitle, { color: Colors.textPrimary, fontSize: 16, fontWeight: '700', marginBottom: 16 }]}>Vibe</Text>
                             <View style={styles.chipRow}>
                                 {user.personalityTags.map(t => (
-                                    <View key={t} style={{ backgroundColor: '#1C1B22', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, marginRight: 8, marginBottom: 8 }}>
-                                        <Text style={{ color: Colors.textPrimary, fontSize: 14, fontWeight: '600' }}>{t}</Text>
+                                    <View key={t} style={{ backgroundColor: '#1C1B22', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, marginRight: 4, marginBottom: 4 }}>
+                                        <Text style={{ color: Colors.textPrimary, fontSize: 13, fontWeight: '600' }}>{t}</Text>
                                     </View>
                                 ))}
                             </View>
@@ -573,32 +620,52 @@ export default function UserProfileScreen() {
                     <View style={{ marginTop: 24 }}>
                         <Text style={[styles.sectionTitle, { color: Colors.textPrimary, fontSize: 16, fontWeight: '700', marginBottom: 16 }]}>Reputation & Taste Points</Text>
                         <TouchableOpacity
-                            style={[styles.repCard, { borderColor: Colors.border, backgroundColor: Colors.backgroundCard }]}
+                            style={[styles.repCard, { borderColor: 'rgba(255, 255, 255, 0.05)' }]}
                             onPress={isMe ? () => navigation.navigate('HostRewards' as any, { hostId: userId }) : undefined}
                             activeOpacity={isMe ? 0.85 : 1}
                         >
-                            <LinearGradient colors={['#FF6B3512', '#6C63FF0A']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                            <RadialGlow />
                             <View style={styles.repRow}>
-                                <View style={{ flex: 1, gap: 6 }}>
-                                    <TastePointsBadge points={hostRep.totalTastePoints} tier={hostRep.tier} size="md" showTier />
-                                    <Text style={[styles.repStat, { color: Colors.textMuted }]}>
-                                        ★ {hostRep.averageRating.toFixed(1)} avg · {hostRep.totalReviews} review{hostRep.totalReviews !== 1 ? 's' : ''}
-                                    </Text>
-                                </View>
-                                <View style={styles.repRight}>
-                                    {hostRep.earnedBadges.slice(0, 2).map((b, i) => (
-                                        <View key={i} style={[styles.miniChip, { backgroundColor: Colors.primary + '15', borderColor: Colors.primary + '30' }]}>
-                                            <Text style={{ fontSize: 12 }}>🏅</Text>
-                                            <Text style={[styles.miniChipTxt, { color: Colors.primary }]} numberOfLines={1}>{b}</Text>
+                                <View style={{ flex: 1, gap: 14 }}>
+                                    {/* Level Badge and Points */}
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                        <View style={{
+                                            backgroundColor: '#FFCC00',
+                                            paddingVertical: 6,
+                                            paddingHorizontal: 12,
+                                            borderRadius: 6,
+                                            justifyContent: 'center',
+                                            alignItems: 'center'
+                                        }}>
+                                            <Text style={{ color: '#000', fontSize: 11, fontWeight: '900', letterSpacing: 0.5 }}>
+                                                {getLevelTitle(hostRep.totalTastePoints).toUpperCase()}
+                                            </Text>
                                         </View>
-                                    ))}
-                                    {isMe && <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />}
+                                        <Text style={{ color: '#FFF', fontSize: 15, fontWeight: '700' }}>
+                                            {hostRep.totalTastePoints} pts · {hostRep.tier}
+                                        </Text>
+                                    </View>
+
+                                    {/* Rating Details */}
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                        <GoldStarIcon width={16} height={16} />
+                                        <Text style={{ color: '#FFF', fontSize: 24, fontWeight: 'bold', marginLeft: 3 }}>
+                                            {hostRep.averageRating.toFixed(1)}
+                                        </Text>
+                                        <Text style={{ color: '#8E8D94', fontSize: 16, fontWeight: '500', marginLeft: 4 }}>
+                                            avg · {hostRep.totalReviews} review{hostRep.totalReviews !== 1 ? 's' : ''}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                <View style={{ alignItems: 'center', justifyContent: 'center', gap: 10, paddingRight: 4 }}>
+                                    <MedalRibbonIcon />
                                     {!isMe && (
                                         <TouchableOpacity 
-                                            style={{ backgroundColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, marginTop: 4 }}
+                                            style={{ backgroundColor: '#FFCC00', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }}
                                             onPress={() => setGivePointsModalVisible(true)}
                                         >
-                                            <Text style={{ color: '#000', fontWeight: '800', fontSize: 12 }}>+ Give Points</Text>
+                                            <Text style={{ color: '#000', fontWeight: '800', fontSize: 11 }}>+ Give Points</Text>
                                         </TouchableOpacity>
                                     )}
                                 </View>
@@ -924,7 +991,7 @@ const PrivateInfoRowItem = ({ iconNode, value, textColor }: any) => (
             width: 20,
             justifyContent: 'center',
             alignItems: 'center',
-            marginRight: 24
+            marginRight: 14
         }}>
             {iconNode}
         </View>
@@ -963,7 +1030,7 @@ const styles = StyleSheet.create({
     statValue: { fontSize: 20, fontWeight: '900' },
     statLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginTop: 4 },
     vDivider: { width: 1, height: 30 },
-    content: { paddingHorizontal: 20, paddingVertical: 20 },
+    content: { paddingHorizontal: 20, paddingBottom: 20, paddingTop: 4 },
     sectionTitle: { fontSize: 14, fontWeight: '600', letterSpacing: 0.6, marginBottom: 16 },
     detailsGrid: { padding: 16, borderRadius: 24, borderWidth: 1, gap: 16 },
     detailRow: { flexDirection: 'row', alignItems: 'center' },
@@ -984,12 +1051,12 @@ const styles = StyleSheet.create({
     reportActions: { flexDirection: 'row', gap: 12, marginTop: 24 },
     reportCancel: { flex: 1, height: 50, justifyContent: 'center', alignItems: 'center' },
     reportSubmit: { flex: 2, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
-    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
     chip: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1 },
     chipTxt: { fontSize: 12, fontWeight: '700' },
     // ── Reputation Card ──
-    repCard: { borderRadius: 20, borderWidth: 1, padding: 18, overflow: 'hidden' },
-    repRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    repCard: { borderRadius: 12, borderWidth: 1, padding: 20, overflow: 'hidden', position: 'relative', backgroundColor: '#1C1B22' },
+    repRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     repStat: { fontSize: 13, fontWeight: '600' },
     repRight: { alignItems: 'flex-end', gap: 6 },
     miniChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, maxWidth: 120 },

@@ -127,11 +127,6 @@ export default function NotificationsScreen() {
                         <Ionicons name="arrow-back" size={24} color={Colors.primary} />
                         <Text style={{ fontSize: 14, fontWeight: '500', color: Colors.textPrimary }}>Notifications</Text>
                     </TouchableOpacity>
-                    {unreadCount > 0 && (
-                        <View style={[styles.countBadge, { backgroundColor: Colors.primary }]}>
-                            <Text style={styles.countText}>{unreadCount}</Text>
-                        </View>
-                    )}
                 </View>
                 {unreadCount > 0 && (
                     <TouchableOpacity onPress={markAllAsRead}>

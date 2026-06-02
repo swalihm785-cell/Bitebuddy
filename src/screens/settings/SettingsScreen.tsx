@@ -8,6 +8,7 @@ import {
     ScrollView,
     Linking,
     useColorScheme,
+    Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -187,7 +188,7 @@ export default function SettingsScreen() {
             <View
                 style={[
                     styles.brandBar,
-                    { paddingTop: Math.max(insets.top, 10), backgroundColor: Colors.backgroundElevated },
+                    { paddingTop: Platform.OS === 'ios' ? Math.max(insets.top, 16) : Math.max(insets.top, 10), backgroundColor: Colors.backgroundElevated },
                 ]}
             >
                 <FudioLogo width={74} height={26} color={Colors.textPrimary} />

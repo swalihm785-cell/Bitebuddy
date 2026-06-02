@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, initialWindowMetrics } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useChatStore } from '../../store/useChatStore';
@@ -22,6 +22,7 @@ interface Props {
 export const BottomTabBar: React.FC<Props> = ({ active = 'None' }) => {
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
+    const bottomInset = insets.bottom || initialWindowMetrics?.insets?.bottom || 0;
     const { currentTheme, isDarkMode } = useThemeStore();
     const { Colors, FontSize } = currentTheme;
     const { conversations } = useChatStore();
@@ -42,9 +43,9 @@ export const BottomTabBar: React.FC<Props> = ({ active = 'None' }) => {
 
     return (
         <View style={[styles.wrap, {
-            paddingBottom: insets.bottom > 0 ? insets.bottom - 10 : 14,
+            paddingBottom: bottomInset > 0 ? bottomInset - 10 : 14,
             borderTopColor: Colors.border,
-            height: 76 + insets.bottom,
+            height: 76 + bottomInset,
             backgroundColor: Colors.background,
         }]}>
 
